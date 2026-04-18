@@ -1,62 +1,100 @@
 # winCleanerLamp
 
-CLI-утилита на Go для очистки мусора в Windows. Безопасные категории, сухой прогон (`--scan`), подтверждение перед удалением.
+CLI-утилита на Go для очистки мусора в Windows. Без внешних зависимостей (только stdlib + системные утилиты `powershell`, `ipconfig`, `wevtutil`, `reg`).
 
-## Где в Windows копится мусор
+## Как определить, что файл — «мусор»
 
-Ниже — места, откуда утилита подметает хлам. Все пути уже зашиты в программу (`internal/cleaner/targets.go`), и каждый можно включать/отключать флагами.
+Программа использует три независимых сигнала:
 
-| Категория | Путь / действие | Зачем чистить |
-|---|---|---|
-| `user-temp` | `%TEMP%`, `%LOCALAPPDATA%\Temp` | Временные файлы приложений, часто не удаляются сами |
-| `windows-temp` | `C:\Windows\Temp` | Системная `%TEMP%`. Требует прав администратора |
-| `prefetch` | `C:\Windows\Prefetch` | Кеш предзагрузки приложений, пересоздаётся |
-| `windows-update-cache` | `C:\Windows\SoftwareDistribution\Download` | Скачанные обновления старше суток |
-| `delivery-optimization` | `...\DeliveryOptimization\Cache` | P2P-кеш обновлений |
-| `cbs-logs` | `C:\Windows\Logs\CBS` | Логи обслуживания компонентов |
-| `wer` | `...\WER\ReportArchive`, `ReportQueue` | Отчёты Windows Error Reporting |
-| `crash-dumps` | `%LOCALAPPDATA%\CrashDumps`, `C:\Windows\Minidump`, `MEMORY.DMP` | Дампы падений |
-| `recent` | `%APPDATA%\Microsoft\Windows\Recent` | Список недавних файлов |
-| `inet-cache` | `%LOCALAPPDATA%\Microsoft\Windows\INetCache` | Кеш WinINet / IE / WebView |
-| `thumbnail-cache` | `thumbcache_*.db`, `iconcache_*.db` | Кеш миниатюр и значков |
-| `chrome-cache` / `edge-cache` / `brave-cache` | `User Data\Default\{Cache,Code Cache,GPUCache}` | Кеш браузеров (пароли/куки/история НЕ трогаются) |
-| `firefox-cache` | `...\Firefox\Profiles\*\cache2` | Кеш Firefox во всех профилях |
-| `nuget-cache` / `pip-cache` / `npm-cache` | кеши пакетных менеджеров | Восстанавливаются при следующей установке |
-| `recycle-bin` | `Clear-RecycleBin` (PowerShell) | Корзина на всех дисках |
-| `dns-cache` | `ipconfig /flushdns` | Сброс кеша DNS |
+1. **По расположению** — файл лежит в известной мусорной директории (Temp, Prefetch, WER, кеши браузеров/IDE/мессенджеров и т.п.). Полный список — ниже.
+2. **По возрасту** — у каждой категории свой `MinAgeHours` (обновления Windows — 24ч, CBS-логи — 72ч, `go-build` — 14д, `maven` — 60д и т.д.). Можно ужесточить глобально флагом `--min-age-hours N`.
+3. **По имени/расширению** для специальных категорий (`thumbcache_*.db`, `iconcache_*.db`, `*.dmp`, `*.evtx`).
 
-### Как определяется «остаточный» файл
-- **По расположению** — файл лежит в одной из известных «мусорных» директорий выше.
-- **По возрасту** — для кешей с `MinAgeHours` (например, `windows-update-cache` — >24ч, `cbs-logs` — >72ч, `nuget-cache` — >30 дней). Глобально можно задать `--min-age-hours N`.
-- **По расширению** для спец-категорий (`thumbcache_*.db`, `iconcache_*.db`, `*.dmp`).
-- **Заблокирован процессом** — тогда файл просто пропускается без ошибки остановки.
+Заблокированные процессом файлы тихо пропускаются — программа не останавливается на ошибке.
 
-### Что НЕ трогается
-- Корни дисков, `C:\Windows\System32`, `WinSxS`, `Program Files`, меню «Пуск», профили `Default`/`Public` и домашняя папка пользователя целиком (см. `safePath` в `cleaner.go`).
-- Пароли, cookies, история, закладки браузеров.
-- `Windows.old` и точки восстановления (слишком рискованно без явного согласия; можно добавить при необходимости).
+Для подозрительных остатков после удаления ПО отдельно есть команда `--leftovers`: сравнивает папки в `AppData\Roaming`, `AppData\Local`, `ProgramData` со списком установленных программ из реестра (`HKLM/HKCU\...\Uninstall`) и выводит «сиротские» папки. **Удаление** их автоматически не делается — только отчёт, потому что эвристика может ошибаться.
 
-## Сборка
+## Категории (безопасные)
+
+| ID | Что чистит |
+|---|---|
+| `user-temp` | `%TEMP%`, `%LOCALAPPDATA%\Temp` |
+| `windows-temp` | `C:\Windows\Temp` (нужен админ) |
+| `prefetch` | `C:\Windows\Prefetch` |
+| `windows-update-cache` | `C:\Windows\SoftwareDistribution\Download` (>24ч) |
+| `delivery-optimization` | P2P-кеш обновлений |
+| `cbs-logs` | `C:\Windows\Logs\CBS` (>72ч) |
+| `sd-datastore-logs` | `SoftwareDistribution\DataStore\Logs` |
+| `windows-logs` | DISM / DPX / MoSetup / WindowsUpdate / setupapi logs |
+| `panther` | `C:\Windows\Panther` — логи установки ОС |
+| `wer` | Windows Error Reporting (архив + очередь) |
+| `crash-dumps` | `%LOCALAPPDATA%\CrashDumps`, `C:\Windows\Minidump`, `MEMORY.DMP` |
+| `livekernel-reports` | `C:\Windows\LiveKernelReports` |
+| `defender-scan-history` | История сканов Defender |
+| `font-cache` | `FontCache*.dat`, `FNTCACHE.DAT` |
+| `recent` | `%APPDATA%\Microsoft\Windows\Recent` |
+| `jump-lists` | AutomaticDestinations / CustomDestinations |
+| `inet-cache` | `%LOCALAPPDATA%\Microsoft\Windows\INetCache` |
+| `thumbnail-cache` | `thumbcache_*.db`, `iconcache_*.db` |
+| `chrome-cache` / `edge-cache` / `brave-cache` | `User Data\Default\{Cache, Code Cache, GPUCache}` |
+| `firefox-cache` | `...\Firefox\Profiles\*\cache2` |
+| `teams-cache` / `teams-new-cache` | Classic + новый MSTeams_* |
+| `discord-cache` / `slack-cache` / `telegram-cache` | мессенджеры |
+| `spotify-cache` | Data / Storage / Browser |
+| `vscode-cache` | `%APPDATA%\Code\{Cache,CachedData,CachedExtensions,Code Cache,GPUCache,logs,User\workspaceStorage}` |
+| `jetbrains-logs` | `%LOCALAPPDATA%\JetBrains\*\{log,caches}` |
+| `office-cache` | `%LOCALAPPDATA%\Microsoft\Office\*\OfficeFileCache` |
+| `adobe-media-cache` | `Adobe\Common\Media Cache*` |
+| `nuget-cache` / `pip-cache` / `npm-cache` / `yarn-cache` / `go-build-cache` / `gradle-cache` | кеши пакетных менеджеров и билд-систем |
+| `steam-htmlcache` | HTML-кеш + логи Steam |
+| `nvidia-cache` / `amd-cache` / `dx-shader-cache` | шейдерные кеши GPU |
+| `recycle-bin` | Корзина на всех дисках (PowerShell `Clear-RecycleBin`) |
+| `dns-cache` | `ipconfig /flushdns` |
+
+## Категории (агрессивные — только с `--aggressive` или явно через `--categories`)
+
+| ID | Что чистит |
+|---|---|
+| `windows-old` | `C:\Windows.old` — старая ОС после апгрейда, десятки ГБ, откат невозможен |
+| `windows-installer-upgrade` | `C:\$WINDOWS.~BT`, `$WINDOWS.~WS`, `C:\ESD\Windows` |
+| `event-logs` | Все журналы `*.evtx` через `wevtutil cl` |
+| `iis-logs` | `C:\inetpub\logs\LogFiles` |
+| `downloads-old` | Файлы из `%USERPROFILE%\Downloads` старше 90 дней |
+| `maven-cache` | `%USERPROFILE%\.m2\repository` (долго пересобирать) |
+
+## Что НЕ трогается никогда
+
+Защита в `safePath` (`internal/cleaner/cleaner.go`):
+
+- Корни дисков, `C:\Windows\System32`, `SysWOW64`, `WinSxS`
+- `Program Files`, `Program Files (x86)`
+- Меню «Пуск», `Users\Default`, `Users\Public`
+- Корень домашней папки пользователя
+
+Плюс в кешах браузеров намеренно выбраны только `Cache/Code Cache/GPUCache` — пароли, cookies, история и закладки **не трогаются**.
+
+## Сборка и запуск
 
 ```powershell
 go build -o wincleanerlamp.exe
 ```
 
-Нужен Go 1.21+. Только стандартная библиотека, внешних зависимостей нет.
-
-## Использование
+Нужен Go 1.21+. Внешних модулей нет.
 
 ```powershell
-# Показать все категории
+# Список всех категорий (безопасные + агрессивные)
 .\wincleanerlamp.exe --list
 
-# Посчитать, сколько можно освободить (ничего не удаляется)
+# Посчитать, сколько можно освободить
 .\wincleanerlamp.exe --scan
 
-# Очистить всё с подтверждением
+# Посчитать вместе с агрессивными
+.\wincleanerlamp.exe --scan --aggressive
+
+# Очистить всё безопасное (с подтверждением)
 .\wincleanerlamp.exe --clean
 
-# Очистить без подтверждения
+# Без подтверждения
 .\wincleanerlamp.exe --clean --yes
 
 # Только выбранные категории
@@ -65,25 +103,48 @@ go build -o wincleanerlamp.exe
 # Исключить категории
 .\wincleanerlamp.exe --clean --exclude recycle-bin,dns-cache
 
-# Удалять только файлы старше 7 дней
-.\wincleanerlamp.exe --clean --min-age-hours 168
+# Включая агрессивные
+.\wincleanerlamp.exe --clean --aggressive --yes
 
-# Подробный лог каждого действия
+# Только файлы старше 30 дней (глобально)
+.\wincleanerlamp.exe --clean --min-age-hours 720
+
+# Подробный лог каждого файла
 .\wincleanerlamp.exe --clean --verbose
+
+# Найти возможные остатки удалённых программ (отчёт, не удаляет!)
+.\wincleanerlamp.exe --leftovers
 ```
 
-Для очистки `C:\Windows\Temp`, `Prefetch`, `SoftwareDistribution` и корзины на системном диске запускайте консоль **от имени администратора**.
+Для полного эффекта (`C:\Windows\Temp`, `Prefetch`, `SoftwareDistribution`, корзина системного диска, `Windows.old`, event logs) запускайте консоль **от имени администратора**.
+
+## Как ищутся остатки программ (`--leftovers`)
+
+1. Читаем `DisplayName` из:
+   - `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`
+   - `HKLM\SOFTWARE\WOW6432Node\...\Uninstall`
+   - `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`
+   - плюс вендоры из `HKLM\SOFTWARE\*`
+2. Токенизируем имена (буквы/цифры, длиной ≥3).
+3. Для каждой папки первого уровня в `%APPDATA%`, `%LOCALAPPDATA%`, `C:\ProgramData`:
+   - если имя в whitelist системных/вендорских папок — пропускаем;
+   - если совпадает с каким-либо токеном установленной программы — пропускаем;
+   - иначе считаем размер и выводим как кандидата.
+4. Сортируем по убыванию размера.
+
+Эвристика ложно-положительная по природе — всегда **проверяйте папки вручную**, прежде чем удалять.
 
 ## Архитектура
 
 ```
-main.go                          CLI: флаги, таблица, подтверждение
-internal/cleaner/targets.go      Список категорий и раскрытие %ENV%
-internal/cleaner/cleaner.go      Scan/Clean, спец-действия, safePath
+main.go                              CLI, флаги, таблица, подтверждение, --leftovers
+internal/cleaner/targets.go          Список категорий + раскрытие %ENV%
+internal/cleaner/cleaner.go          Scan/Clean, спец-действия, safePath
+internal/cleaner/leftovers.go        Поиск остатков удалённых программ через реестр
 ```
 
-`Process(Target, Options) Report` — единая точка для сканирования и удаления; при `DryRun=true` только считает размер.
+Единая точка — `cleaner.Process(Target, Options) Report`; `DryRun=true` считает размер без удаления.
 
 ## Дисклеймер
 
-Используйте на свой страх и риск. Перед первым запуском обязательно сделайте `--scan` и просмотрите список. Утилита старается быть консервативной (не трогает системные каталоги, пропускает занятые файлы, требует подтверждения), но окончательную ответственность за удаление файлов несёте вы.
+Используйте на свой страх и риск. Перед первым запуском сделайте `--scan` (и `--scan --aggressive`, если собираетесь использовать агрессивный режим). Программа консервативна по умолчанию, но окончательную ответственность за удалённые файлы несёте вы.

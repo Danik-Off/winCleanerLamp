@@ -158,13 +158,23 @@ func usage() {
 }
 
 func printList(all []cleaner.Target) {
-	fmt.Println("Доступные категории:")
+	fmt.Println("Доступные категории (безопасные по умолчанию):")
+	fmt.Println()
 	for _, t := range all {
-		fmt.Printf("\n  %s\n    %s\n    %s\n", bold(t.ID), t.Name, t.Description)
+		if t.Aggressive {
+			continue
+		}
+		fmt.Printf("  %s\n    %s\n    %s\n\n", t.ID, t.Name, t.Description)
+	}
+	fmt.Println("Агрессивные категории (только с флагом --aggressive или через --categories):")
+	fmt.Println()
+	for _, t := range all {
+		if !t.Aggressive {
+			continue
+		}
+		fmt.Printf("  %s\n    %s\n    %s\n\n", t.ID, t.Name, t.Description)
 	}
 }
-
-func bold(s string) string { return s } // без ANSI чтобы не ломать cmd.exe
 
 func filterTargets(all []cleaner.Target, include, exclude string, aggressive bool) []cleaner.Target {
 	inc := splitCSV(include)
