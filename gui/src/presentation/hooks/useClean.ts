@@ -11,6 +11,7 @@ interface UseCleanReturn {
   log: OperationLog | null;
   bytesCleaned: number;
   filesCleaned: number;
+  errorCount: number;
   error: string | null;
   clean: (aggressive: boolean, selection: CategorySelection) => Promise<void>;
   clear: () => void;
@@ -21,6 +22,7 @@ export function useClean(): UseCleanReturn {
   const [log, setLog] = useState<OperationLog | null>(null);
   const [bytesCleaned, setBytesCleaned] = useState(0);
   const [filesCleaned, setFilesCleaned] = useState(0);
+  const [errorCount, setErrorCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const clean = useCallback(async (aggressive: boolean, selection: CategorySelection) => {
@@ -29,6 +31,7 @@ export function useClean(): UseCleanReturn {
     setLog(null);
     setBytesCleaned(0);
     setFilesCleaned(0);
+    setErrorCount(0);
 
     try {
       const response = await cleanUseCase.execute({
@@ -39,6 +42,7 @@ export function useClean(): UseCleanReturn {
       setLog(response.log);
       setBytesCleaned(response.bytesCleaned);
       setFilesCleaned(response.filesCleaned);
+      setErrorCount(response.errorCount);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Clean failed');
     } finally {
@@ -51,6 +55,7 @@ export function useClean(): UseCleanReturn {
     setError(null);
     setBytesCleaned(0);
     setFilesCleaned(0);
+    setErrorCount(0);
   }, []);
 
   return {
@@ -58,6 +63,7 @@ export function useClean(): UseCleanReturn {
     log,
     bytesCleaned,
     filesCleaned,
+    errorCount,
     error,
     clean,
     clear

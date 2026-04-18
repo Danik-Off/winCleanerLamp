@@ -2,18 +2,23 @@ package cleaner
 
 import (
 	"os"
+	"sync"
+	"time"
 )
 
 // SysInfoEntry — запись об одном системном файле или каталоге.
 type SysInfoEntry struct {
-	Name string
-	Path string
-	Size int64
-	Hint string
+	Name    string
+	Path    string
+	Size    int64 // -1 = не удалось вычислить (таймаут / нет доступа)
+	Hint    string
+	IsDir   bool
+	Exists  bool
 }
 
 // GatherSysInfo возвращает информацию о «больших» системных файлах,
 // которые нельзя трогать напрямую, но полезно знать их размер.
+// Размеры каталогов вычисляются параллельно с таймаутом 3 сек на каждый.
 func GatherSysInfo() []SysInfoEntry {
 	entries := []SysInfoEntry{
 		{
@@ -40,33 +45,60 @@ func GatherSysInfo() []SysInfoEntry {
 			Name: "WinSxS",
 			Path: `C:\Windows\WinSxS`,
 			Hint: "    Хранилище компонентов Windows. НЕ удалять! Только через dism /Online /Cleanup-Image.",
+			IsDir: true,
 		},
 		{
 			Name: "System Volume Information",
 			Path: `C:\System Volume Information`,
 			Hint: "    Точки восстановления и Volume Shadow Copy. Управление: vssadmin / «Защита системы».",
+			IsDir: true,
 		},
 		{
 			Name: "Installer",
 			Path: `C:\Windows\Installer`,
 			Hint: "    Кеш MSI-установщиков. НЕ удалять вручную — поломает обновление/удаление программ.",
+			IsDir: true,
 		},
 	}
 
+	// Вычисляем размеры параллельно с таймаутом
+	var wg sync.WaitGroup
 	for i := range entries {
-		entries[i].Size = pathSize(entries[i].Path)
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			entries[idx].Size, entries[idx].Exists = pathSizeFast(entries[idx].Path, entries[idx].IsDir)
+		}(i)
 	}
+	wg.Wait()
 	return entries
 }
 
-func pathSize(p string) int64 {
+// pathSizeFast возвращает размер файла/каталога.
+// Для файлов — мгновенный os.Lstat.
+// Для каталогов — dirSize с таймаутом 3 секунды.
+// Возвращает (size, exists). size=-1 если таймаут или ошибка доступа.
+func pathSizeFast(p string, isDir bool) (int64, bool) {
 	info, err := os.Lstat(p)
 	if err != nil {
-		return 0
+		return 0, false
 	}
 	if !info.IsDir() {
-		return info.Size()
+		return info.Size(), true
 	}
-	sz, _ := dirSize(p)
-	return sz
+
+	// Для каталогов используем горутину с таймаутом
+	type result struct{ size int64 }
+	ch := make(chan result, 1)
+	go func() {
+		sz, _ := dirSize(p)
+		ch <- result{sz}
+	}()
+
+	select {
+	case r := <-ch:
+		return r.size, true
+	case <-time.After(3 * time.Second):
+		return -1, true // таймаут — каталог существует, но размер не удалось вычислить быстро
+	}
 }

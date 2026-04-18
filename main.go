@@ -29,6 +29,8 @@ func main() {
 		aggressive  = flag.Bool("aggressive", false, "включить агрессивные категории (Windows.old, $WINDOWS.~BT, event-logs, старые Downloads и т.п.)")
 		leftovers   = flag.Bool("leftovers", false, "найти возможные остатки удалённых программ в AppData/ProgramData (только отчёт)")
 		sysinfo     = flag.Bool("sysinfo", false, "показать размеры системных файлов (hiberfil.sys, pagefile.sys, swapfile.sys, WinSxS) и советы")
+		duplicates  = flag.String("duplicates", "", "найти дубликаты файлов в указанных папках (через запятую, например C:\\Users\\Me)")
+		emptyDirs   = flag.String("empty-dirs", "", "найти пустые папки в указанных папках (через запятую)")
 		showEmpty   = flag.Bool("show-empty", false, "показывать в таблице категории с нулевым размером")
 		parallelN   = flag.Int("parallel", 8, "число параллельных сканеров (1 = последовательно)")
 		showVer     = flag.Bool("version", false, "показать версию")
@@ -61,6 +63,20 @@ func main() {
 
 	if *leftovers {
 		runLeftovers()
+		if !*scanFlag && !*cleanFlag && *duplicates == "" && *emptyDirs == "" {
+			return
+		}
+	}
+
+	if *duplicates != "" {
+		runDuplicates(*duplicates)
+		if !*scanFlag && !*cleanFlag && *emptyDirs == "" {
+			return
+		}
+	}
+
+	if *emptyDirs != "" {
+		runEmptyDirs(*emptyDirs)
 		if !*scanFlag && !*cleanFlag {
 			return
 		}
@@ -233,8 +249,9 @@ func filterTargets(all []cleaner.Target, include, exclude string, aggressive boo
 }
 
 func runLeftovers() {
-	fmt.Println("Поиск возможных остатков удалённых программ в AppData/ProgramData...")
-	fmt.Println("(это эвристика — перед удалением проверьте каждую папку вручную)")
+	fmt.Println("Поиск возможных остатков удалённых программ...")
+	fmt.Println("Сканирование: AppData, ProgramData, Program Files, реестр HKCU\\Software")
+	fmt.Println("(это эвристика — перед удалением проверьте каждый элемент вручную)")
 	fmt.Println()
 	cands, err := cleaner.ScanLeftovers()
 	if err != nil {
@@ -242,21 +259,150 @@ func runLeftovers() {
 		return
 	}
 	if len(cands) == 0 {
-		fmt.Println("Подозрительных папок не найдено.")
+		fmt.Println("Подозрительных остатков не найдено.")
 		return
 	}
-	var total int64
+
+	// Группируем по типу
+	var folders, empties, regKeys []cleaner.LeftoverCandidate
 	for _, c := range cands {
-		total += c.Size
+		switch c.Type {
+		case cleaner.LeftoverFolder:
+			folders = append(folders, c)
+		case cleaner.LeftoverEmpty:
+			empties = append(empties, c)
+		case cleaner.LeftoverRegistry:
+			regKeys = append(regKeys, c)
+		}
 	}
-	fmt.Printf("  %-10s  %8s  %s\n", "РАЗМЕР", "ФАЙЛОВ", "ПАПКА")
-	fmt.Printf("  %s  %s  %s\n", strings.Repeat("-", 10), strings.Repeat("-", 8), strings.Repeat("-", 50))
-	for _, c := range cands {
-		fmt.Printf("  %-10s  %8d  %s\n", cleaner.Human(c.Size), c.Files, c.Path)
+
+	var totalSize int64
+	var totalCount int
+
+	// Папки-остатки
+	if len(folders) > 0 {
+		fmt.Printf("  === Папки-остатки (%d) ===\n", len(folders))
+		fmt.Printf("  %-10s  %8s  %s\n", "РАЗМЕР", "ФАЙЛОВ", "ПУТЬ")
+		fmt.Printf("  %s  %s  %s\n", strings.Repeat("-", 10), strings.Repeat("-", 8), strings.Repeat("-", 60))
+		for _, c := range folders {
+			size := cleaner.Human(c.Size)
+			if c.Size == -1 {
+				size = "~большой"
+			}
+			fmt.Printf("  %-10s  %8d  %s\n", size, c.Files, c.Path)
+			if c.Size > 0 {
+				totalSize += c.Size
+			}
+			totalCount++
+		}
+		fmt.Println()
 	}
-	fmt.Printf("\n  ИТОГО потенциальных остатков: %s в %d папках\n", cleaner.Human(total), len(cands))
-	fmt.Println("\nДля удаления выбранных папок используйте стандартный Проводник / rmdir /s.")
-	fmt.Println("Автоматическое удаление не выполняется намеренно — слишком высок риск ложных срабатываний.")
+
+	// Пустые папки
+	if len(empties) > 0 {
+		fmt.Printf("  === Пустые папки (%d) ===\n", len(empties))
+		for _, c := range empties {
+			fmt.Printf("  [пусто]  %s\n", c.Path)
+			totalCount++
+		}
+		fmt.Println()
+	}
+
+	// Ключи реестра
+	if len(regKeys) > 0 {
+		fmt.Printf("  === Ключи реестра без программ (%d) ===\n", len(regKeys))
+		for _, c := range regKeys {
+			fmt.Printf("  [реестр]  %s\n", c.Path)
+			totalCount++
+		}
+		fmt.Println()
+	}
+
+	fmt.Printf("  ИТОГО: %d потенциальных остатков", totalCount)
+	if totalSize > 0 {
+		fmt.Printf(", ~%s на диске", cleaner.Human(totalSize))
+	}
+	fmt.Println()
+	fmt.Println("\n  Для удаления папок используйте GUI или Проводник / rmdir /s.")
+	fmt.Println("  Для реестра: regedit или reg delete <ключ>.")
+}
+
+func runDuplicates(pathsCSV string) {
+	roots := splitCSV(pathsCSV)
+	if len(roots) == 0 {
+		fmt.Fprintln(os.Stderr, "Укажите папки для поиска дубликатов через запятую.")
+		return
+	}
+	fmt.Printf("Поиск дубликатов файлов в: %s\n", strings.Join(roots, ", "))
+	fmt.Println("(это может занять несколько минут для больших дисков)")
+	fmt.Println()
+
+	result, err := cleaner.ScanDuplicates(cleaner.DuplicateScanOptions{
+		Roots:   roots,
+		MinSize: 1024,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		return
+	}
+
+	if len(result.Groups) == 0 {
+		fmt.Printf("Дубликатов не найдено (просканировано %d файлов за %.1f сек.)\n",
+			result.ScannedFiles, result.Duration.Seconds())
+		return
+	}
+
+	fmt.Printf("Просканировано %d файлов за %.1f сек.\n\n", result.ScannedFiles, result.Duration.Seconds())
+
+	limit := 50
+	if len(result.Groups) < limit {
+		limit = len(result.Groups)
+	}
+
+	for i, g := range result.Groups[:limit] {
+		fmt.Printf("  === Группа %d: %s (x%d файлов) ===\n", i+1, cleaner.Human(g.Size), len(g.Paths))
+		for _, p := range g.Paths {
+			fmt.Printf("    %s\n", p)
+		}
+		fmt.Printf("    Экономия при удалении лишних: %s\n\n", cleaner.Human(g.WasteSize))
+	}
+
+	fmt.Printf("  ИТОГО: %d групп дубликатов, %d файлов, ~%s можно освободить\n",
+		len(result.Groups), result.TotalFiles, cleaner.Human(result.TotalWaste))
+	if len(result.Groups) > limit {
+		fmt.Printf("  (показано первые %d групп из %d)\n", limit, len(result.Groups))
+	}
+}
+
+func runEmptyDirs(pathsCSV string) {
+	roots := splitCSV(pathsCSV)
+	if len(roots) == 0 {
+		fmt.Fprintln(os.Stderr, "Укажите папки для поиска пустых директорий через запятую.")
+		return
+	}
+	fmt.Printf("Поиск пустых папок в: %s\n", strings.Join(roots, ", "))
+	fmt.Println()
+
+	result, err := cleaner.ScanEmptyDirs(cleaner.EmptyDirScanOptions{
+		Roots:      roots,
+		IgnoreJunk: true,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		return
+	}
+
+	if result.Total == 0 {
+		fmt.Println("Пустых папок не найдено.")
+		return
+	}
+
+	fmt.Printf("  === Пустые папки (%d) ===\n", result.Total)
+	for _, d := range result.Dirs {
+		fmt.Printf("  [пусто]  %s\n", d.Path)
+	}
+	fmt.Printf("\n  ИТОГО: %d пустых папок\n", result.Total)
+	fmt.Println("  Для удаления используйте GUI или rmdir.")
 }
 
 func splitCSV(s string) []string {
@@ -380,7 +526,11 @@ func runSysInfo() {
 	fmt.Println()
 	for _, e := range info {
 		size := "—"
-		if e.Size > 0 {
+		if !e.Exists {
+			size = "не найден"
+		} else if e.Size == -1 {
+			size = "~большой"
+		} else if e.Size > 0 {
 			size = cleaner.Human(e.Size)
 		}
 		fmt.Printf("  %-25s %12s  %s\n", e.Name, size, e.Path)

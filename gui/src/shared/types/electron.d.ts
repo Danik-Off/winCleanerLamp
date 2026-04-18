@@ -48,15 +48,29 @@ interface CleanResultDto {
   code: number;
 }
 
+interface DeleteResultDto {
+  success: boolean;
+  error?: string;
+}
+
 interface ElectronAPI {
   getCategories: () => Promise<CategoriesResponseDto>;
   scan: (options: ScanOptionsDto) => Promise<ScanResultDto>;
   clean: (options: CleanOptionsDto) => Promise<CleanResultDto>;
   getSysInfo: () => Promise<string>;
   getLeftovers: () => Promise<string>;
+  deleteLeftover: (folderPath: string) => Promise<DeleteResultDto>;
+  getDuplicates: (rootPaths: string) => Promise<string>;
+  getEmptyDirs: (rootPaths: string) => Promise<string>;
+  deleteEmptyDir: (dirPath: string) => Promise<DeleteResultDto>;
+  deleteFile: (filePath: string) => Promise<DeleteResultDto>;
   onScanProgress: (callback: (data: string) => void) => void;
   onCleanProgress: (callback: (data: string) => void) => void;
   removeAllListeners: (channel: string) => void;
+  windowMinimize: () => void;
+  windowMaximize: () => void;
+  windowClose: () => void;
+  windowIsMaximized: () => Promise<boolean>;
 }
 
 interface Window {

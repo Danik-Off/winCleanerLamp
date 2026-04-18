@@ -15,6 +15,7 @@ export interface CleanResponse {
   log: OperationLog;
   bytesCleaned: number;
   filesCleaned: number;
+  errorCount: number;
 }
 
 export class CleanUseCase {
@@ -42,13 +43,16 @@ export class CleanUseCase {
       log = log.add(LogEntry.success('Очистка завершена'));
 
       // Parse cleaned amounts from log
-      const bytesMatch = resultLog.toString().match(/освобождено:\s+([\d.]+\s*\w+)/i);
-      const filesMatch = resultLog.toString().match(/(\d+)\s+файл/);
+      const rawOutput = resultLog.toString();
+      const bytesMatch = rawOutput.match(/Освобождено:\s+([\d.]+\s*\w+)/i);
+      const filesMatch = rawOutput.match(/в\s+(\d+)\s+файл/i);
+      const errMatch = rawOutput.match(/Ошибок\/пропусков:\s+(\d+)/);
 
       return {
         log,
         bytesCleaned: bytesMatch ? this.parseSize(bytesMatch[1]) : 0,
-        filesCleaned: filesMatch ? parseInt(filesMatch[1], 10) : 0
+        filesCleaned: filesMatch ? parseInt(filesMatch[1], 10) : 0,
+        errorCount: errMatch ? parseInt(errMatch[1], 10) : 0
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';

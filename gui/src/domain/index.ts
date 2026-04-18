@@ -6,6 +6,7 @@
 export { Category, CategorySelection } from './entities/Category';
 export { ScanResult, ScanSummary } from './entities/ScanResult';
 export { LeftoverItem, LeftoverSummary } from './entities/LeftoverItem';
+export type { LeftoverType } from './entities/LeftoverItem';
 export { SystemFileInfo, SystemInfoSummary } from './entities/SystemInfo';
 export { LogEntry, LogLevel, OperationLog } from './entities/OperationLog';
 

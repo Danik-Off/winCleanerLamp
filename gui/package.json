@@ -1,6 +1,6 @@
 {
   "name": "wincleanerlamp-gui",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "GUI для winCleanerLamp на Electron + React + MUI + TypeScript с Onion Architecture",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -12,7 +12,9 @@
     "electron": "electron dist-electron/main.js",
     "start": "npm run build && electron dist-electron/main.js",
     "lint": "eslint . --ext .ts,.tsx",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win --x64"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -37,6 +39,43 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.0"
+    "eslint-plugin-react-refresh": "^0.4.0",
+    "electron-builder": "^24.9.0"
+  },
+  "build": {
+    "appId": "com.wincleanerlamp.gui",
+    "productName": "WinCleanerLamp",
+    "directories": {
+      "output": "dist-release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "wincleanerlamp.exe",
+        "to": "wincleanerlamp.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerSidebar": null
+    }
   }
 }

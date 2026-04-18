@@ -2,7 +2,7 @@
  * Electron Main Process
  * TypeScript implementation of main process
  */
-import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
 import path from 'path';
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
@@ -34,6 +34,8 @@ function createWindow(): void {
     height: 800,
     minWidth: 900,
     minHeight: 600,
+    frame: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -174,6 +176,89 @@ ipcMain.handle('get-leftovers', async () => {
   return stdout;
 });
 
+// Duplicates IPC Handler
+ipcMain.handle('get-duplicates', async (_event: IpcMainInvokeEvent, rootPaths: string) => {
+  const { stdout } = await executeCli(['--duplicates', rootPaths]);
+  return stdout;
+});
+
+// Empty Dirs IPC Handler
+ipcMain.handle('get-empty-dirs', async (_event: IpcMainInvokeEvent, rootPaths: string) => {
+  const { stdout } = await executeCli(['--empty-dirs', rootPaths]);
+  return stdout;
+});
+
+// Delete Empty Dir IPC Handler
+ipcMain.handle('delete-empty-dir', async (_event: IpcMainInvokeEvent, dirPath: string) => {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      return { success: false, error: 'Папка не найдена' };
+    }
+    const stat = fs.statSync(dirPath);
+    if (!stat.isDirectory()) {
+      return { success: false, error: 'Путь не является папкой' };
+    }
+    fs.rmSync(dirPath, { recursive: true, force: true });
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: message };
+  }
+});
+
+// Delete File IPC Handler (for duplicates)
+ipcMain.handle('delete-file', async (_event: IpcMainInvokeEvent, filePath: string) => {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'Файл не найден' };
+    }
+    fs.unlinkSync(filePath);
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: message };
+  }
+});
+
+// Delete Leftover Folder IPC Handler
+ipcMain.handle('delete-leftover', async (_event: IpcMainInvokeEvent, folderPath: string) => {
+  try {
+    if (!fs.existsSync(folderPath)) {
+      return { success: false, error: 'Папка не найдена' };
+    }
+    const stat = fs.statSync(folderPath);
+    if (!stat.isDirectory()) {
+      return { success: false, error: 'Путь не является папкой' };
+    }
+    fs.rmSync(folderPath, { recursive: true, force: true });
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: message };
+  }
+});
+
+// Window Control IPC Handlers
+ipcMain.on('window-minimize', () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+});
+
+ipcMain.on('window-close', () => {
+  mainWindow?.close();
+});
+
+ipcMain.handle('window-is-maximized', () => {
+  return mainWindow?.isMaximized() ?? false;
+});
+
 // Category Parser
 interface CategoryDto {
   id: string;
@@ -246,7 +331,8 @@ function parseScanOutput(output: string): ScanParsedResult {
 
   for (const line of lines) {
     // Parse table rows: id name size files
-    const match = line.match(/^\s+(\S+)\s+(.+?)\s+(\S+)\s+(\d+)$/);
+    // Size format: "1.12 GB", "392.72 MB", "0 B", or "-"
+    const match = line.match(/^\s+(\S+)\s+(.+?)\s+([\d.]+\s*[KMGT]?B|-)\s+(\d+)\s*$/);
     if (match) {
       const [, id, name, sizeStr, files] = match;
       const sizeBytes = parseSize(sizeStr.trim());
@@ -261,8 +347,8 @@ function parseScanOutput(output: string): ScanParsedResult {
       totalFiles += parseInt(files, 10);
     }
 
-    // Parse total line
-    const totalMatch = line.match(/ИТОГО:\s+(\S+)\s+в\s+(\d+)\s+файла/);
+    // Parse total line: "ИТОГО: 1.85 GB в 57212 файлах"
+    const totalMatch = line.match(/ИТОГО:\s+([\d.]+\s*[KMGT]?B)\s+в\s+(\d+)\s+файла/);
     if (totalMatch) {
       totalBytes = parseSize(totalMatch[1]);
       totalFiles = parseInt(totalMatch[2], 10);

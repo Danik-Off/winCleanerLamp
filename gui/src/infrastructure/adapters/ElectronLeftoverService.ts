@@ -3,6 +3,7 @@
  * Implements ILeftoverService using Electron IPC
  */
 import type { ILeftoverService } from '@application/ports/ILeftoverService';
+import type { LeftoverType } from '@domain/index';
 import { LeftoverSummary, LeftoverItem } from '@domain/index';
 
 export class ElectronLeftoverService implements ILeftoverService {
@@ -16,42 +17,75 @@ export class ElectronLeftoverService implements ILeftoverService {
   private parseLeftovers(output: string): LeftoverItem[] {
     const lines = output.split('\n');
     const items: LeftoverItem[] = [];
-    let inTable = false;
+    let currentSection: LeftoverType = 'folder';
     
     for (const line of lines) {
-      // Detect table start
-      if (line.includes('РАЗМЕР') && line.includes('ФАЙЛОВ')) {
-        inTable = true;
+      // Detect section headers
+      if (line.includes('=== Папки-остатки')) {
+        currentSection = 'folder';
+        continue;
+      }
+      if (line.includes('=== Пустые папки')) {
+        currentSection = 'empty';
+        continue;
+      }
+      if (line.includes('=== Ключи реестра')) {
+        currentSection = 'registry';
         continue;
       }
       
-      // Skip separator lines
-      if (line.includes('---') || line.includes('===')) continue;
-      
-      // Parse data lines
-      if (inTable && line.trim()) {
-        const parsed = this.parseDataLine(line);
-        if (parsed) {
-          items.push(parsed);
-        }
-      }
-      
+      // Skip separator/header lines
+      if (line.includes('---') || line.includes('РАЗМЕР') || line.includes('ФАЙЛОВ')) continue;
       // Stop at total line
-      if (line.includes('ИТОГО')) break;
+      if (line.includes('ИТОГО:')) break;
+      
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // Parse folder data lines: "  SIZE  FILES  PATH"
+      if (currentSection === 'folder') {
+        const parsed = this.parseFolderLine(trimmed);
+        if (parsed) items.push(parsed);
+        continue;
+      }
+
+      // Parse empty folder lines: "  [пусто]  PATH"
+      if (currentSection === 'empty') {
+        const emptyMatch = trimmed.match(/^\[пусто\]\s+(.+)$/);
+        if (emptyMatch) {
+          items.push(LeftoverItem.create(emptyMatch[1].trim(), 0, 0, 'Пустая папка', 'empty'));
+        }
+        continue;
+      }
+
+      // Parse registry lines: "  [реестр]  PATH"
+      if (currentSection === 'registry') {
+        const regMatch = trimmed.match(/^\[реестр\]\s+(.+)$/);
+        if (regMatch) {
+          items.push(LeftoverItem.create(regMatch[1].trim(), 0, 0, 'Ключ реестра без программы', 'registry'));
+        }
+        continue;
+      }
     }
     
     return items;
   }
 
-  private parseDataLine(line: string): LeftoverItem | null {
-    // Parse lines like: "46.31 GB       68396  C:\Users\...\AppData\Roaming\.minecraft"
-    const match = line.match(/([\d.]+\s*\w+)\s+(\d+)\s+(.+)$/);
+  private parseFolderLine(line: string): LeftoverItem | null {
+    // Parse lines like: "46.31 GB       68396  C:\Users\..."
+    // or: "~большой         0  C:\Users\..."
+    const match = line.match(/^([\d.]+\s*[KMGT]?B|~большой)\s+(\d+)\s+(.+)$/);
     if (!match) return null;
     
     const [, sizeStr, files, path] = match;
-    const sizeBytes = this.parseSize(sizeStr.trim());
+    let sizeBytes: number;
+    if (sizeStr.trim() === '~большой') {
+      sizeBytes = -1;
+    } else {
+      sizeBytes = this.parseSize(sizeStr.trim());
+    }
     
-    return LeftoverItem.create(path.trim(), sizeBytes, parseInt(files, 10));
+    return LeftoverItem.create(path.trim(), sizeBytes, parseInt(files, 10), 'Нет в списке установленных программ', 'folder');
   }
 
   private parseSize(sizeStr: string): number {

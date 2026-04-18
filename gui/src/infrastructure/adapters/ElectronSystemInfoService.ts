@@ -17,17 +17,27 @@ export class ElectronSystemInfoService implements ISystemInfoService {
     const lines = output.split('\n');
     const files: SystemFileInfo[] = [];
     
-    for (const line of lines) {
-      // Parse lines like: "hiberfil.sys              12.42 GB  C:\hiberfil.sys"
-      const match = line.match(/^(\S+)\s+([\d.]+\s*\w+)\s+(.+)$/);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Parse lines like: "  hiberfil.sys              12.42 GB  C:\hiberfil.sys"
+      // or: "  WinSxS                    ~большой  C:\Windows\WinSxS"
+      // or: "  swapfile.sys             не найден  C:\swapfile.sys"
+      // Format: 2 spaces + name(25 chars) + size(12 chars right-aligned) + 2 spaces + path
+      const match = line.match(/^\s{2}(\S.{0,24}?)\s+([\d.]+\s*[KMGT]?B|~большой|не найден|—)\s{2}(.+)$/);
       if (match) {
         const [, name, sizeStr, path] = match;
-        const sizeBytes = this.parseSize(sizeStr.trim());
+        let sizeBytes = 0;
+        if (sizeStr.trim() === '~большой') {
+          sizeBytes = -1; // marker for "too large to calculate"
+        } else if (sizeStr.trim() === 'не найден' || sizeStr.trim() === '—') {
+          sizeBytes = 0;
+        } else {
+          sizeBytes = this.parseSize(sizeStr.trim());
+        }
         
-        // Find the hint in following lines
-        const hint = this.findHint(lines, lines.indexOf(line));
+        const hint = this.findHint(lines, i);
         
-        files.push(SystemFileInfo.create(name, path.trim(), sizeBytes, hint));
+        files.push(SystemFileInfo.create(name.trim(), path.trim(), sizeBytes, hint));
       }
     }
     

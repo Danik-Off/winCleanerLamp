@@ -11,11 +11,16 @@ export class SystemFileInfo {
   ) {}
 
   get sizeFormatted(): string {
+    if (this.sizeBytes === -1) return '~большой';
     return formatBytes(this.sizeBytes);
   }
 
   get exists(): boolean {
-    return this.sizeBytes > 0;
+    return this.sizeBytes > 0 || this.sizeBytes === -1;
+  }
+
+  get sizeUnknown(): boolean {
+    return this.sizeBytes === -1;
   }
 
   static create(
@@ -37,7 +42,7 @@ export class SystemInfoSummary {
   ) {}
 
   get totalBytes(): number {
-    return this.files.reduce((sum, f) => sum + f.sizeBytes, 0);
+    return this.files.reduce((sum, f) => sum + Math.max(0, f.sizeBytes), 0);
   }
 
   get existingFiles(): SystemFileInfo[] {
