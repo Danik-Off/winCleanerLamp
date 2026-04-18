@@ -65,7 +65,9 @@ func Process(t Target, opts Options) Report {
 		info, err := os.Lstat(p)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				opts.log("  [skip] не существует: %s", p)
+				if opts.Verbose {
+					opts.log("  [skip] не существует: %s", p)
+				}
 				continue
 			}
 			r.Errors = append(r.Errors, fmt.Sprintf("stat %s: %v", p, err))
@@ -132,31 +134,61 @@ func processDir(root string, t Target, opts Options, r *Report) {
 		})
 		return
 	case "teams-new-cache":
-		// %LOCALAPPDATA%\Packages\MSTeams_*\LocalCache\Microsoft\MSTeams\{Cache,GPUCache,Code Cache}
-		entries, err := os.ReadDir(root)
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
-				r.Errors = append(r.Errors, err.Error())
-			}
-			return
-		}
-		for _, e := range entries {
-			name := e.Name()
-			if !e.IsDir() || !strings.HasPrefix(name, "MSTeams_") {
-				continue
-			}
-			base := filepath.Join(root, name, "LocalCache", "Microsoft", "MSTeams")
-			for _, sub := range []string{"Cache", "GPUCache", "Code Cache", "tmp"} {
-				p := filepath.Join(base, sub)
+		processUWPPackageCache(root, "MSTeams_",
+			[]string{`LocalCache\Microsoft\MSTeams\Cache`,
+				`LocalCache\Microsoft\MSTeams\GPUCache`,
+				`LocalCache\Microsoft\MSTeams\Code Cache`,
+				`LocalCache\Microsoft\MSTeams\tmp`},
+			t, opts, r)
+		return
+	case "store-cache":
+		processUWPPackageCache(root, "Microsoft.WindowsStore_",
+			[]string{`LocalCache`, `LocalState\Cache`, `AC\INetCache`},
+			t, opts, r)
+		return
+	case "skype-cache":
+		// %APPDATA%\Skype\<profile>\{media_messaging\media_cache_v3,skylib,cache}
+		forEachSubdir(root, r, func(profile string) {
+			for _, sub := range []string{
+				`media_messaging\media_cache_v3`,
+				`media_messaging\media_cache`,
+				`skylib`,
+				`cache`,
+			} {
+				p := filepath.Join(profile, sub)
 				if _, err := os.Stat(p); err == nil {
 					walkAndDelete(p, t, opts, r, true)
 				}
 			}
-		}
+		})
 		return
 	}
 
 	walkAndDelete(root, t, opts, r, t.KeepRoot)
+}
+
+// processUWPPackageCache обрабатывает папки %LOCALAPPDATA%\Packages\<prefix>*
+// и удаляет указанные относительные подпути внутри каждой найденной.
+func processUWPPackageCache(root, prefix string, relPaths []string, t Target, opts Options, r *Report) {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			r.Errors = append(r.Errors, err.Error())
+		}
+		return
+	}
+	for _, e := range entries {
+		if !e.IsDir() || !strings.HasPrefix(e.Name(), prefix) {
+			continue
+		}
+		base := filepath.Join(root, e.Name())
+		for _, rel := range relPaths {
+			p := filepath.Join(base, rel)
+			if _, err := os.Stat(p); err == nil {
+				walkAndDelete(p, t, opts, r, true)
+			}
+		}
+	}
 }
 
 // forEachSubdir вызывает fn для каждого поддиректория root.

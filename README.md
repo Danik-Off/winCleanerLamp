@@ -73,6 +73,14 @@ CLI-утилита на Go для очистки мусора в Windows. Без
 
 Плюс в кешах браузеров намеренно выбраны только `Cache/Code Cache/GPUCache` — пароли, cookies, история и закладки **не трогаются**.
 
+## Новое в этой версии
+
+- **+14 категорий** по справочнику: `readyboot`, `store-cache` (Microsoft Store), `epic-cache`, `battlenet-cache`, `steam-appcache` (appcache/depotcache/dumps), `origin-cache` (EA App), `java-cache`, `skype-cache`, плюс агрессивные `vs-packages` (VisualStudio\\Packages), `zoom-recordings`, `config-msi`, `getcurrent-sysreset`.
+- **Параллельное сканирование** (`--parallel N`, по умолчанию 8 воркеров) + живой прогресс-бар `[N/M]`.
+- **Скрытие пустых категорий** в таблице сканирования (включить обратно — `--show-empty`).
+- **`--sysinfo`** — размеры `hiberfil.sys`, `pagefile.sys`, `swapfile.sys`, `MEMORY.DMP`, `WinSxS`, `System Volume Information`, `C:\Windows\Installer` с подсказками как ими управлять (`powercfg /h off`, `dism /Online /Cleanup-Image /StartComponentCleanup /ResetBase` и т.п.).
+- На этапе очистки пропускаются категории, которые при скане показали 0 байт — экономия времени.
+
 ## Сборка и запуск
 
 ```powershell

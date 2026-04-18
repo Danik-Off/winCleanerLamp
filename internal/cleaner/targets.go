@@ -454,6 +454,115 @@ func AllTargets() []Target {
 			Paths:       []string{`%LOCALAPPDATA%\D3DSCache`},
 			KeepRoot:    true,
 		},
+		{
+			ID:          "readyboot",
+			Name:        "ReadyBoot трассировка загрузки",
+			Description: "C:\\Windows\\Prefetch\\ReadyBoot\\*.etl — трассировки, пересоздаются.",
+			Paths:       []string{`C:\Windows\Prefetch\ReadyBoot`},
+			KeepRoot:    true,
+		},
+		{
+			ID:          "store-cache",
+			Name:        "Кеш Microsoft Store",
+			Description: "%LOCALAPPDATA%\\Packages\\Microsoft.WindowsStore_*\\LocalCache.",
+			Paths:       []string{`%LOCALAPPDATA%\Packages`},
+			// спец-обработка ниже: фильтр по префиксу Microsoft.WindowsStore_
+		},
+		{
+			ID:          "epic-cache",
+			Name:        "Кеш Epic Games Launcher",
+			Description: "%LOCALAPPDATA%\\EpicGamesLauncher\\Saved\\{webcache*,Logs}.",
+			Paths: []string{
+				`%LOCALAPPDATA%\EpicGamesLauncher\Saved\webcache`,
+				`%LOCALAPPDATA%\EpicGamesLauncher\Saved\webcache_4147`,
+				`%LOCALAPPDATA%\EpicGamesLauncher\Saved\webcache_4430`,
+				`%LOCALAPPDATA%\EpicGamesLauncher\Saved\Logs`,
+				`%LOCALAPPDATA%\Epic Games Launcher\Saved\webcache`,
+				`%LOCALAPPDATA%\Epic Games Launcher\Saved\Logs`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "battlenet-cache",
+			Name:        "Кеш Battle.net",
+			Description: "C:\\ProgramData\\Battle.net\\Cache и %LOCALAPPDATA%\\Battle.net\\Cache.",
+			Paths: []string{
+				`C:\ProgramData\Battle.net\Cache`,
+				`%LOCALAPPDATA%\Battle.net\Cache`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "steam-appcache",
+			Name:        "Steam appcache / depotcache / dumps",
+			Description: "Дополнительные кеши Steam: appcache, depotcache, dumps.",
+			Paths: []string{
+				`C:\Program Files (x86)\Steam\appcache\httpcache`,
+				`C:\Program Files (x86)\Steam\depotcache`,
+				`C:\Program Files (x86)\Steam\dumps`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "origin-cache",
+			Name:        "Кеш EA App / Origin",
+			Description: "%LOCALAPPDATA%\\Electronic Arts\\EA Desktop\\CEF и Origin\\CEF.",
+			Paths: []string{
+				`%LOCALAPPDATA%\Electronic Arts\EA Desktop\CEF`,
+				`%LOCALAPPDATA%\Origin\CEF`,
+				`%APPDATA%\Origin\Logs`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "java-cache",
+			Name:        "Кеш Java (Deployment)",
+			Description: "%LOCALAPPDATA%\\Sun\\Java\\Deployment\\cache.",
+			Paths:       []string{`%LOCALAPPDATA%\Sun\Java\Deployment\cache`},
+			KeepRoot:    true,
+		},
+		{
+			ID:          "skype-cache",
+			Name:        "Кеш Skype (только media_messaging/skylib)",
+			Description: "Вложенные кеш-директории в %APPDATA%\\Skype (истории не трогают).",
+			Paths:       []string{`%APPDATA%\Skype`},
+			// спец-обработка: чистим только известные cache-подпапки
+		},
+
+		// ---- Агрессивные ----
+		{
+			ID:          "vs-packages",
+			Name:        "Кеш установщика Visual Studio",
+			Description: "%LOCALAPPDATA%\\Microsoft\\VisualStudio\\Packages — десятки ГБ, скачается заново при установке/обновлении VS.",
+			Paths:       []string{`%LOCALAPPDATA%\Microsoft\VisualStudio\Packages`},
+			KeepRoot:    true,
+			Aggressive:  true,
+		},
+		{
+			ID:          "zoom-recordings",
+			Name:        "Локальные записи Zoom",
+			Description: "%USERPROFILE%\\Documents\\Zoom — ПОЛЬЗОВАТЕЛЬСКИЕ файлы! Убедитесь, что не нужны.",
+			Paths:       []string{`%USERPROFILE%\Documents\Zoom`},
+			KeepRoot:    true,
+			Aggressive:  true,
+		},
+		{
+			ID:          "config-msi",
+			Name:        "C:\\Config.Msi (остатки установщика)",
+			Description: "Временные файлы Windows Installer, в норме удаляются сами.",
+			Paths:       []string{`C:\Config.Msi`},
+			Aggressive:  true,
+		},
+		{
+			ID:          "getcurrent-sysreset",
+			Name:        "$GetCurrent / $SysReset (артефакты обновления/сброса)",
+			Description: "C:\\$GetCurrent и C:\\$SysReset — логи/кеш после крупных обновлений или сбросов.",
+			Paths: []string{
+				`C:\$GetCurrent`,
+				`C:\$SysReset`,
+			},
+			Aggressive: true,
+		},
 
 		// ---- Агрессивные (только с --aggressive) ----
 		{

@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/suzen/wincleanerlamp/internal/cleaner"
@@ -27,6 +28,9 @@ func main() {
 		minAgeHours = flag.Int("min-age-hours", 0, "удалять файлы старше N часов (применяется ко всем категориям)")
 		aggressive  = flag.Bool("aggressive", false, "включить агрессивные категории (Windows.old, $WINDOWS.~BT, event-logs, старые Downloads и т.п.)")
 		leftovers   = flag.Bool("leftovers", false, "найти возможные остатки удалённых программ в AppData/ProgramData (только отчёт)")
+		sysinfo     = flag.Bool("sysinfo", false, "показать размеры системных файлов (hiberfil.sys, pagefile.sys, swapfile.sys, WinSxS) и советы")
+		showEmpty   = flag.Bool("show-empty", false, "показывать в таблице категории с нулевым размером")
+		parallelN   = flag.Int("parallel", 8, "число параллельных сканеров (1 = последовательно)")
 		showVer     = flag.Bool("version", false, "показать версию")
 	)
 	flag.Usage = usage
@@ -46,6 +50,13 @@ func main() {
 	if *listFlag {
 		printList(all)
 		return
+	}
+
+	if *sysinfo {
+		runSysInfo()
+		if !*scanFlag && !*cleanFlag && !*leftovers {
+			return
+		}
 	}
 
 	if *leftovers {
@@ -74,21 +85,21 @@ func main() {
 	}
 
 	// Сначала всегда делаем сканирование, чтобы показать сводку.
-	fmt.Printf("Сканирую %d категори%s...\n\n", len(selected), pluralRu(len(selected)))
+	fmt.Printf("Сканирую %d категори%s...\n", len(selected), pluralRu(len(selected)))
 	scanOpts := opts
 	scanOpts.DryRun = true
 	scanOpts.Verbose = false
 
-	rows := make([]cleaner.Report, 0, len(selected))
+	start := time.Now()
+	rows := parallelScan(selected, scanOpts, *parallelN)
 	var totalBytes int64
 	var totalFiles int
-	for _, t := range selected {
-		r := cleaner.Process(t, scanOpts)
-		rows = append(rows, r)
+	for _, r := range rows {
 		totalBytes += r.Bytes
 		totalFiles += r.Files
 	}
-	printTable(rows, totalBytes, totalFiles)
+	fmt.Printf("Сканирование заняло %.1f сек.\n\n", time.Since(start).Seconds())
+	printTable(rows, totalBytes, totalFiles, *showEmpty)
 
 	if opts.DryRun {
 		return
@@ -110,8 +121,18 @@ func main() {
 	var cleanedBytes int64
 	var cleanedFiles int
 	var allErrors []string
-	for _, t := range selected {
-		fmt.Printf("→ %s\n", t.Name)
+	// Очищаем только непустые (те что нашли мусор при скане) — экономия времени.
+	nonEmpty := make(map[string]bool, len(rows))
+	for _, r := range rows {
+		if r.Bytes > 0 || r.Files > 0 || r.Target.Special != "" {
+			nonEmpty[r.Target.ID] = true
+		}
+	}
+	for i, t := range selected {
+		if !nonEmpty[t.ID] {
+			continue
+		}
+		fmt.Printf("[%d/%d] → %s\n", i+1, len(selected), t.Name)
 		r := cleaner.Process(t, opts)
 		cleanedBytes += r.Bytes
 		cleanedFiles += r.Files
@@ -253,12 +274,30 @@ func splitCSV(s string) []string {
 	return out
 }
 
-func printTable(rows []cleaner.Report, totalBytes int64, totalFiles int) {
+func printTable(rows []cleaner.Report, totalBytes int64, totalFiles int, showEmpty bool) {
 	sort.SliceStable(rows, func(i, j int) bool { return rows[i].Bytes > rows[j].Bytes })
+
+	visible := rows
+	hidden := 0
+	if !showEmpty {
+		visible = visible[:0]
+		for _, r := range rows {
+			if r.Bytes == 0 && r.Files == 0 && !r.Skipped {
+				hidden++
+				continue
+			}
+			visible = append(visible, r)
+		}
+	}
+
+	if len(visible) == 0 {
+		fmt.Println("  Мусора не найдено.")
+		return
+	}
 
 	idW := len("КАТЕГОРИЯ")
 	nameW := len("НАЗВАНИЕ")
-	for _, r := range rows {
+	for _, r := range visible {
 		if len(r.Target.ID) > idW {
 			idW = len(r.Target.ID)
 		}
@@ -276,7 +315,7 @@ func printTable(rows []cleaner.Report, totalBytes int64, totalFiles int) {
 		strings.Repeat("-", 12),
 		strings.Repeat("-", 8),
 	)
-	for _, r := range rows {
+	for _, r := range visible {
 		name := truncateRunes(r.Target.Name, nameW)
 		size := cleaner.Human(r.Bytes)
 		if r.Skipped {
@@ -284,7 +323,79 @@ func printTable(rows []cleaner.Report, totalBytes int64, totalFiles int) {
 		}
 		fmt.Printf("  %-*s  %-*s  %12s  %8d\n", idW, r.Target.ID, nameW, padRunes(name, nameW), size, r.Files)
 	}
-	fmt.Printf("\n  ИТОГО: %s в %d файлах\n", cleaner.Human(totalBytes), totalFiles)
+	fmt.Printf("\n  ИТОГО: %s в %d файлах", cleaner.Human(totalBytes), totalFiles)
+	if hidden > 0 {
+		fmt.Printf("  (скрыто пустых категорий: %d — используйте --show-empty)", hidden)
+	}
+	fmt.Println()
+}
+
+// parallelScan прогоняет сканирование целей параллельно с прогресс-баром.
+func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int) []cleaner.Report {
+	if workers < 1 {
+		workers = 1
+	}
+	if workers > len(targets) {
+		workers = len(targets)
+	}
+
+	results := make([]cleaner.Report, len(targets))
+	type job struct{ idx int }
+	jobs := make(chan job, len(targets))
+	for i := range targets {
+		jobs <- job{i}
+	}
+	close(jobs)
+
+	var done int64
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	total := len(targets)
+	progress := func(name string) {
+		mu.Lock()
+		done++
+		fmt.Printf("\r  [%d/%d] %-60s", done, total, truncateRunes(name, 58))
+		mu.Unlock()
+	}
+
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range jobs {
+				t := targets[j.idx]
+				results[j.idx] = cleaner.Process(t, opts)
+				progress(t.Name)
+			}
+		}()
+	}
+	wg.Wait()
+	fmt.Printf("\r%s\r", strings.Repeat(" ", 80))
+	return results
+}
+
+func runSysInfo() {
+	info := cleaner.GatherSysInfo()
+	fmt.Println("Системные файлы и большие каталоги:")
+	fmt.Println()
+	for _, e := range info {
+		size := "—"
+		if e.Size > 0 {
+			size = cleaner.Human(e.Size)
+		}
+		fmt.Printf("  %-25s %12s  %s\n", e.Name, size, e.Path)
+		if e.Hint != "" {
+			fmt.Printf("  %s\n", e.Hint)
+		}
+		fmt.Println()
+	}
+	fmt.Println("  Эти файлы НЕ удаляются этой утилитой — только информативно.")
+	fmt.Println("  Управление:")
+	fmt.Println("    • hiberfil.sys  — отключить:  powercfg /h off")
+	fmt.Println("    • pagefile.sys  — размер:    Система → Дополнительные → Быстродействие → Виртуальная память")
+	fmt.Println("    • WinSxS        — анализ:    dism /Online /Cleanup-Image /AnalyzeComponentStore")
+	fmt.Println("                      очистка:   dism /Online /Cleanup-Image /StartComponentCleanup /ResetBase")
+	fmt.Println()
 }
 
 func truncateRunes(s string, n int) string {
