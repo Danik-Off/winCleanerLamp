@@ -1,6 +1,6 @@
 {
   "name": "wincleanerlamp-gui",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "GUI для winCleanerLamp на Electron + React + MUI + TypeScript с Onion Architecture",
   "license": "MIT",
   "author": "Danik Off",
@@ -70,11 +70,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": null
