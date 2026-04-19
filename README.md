@@ -44,7 +44,7 @@ npm run release:push
 
 Рабочая копия должна быть **без незакоммиченных изменений**, иначе `npm version` завершится с ошибкой.
 
-Workflow GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) публикует артефакты при push тегов `v*`.
+Workflow GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)): один job **Windows** (Go один раз → GUI → артефакты), затем job **GitHub Release** — публикация при push тегов `v*`.
 
 ## Быстрый старт
 

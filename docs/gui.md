@@ -123,6 +123,8 @@ npm run dist
 
 `pack` и `dist` сначала выполняют **`build:cli`** (`go build` в `../wincleanerlamp.exe`), затем `build`, затем **electron-builder**.
 
+Если CLI уже собран в корне репозитория, достаточно **`npm run dist:electron`** (`build` + `electron-builder` без повторного Go). Такой шаг используется в GitHub Actions, чтобы не собирать бинарник дважды.
+
 ---
 
 ## Версия приложения

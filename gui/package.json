@@ -4,6 +4,10 @@
   "description": "GUI для winCleanerLamp на Electron + React + MUI + TypeScript с Onion Architecture",
   "license": "MIT",
   "author": "Danik Off",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Danik-Off/winCleanerLamp.git"
+  },
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
@@ -17,7 +21,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "pack": "npm run build:cli && npm run build && electron-builder --dir",
-    "dist": "npm run build:cli && npm run build && electron-builder --win --x64"
+    "dist": "npm run build:cli && npm run build && electron-builder --win --x64",
+    "dist:electron": "npm run build && electron-builder --win --x64"
   },
   "dependencies": {
     "react": "^18.2.0",

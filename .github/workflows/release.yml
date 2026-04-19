@@ -5,91 +5,120 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
 jobs:
-  # ─── Job 1: Build CLI (Go binary) ───
-  build-cli:
-    name: Build CLI
+  # Один Windows-runner: раньше CLI и GUI собирались отдельно и Go билдился дважды.
+  build:
+    name: 'Windows: CLI + GUI'
     runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Go
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Go — установка
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
-      - name: Build CLI
-        run: |
-          go build -ldflags "-s -w" -o wincleanerlamp.exe .
+      - name: Node.js — установка
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
 
-      - name: Upload CLI artifact
+      # LOCALAPPDATA не в github `env` по умолчанию — берём из PowerShell
+      - name: Кэш Electron — пути
+        id: electron_cache_paths
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "electron=$($env:LOCALAPPDATA)\electron\Cache"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "electron_builder=$($env:LOCALAPPDATA)\electron-builder\Cache"
+
+      - name: Кэш бинарников Electron
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.electron_cache_paths.outputs.electron }}
+            ${{ steps.electron_cache_paths.outputs.electron_builder }}
+          key: ${{ runner.os }}-electron-${{ hashFiles('gui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - name: GUI — npm ci
+        working-directory: gui
+        run: npm ci
+
+      - name: CLI — сборка Go
+        run: go build -ldflags "-s -w" -o wincleanerlamp.exe .
+
+      - name: GUI — сборка (tsc + Vite + Electron main)
+        working-directory: gui
+        run: npm run build
+
+      - name: GUI — упаковка (electron-builder)
+        working-directory: gui
+        run: npm run dist:electron
+
+      - name: Артефакт — CLI
         uses: actions/upload-artifact@v4
         with:
           name: cli-windows-amd64
           path: wincleanerlamp.exe
+          if-no-files-found: error
 
-  # ─── Job 2: Build GUI + CLI (Electron app) ───
-  build-gui:
-    name: Build GUI + CLI
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install GUI dependencies
-        working-directory: gui
-        run: npm ci
-
-      - name: Build CLI + GUI and package Electron app
-        working-directory: gui
-        run: npm run dist
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload GUI artifact
+      - name: Артефакт — установщики GUI
         uses: actions/upload-artifact@v4
         with:
           name: gui-windows-amd64
           path: gui/dist-release/*.exe
+          if-no-files-found: error
 
-  # ─── Job 3: Create GitHub Release ───
-  release:
-    name: Publish Release
-    needs: [build-cli, build-gui]
+      - name: Сводка сборки
+        if: success()
+        shell: pwsh
+        run: |
+          @"
+          ## Сборка ${{ github.ref_name }}
+          - **CLI:** `wincleanerlamp.exe` в корне репозитория
+          - **GUI:** установщики в `gui/dist-release/`
+          "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
+
+  publish:
+    name: 'GitHub Release'
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download CLI artifact
+      - name: Скачать артефакт CLI
         uses: actions/download-artifact@v4
         with:
           name: cli-windows-amd64
           path: artifacts/cli
 
-      - name: Download GUI artifact
+      - name: Скачать артефакт GUI
         uses: actions/download-artifact@v4
         with:
           name: gui-windows-amd64
           path: artifacts/gui
 
-      - name: Rename CLI
+      - name: Подготовить имена файлов (CLI)
         run: |
           TAG="${GITHUB_REF_NAME}"
-          mv artifacts/cli/wincleanerlamp.exe "artifacts/wincleanerlamp-cli-${TAG}-windows-amd64.exe"
+          mv "artifacts/cli/wincleanerlamp.exe" "artifacts/wincleanerlamp-cli-${TAG}-windows-amd64.exe"
 
-      - name: Create Release
+      - name: Опубликовать релиз
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
@@ -98,3 +127,11 @@ jobs:
             artifacts/gui/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Сводка релиза
+        if: success()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
+          ## Публикация
+          - Загружены CLI и GUI артефакты в GitHub Release.
+          EOF
