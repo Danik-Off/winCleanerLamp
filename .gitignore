@@ -7,7 +7,7 @@
 
 # Игнорируем конкретный ваш файл (на всякий случай)
 ./wincleanerlamp.exe
-gui/node_modules/package-lock.json
+gui/package-lock.json
 
 # Папки сборки (если вы компилируете из C/C++, Go, C# и т.п.)
 Debug/
@@ -36,14 +36,3 @@ gui/dist-electron
 *.suo
 *.user
 *.sln.docstates
-
-# Если gui — это папка с исходниками, НЕ игнорируйте её целиком.
-# Но если внутри gui есть сгенерированные файлы, добавьте их:
-gui/__pycache__/
-gui/*.pyc
-gui/build/
-gui/dist/
-gui/*.egg-info/
-
-# Если gui — это результат компиляции (например, Qt Designer), то игнорируйте всю папку:
-# /gui/
