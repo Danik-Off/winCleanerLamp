@@ -12,12 +12,18 @@ const EXE_NAME = 'wincleanerlamp.exe';
 const DEV_PORT = 3000;
 
 /**
- * Get path to wincleanerlamp.exe
+ * Get path to wincleanerlamp.exe (repo root in dev; next to app exe when packaged — electron-builder extraFiles)
  */
 function getExePath(): string {
   const devPath = path.join(__dirname, '..', '..', EXE_NAME);
-  const prodPath = path.join(process.resourcesPath, EXE_NAME);
-  return fs.existsSync(devPath) ? devPath : prodPath;
+  if (!app.isPackaged) {
+    return devPath;
+  }
+  const besideApp = path.join(path.dirname(process.execPath), EXE_NAME);
+  if (fs.existsSync(besideApp)) {
+    return besideApp;
+  }
+  return path.join(process.resourcesPath, EXE_NAME);
 }
 
 /**

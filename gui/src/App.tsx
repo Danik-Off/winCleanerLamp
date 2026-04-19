@@ -92,7 +92,7 @@ function App(): JSX.Element {
           variant="caption"
           sx={{ opacity: 0.4, mr: 1 }}
         >
-          v2.0.0
+          v1.0.0
         </Typography>
         <Box sx={{ WebkitAppRegion: 'no-drag', display: 'flex' }}>
           <IconButton

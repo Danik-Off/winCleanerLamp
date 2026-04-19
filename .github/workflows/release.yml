@@ -48,21 +48,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Build CLI binary
-        run: |
-          go build -ldflags "-s -w" -o gui/wincleanerlamp.exe .
-
       - name: Install GUI dependencies
         working-directory: gui
         run: npm ci
 
-      - name: Build GUI (Vite + Electron TS)
+      - name: Build CLI + GUI and package Electron app
         working-directory: gui
-        run: npm run build
-
-      - name: Package Electron app
-        working-directory: gui
-        run: npx electron-builder --win --x64 -c.extraFiles[0].from=wincleanerlamp.exe -c.extraFiles[0].to=wincleanerlamp.exe
+        run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
