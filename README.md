@@ -22,20 +22,27 @@
 
 ## Версия и релизы в Git
 
-**Единый номер версии** для проекта задаётся в корневом [`package.json`](package.json) в поле `version`. Перед релизом имеет смысл выставить ту же версию в [`gui/package.json`](gui/package.json), чтобы номер в установщике Electron совпадал с тегом.
+**Единый номер версии** задаётся в корневом [`package.json`](package.json). Версия в [`gui/package.json`](gui/package.json) при релизе **подставляется автоматически** (скрипт [`scripts/sync-gui-version.js`](scripts/sync-gui-version.js) в npm lifecycle `version`).
 
-**Вариант 1 — стандартный npm (создаёт коммит и тег `v…`):**
+В корне включён [`.npmrc`](.npmrc) с `git-tag-version=true`: при поднятии версии через npm создаётся **git-коммит** и **аннотированный тег** вида `v1.2.3`.
+
+**Релиз (рекомендуется):** из корня репозитория, с чистым `git status`:
 
 ```powershell
-cd <корень репозитория>
-npm version patch
-git push
-git push --tags
+npm run release:patch
 ```
 
-(Вместо `patch` можно `minor` или `major`.)
+(или `release:minor` / `release:major` — то же самое, что `npm version patch|minor|major` с сообщением коммита `chore(release): …`.)
 
-**Вариант 2 — только тег по текущей версии в `package.json`:** `npm run git:tag`, затем `npm run git:tag:push`.
+Дальше отправить коммит и тег на удалённый репозиторий:
+
+```powershell
+npm run release:push
+```
+
+Вручную то же самое: `npm version patch`, затем `git push --follow-tags`.
+
+Рабочая копия должна быть **без незакоммиченных изменений**, иначе `npm version` завершится с ошибкой.
 
 Workflow GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) публикует артефакты при push тегов `v*`.
 

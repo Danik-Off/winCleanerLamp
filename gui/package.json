@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "GUI для winCleanerLamp на Electron + React + MUI + TypeScript с Onion Architecture",
   "license": "MIT",
-  "author": "suzen",
+  "author": "Danik Off",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
