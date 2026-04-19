@@ -121,9 +121,11 @@ npm run pack
 npm run dist
 ```
 
-`pack` и `dist` сначала выполняют **`build:cli`** (`go build` в `../wincleanerlamp.exe`), затем `build`, затем **electron-builder**.
+`pack` и `dist` сначала выполняют **`build:cli`** (`go build` в `../wincleanerlamp.exe`), затем **`verify:cli`** (проверка, что файл есть — иначе сборка падает с понятной ошибкой), затем `build`, затем **electron-builder**.
 
-Если CLI уже собран в корне репозитория, достаточно **`npm run dist:electron`** (`build` + `electron-builder` без повторного Go). Такой шаг используется в GitHub Actions, чтобы не собирать бинарник дважды.
+Бинарник CLI попадает в **`resources/wincleanerlamp.exe`** рядом с `app.asar` (**`extraResources`** в `package.json`), а не рядом с `WinCleanerLamp.exe`. Главный процесс ищет его в `process.resourcesPath`.
+
+Если CLI уже собран в корне репозитория, достаточно **`npm run dist:electron`** (`verify:cli` + `build` + `electron-builder` без Go). Такой шаг используется в GitHub Actions после отдельного шага `go build`.
 
 ---
 

@@ -12,18 +12,33 @@ const EXE_NAME = 'wincleanerlamp.exe';
 const DEV_PORT = 3000;
 
 /**
- * Get path to wincleanerlamp.exe (repo root in dev; next to app exe when packaged — electron-builder extraFiles)
+ * Путь к wincleanerlamp.exe:
+ * - dev: корень репозитория (на уровень выше gui/)
+ * - production: electron-builder кладёт бинарник в extraResources → каталог process.resourcesPath
  */
 function getExePath(): string {
   const devPath = path.join(__dirname, '..', '..', EXE_NAME);
   if (!app.isPackaged) {
     return devPath;
   }
+  const inResources = path.join(process.resourcesPath, EXE_NAME);
+  if (fs.existsSync(inResources)) {
+    return inResources;
+  }
   const besideApp = path.join(path.dirname(process.execPath), EXE_NAME);
   if (fs.existsSync(besideApp)) {
     return besideApp;
   }
-  return path.join(process.resourcesPath, EXE_NAME);
+  return inResources;
+}
+
+/** Рендерер: только в упакованном приложении грузим dist; иначе легко словить localhost при NODE_ENV=development в системе */
+function getIndexHtmlPath(): string {
+  return path.join(app.getAppPath(), 'dist', 'index.html');
+}
+
+function shouldLoadDevServer(): boolean {
+  return !app.isPackaged && process.env.NODE_ENV === 'development';
 }
 
 /**
@@ -51,12 +66,13 @@ function createWindow(): void {
     show: false, // Show when ready
   });
 
-  // Load the appropriate URL
-  if (process.env.NODE_ENV === 'development') {
+  // Упакованное приложение всегда с file:// из dist (не доверяем NODE_ENV — иначе пустое окно при dev в PATH)
+  if (shouldLoadDevServer()) {
     mainWindow.loadURL(`http://localhost:${DEV_PORT}`);
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = getIndexHtmlPath();
+    mainWindow.loadFile(indexPath);
   }
 
   // Show when ready to prevent visual flash
