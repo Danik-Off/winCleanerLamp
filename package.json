@@ -1,0 +1,16 @@
+{
+  "name": "wincleanerlamp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Очистка временных файлов и кешей Windows: CLI на Go и GUI на Electron.",
+  "license": "MIT",
+  "author": "suzen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suzen/wincleanerlamp.git"
+  },
+  "scripts": {
+    "git:tag": "node -e \"const {execSync}=require('child_process');const v=require('./package.json').version;execSync('git tag v'+v,{stdio:'inherit'});console.log('Создан тег v'+v+'. Для отправки: npm run git:tag:push')\"",
+    "git:tag:push": "node -e \"const {execSync}=require('child_process');const v=require('./package.json').version;execSync('git push origin v'+v,{stdio:'inherit'})\""
+  }
+}
