@@ -27,6 +27,7 @@ import {
   Card,
   CardContent,
   Grid,
+  ListItemIcon,
 } from '@mui/material';
 import {
   FolderOff as EmptyFolderIcon,
@@ -35,6 +36,8 @@ import {
   Search as SearchIcon,
   Delete as DeleteIcon,
   Clear as ClearIcon,
+  FolderOpen as FolderOpenIcon,
+  RestoreFromTrash as RestoreIcon,
 } from '@mui/icons-material';
 
 interface EmptyFoldersPanelProps {
@@ -52,6 +55,13 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
   const [deleting, setDeleting] = useState(false);
   const [deletedPaths, setDeletedPaths] = useState<Set<string>>(new Set());
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteResults, setDeleteResults] = useState<Array<{path: string; success: boolean; movedToRecycleBin: boolean}>>([]);
+  const [showReport, setShowReport] = useState(false);
+
+  const handleOpenInExplorer = useCallback((dirPath: string) => {
+    // Открыть папку в Проводнике
+    window.electronAPI.openExternal(dirPath);
+  }, []);
 
   const handleScan = useCallback(async () => {
     const paths = rootPath.trim();
@@ -83,6 +93,11 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
       const res = await window.electronAPI.deleteEmptyDir(deleteTarget);
       if (res.success) {
         setDeletedPaths(prev => new Set(prev).add(deleteTarget));
+        setDeleteResults(prev => [...prev, {
+          path: deleteTarget,
+          success: true,
+          movedToRecycleBin: res.movedToRecycleBin || false,
+        }]);
         setDeleteTarget(null);
       } else {
         setDeleteError(res.error || 'Ошибка удаления');
@@ -98,14 +113,30 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
     const alive = dirs.filter(d => !deletedPaths.has(d));
     const lf = filter.toLowerCase().trim();
     const toDelete = lf ? alive.filter(d => d.toLowerCase().includes(lf)) : alive;
+    
+    let successCount = 0;
+    let errorCount = 0;
+    const results: Array<{path: string; success: boolean; movedToRecycleBin: boolean}> = [];
+
     for (const d of toDelete) {
       try {
         const res = await window.electronAPI.deleteEmptyDir(d);
         if (res.success) {
           setDeletedPaths(prev => new Set(prev).add(d));
+          successCount++;
+          results.push({ path: d, success: true, movedToRecycleBin: res.movedToRecycleBin || false });
+        } else {
+          errorCount++;
+          results.push({ path: d, success: false, movedToRecycleBin: false });
         }
-      } catch { /* continue */ }
+      } catch {
+        errorCount++;
+        results.push({ path: d, success: false, movedToRecycleBin: false });
+      }
     }
+
+    setDeleteResults(results);
+    setShowReport(true);
   }, [dirs, filter, deletedPaths]);
 
   const filteredDirs = useMemo(() => {
@@ -119,9 +150,9 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
     <Box>
       {/* Header */}
       <Paper
-        elevation={3}
+        elevation={2}
         sx={{
-          p: 3, mb: 2, borderRadius: 2,
+          p: 3, mb: 2, borderRadius: 3,
           background: (t) => t.palette.mode === 'dark'
             ? 'linear-gradient(135deg, #bf360c 0%, #e64a19 100%)'
             : 'linear-gradient(135deg, #fbe9e7 0%, #ffccbc 100%)',
@@ -132,7 +163,10 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Поиск пустых папок</Typography>
         </Box>
         <Alert severity="info" sx={{ mb: 2, borderRadius: 1.5 }}>
-          Находит пустые папки (включая содержащие только Thumbs.db, desktop.ini). Системные папки пропускаются.
+          Находит пустые папки (включая содержащие только Thumbs.db, desktop.ini). 
+          <Box component="span" sx={{ display: 'block', mt: 0.5, fontSize: '0.85em' }}>
+            ✅ Удаление в Корзину • ⚠️ Системные папки защищены
+          </Box>
         </Alert>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
           <TextField
@@ -155,13 +189,13 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
         </Box>
       </Paper>
 
-      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 2, height: 6 }} />}
 
       {/* Stats */}
       {hasScanResult && (
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={6}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#bf360c,#e64a19)' : 'linear-gradient(135deg,#fbe9e7,#ffccbc)' }}>
+          <Grid item xs={12} sm={6}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#bf360c,#e64a19)' : 'linear-gradient(135deg,#fbe9e7,#ffccbc)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <EmptyFolderIcon sx={{ fontSize: 28, opacity: 0.8 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{filteredDirs.length}</Typography>
@@ -169,8 +203,8 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={6}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#1b5e20,#2e7d32)' : 'linear-gradient(135deg,#e8f5e9,#c8e6c9)' }}>
+          <Grid item xs={12} sm={6}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#1b5e20,#2e7d32)' : 'linear-gradient(135deg,#e8f5e9,#c8e6c9)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <DeleteIcon sx={{ fontSize: 28, opacity: 0.8 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{deletedPaths.size}</Typography>
@@ -214,7 +248,7 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
 
       {/* List */}
       {filteredDirs.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 2 }}>
+        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {filteredDirs.map((dir, idx) => {
               const name = dir.split('\\').pop() || dir;
@@ -223,23 +257,34 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
                   <ListItem
                     sx={{ py: 1, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
                     secondaryAction={
-                      <Tooltip title="Удалить пустую папку">
-                        <IconButton edge="end" color="error" size="small"
-                          onClick={() => { setDeleteError(null); setDeleteTarget(dir); }}
-                          sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="Открыть в Проводнике">
+                          <IconButton edge="end" size="small"
+                            onClick={() => handleOpenInExplorer(dir)}
+                            sx={{ color: 'primary.main' }}>
+                            <FolderOpenIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Удалить пустую папку">
+                          <IconButton edge="end" color="error" size="small"
+                            onClick={() => { setDeleteError(null); setDeleteTarget(dir); }}
+                            sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     }
                   >
-                    <EmptyFolderIcon sx={{ mr: 1.5, fontSize: 20, opacity: 0.5 }} />
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <EmptyFolderIcon sx={{ fontSize: 20, opacity: 0.5 }} />
+                    </ListItemIcon>
                     <ListItemText
                       primary={name}
                       secondary={dir}
                       primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                       secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
                     />
-                    <Chip label="пусто" size="small" variant="outlined" sx={{ ml: 1, mr: 4 }} />
+                    <Chip label="пусто" size="small" variant="outlined" sx={{ ml: 1 }} />
                   </ListItem>
                   {idx < filteredDirs.length - 1 && <Divider />}
                 </React.Fragment>
@@ -259,16 +304,23 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon color="error" />
+          <WarningIcon color="warning" />
           Удалить пустую папку
         </DialogTitle>
         <DialogContent>
           {deleteTarget && (
             <Box>
+              <Typography variant="body2" sx={{ mb: 1 }}>Вы собираетесь переместить в Корзину:</Typography>
               <Paper variant="outlined" sx={{ p: 1.5, mb: 2, bgcolor: 'action.hover', borderRadius: 1.5 }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-all' }}>{deleteTarget}</Typography>
               </Paper>
-              <Alert severity="warning" sx={{ borderRadius: 1.5 }}>Папка будет удалена безвозвратно.</Alert>
+              <Alert severity="success" sx={{ borderRadius: 1.5, mb: 1 }}>
+                <RestoreIcon sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                Папка будет перемещена в Корзину (можно восстановить)
+              </Alert>
+              <Alert severity="info" sx={{ borderRadius: 1.5, mt: 1 }}>
+                Системные папки (Windows, Program Files) защищены и не могут быть удалены.
+              </Alert>
               {deleteError && <Alert severity="error" sx={{ mt: 1, borderRadius: 1.5 }}>{deleteError}</Alert>}
             </Box>
           )}
@@ -276,9 +328,78 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ borderRadius: 1.5 }}>Отмена</Button>
-          <Button onClick={handleDelete} variant="contained" color="error" disabled={deleting}
-            startIcon={deleting ? <CircularProgress size={16} /> : <DeleteIcon />} sx={{ borderRadius: 1.5 }}>
-            {deleting ? 'Удаление...' : 'Удалить'}
+          <Button onClick={handleDelete} variant="contained" color="warning" disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : <RestoreIcon />} sx={{ borderRadius: 1.5 }}>
+            {deleting ? 'Перемещение...' : 'Переместить в Корзину'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Report Dialog */}
+      <Dialog open={showReport} onClose={() => setShowReport(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <RestoreIcon sx={{ color: 'success.main' }} />
+          Отчет об удалении
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+              Результат массового удаления:
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'success.light' }}>
+                  <Typography variant="h4" color="success.main">
+                    {deleteResults.filter(r => r.success).length}
+                  </Typography>
+                  <Typography variant="caption">Успешно перемещено</Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={6}>
+                <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'error.light' }}>
+                  <Typography variant="h4" color="error.main">
+                    {deleteResults.filter(r => !r.success).length}
+                  </Typography>
+                  <Typography variant="caption">Ошибок</Typography>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+          
+          {deleteResults.some(r => !r.success) && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Некоторые папки не удалось удалить. Проверьте права доступа и закройте программы, использующие эти папки.
+            </Alert>
+          )}
+          
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Детали:</Typography>
+          <Paper variant="outlined" sx={{ maxHeight: 200, overflow: 'auto' }}>
+            <List dense>
+              {deleteResults.map((result, idx) => (
+                <ListItem key={idx} sx={{ py: 0.5 }}>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    {result.success ? (
+                      <RestoreIcon fontSize="small" color="success" />
+                    ) : (
+                      <WarningIcon fontSize="small" color="error" />
+                    )}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={result.path}
+                    secondary={result.success ? 'Перемещено в Корзину' : 'Ошибка удаления'}
+                    primaryTypographyProps={{ 
+                      variant: 'body2', 
+                      sx: { wordBreak: 'break-all', fontSize: '0.8rem' } 
+                    }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setShowReport(false)} variant="contained" sx={{ borderRadius: 1.5 }}>
+            Закрыть
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,7 +1,9 @@
 package cleaner
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -23,6 +25,14 @@ type EmptyDirScanOptions struct {
 type EmptyDirResult struct {
 	Dirs  []EmptyDirCandidate
 	Total int
+}
+
+// EmptyDirDeleteResult — результат попытки удаления.
+type EmptyDirDeleteResult struct {
+	Path       string
+	Success    bool
+	Error      string
+	MovedToRecycleBin bool
 }
 
 // ScanEmptyDirs ищет пустые папки в указанных корнях.
@@ -133,14 +143,69 @@ func protectedEmptyDir(name string) bool {
 	return protected[name]
 }
 
-// DeleteEmptyDir удаляет пустую папку безопасно.
-func DeleteEmptyDir(path string) error {
-	// Перепроверяем что папка пуста
+// isSafePathForDeletion проверяет, что путь безопасен для удаления пустых папок.
+// Запрещает системные директории и корневые пути.
+func isSafePathForDeletion(path string) bool {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	abs = filepath.Clean(abs)
+	low := strings.ToLower(abs)
+
+	// Запрещаем корень диска
+	if len(abs) <= 3 {
+		return false
+	}
+
+	// Системные директории — абсолютное табу
+	forbidden := []string{
+		`c:\windows`,
+		`c:\windows\system32`,
+		`c:\windows\syswow64`,
+		`c:\windows\winsxs`,
+		`c:\program files`,
+		`c:\program files (x86)`,
+		`c:\programdata`,
+		`c:\users\all users`,
+		`c:\users\default`,
+		`c:\users\public`,
+		`c:\perflogs`,
+	}
+	for _, f := range forbidden {
+		if strings.HasPrefix(low, f) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// DeleteEmptyDirToRecycleBin удаляет пустую папку, перемещая её в Корзину.
+// Возвращает результат операции с флагом MovedToRecycleBin.
+func DeleteEmptyDirToRecycleBin(path string) EmptyDirDeleteResult {
+	result := EmptyDirDeleteResult{Path: path}
+
+	// Перепроверяем что папка существует и это директория
+	if _, err := os.Stat(path); err != nil {
+		result.Error = fmt.Sprintf("папка не найдена: %v", err)
+		return result
+	}
+
+	// Проверка безопасности
+	if !isSafePathForDeletion(path) {
+		result.Error = "удаление этой папки небезопасно (системная директория)"
+		return result
+	}
+
+	// Проверяем что папка действительно пуста (или содержит только junk-файлы)
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return err
+		result.Error = fmt.Sprintf("не удалось прочитать папку: %v", err)
+		return result
 	}
-	// Удаляем junk-файлы сначала
+
+	// Удаляем junk-файлы внутри
 	junk := map[string]bool{
 		"thumbs.db": true, "desktop.ini": true, ".ds_store": true,
 		"folder.jpg": true, "albumartsmall.jpg": true, "icon.ico": true,
@@ -150,5 +215,33 @@ func DeleteEmptyDir(path string) error {
 			_ = os.Remove(filepath.Join(path, e.Name()))
 		}
 	}
-	return os.RemoveAll(path)
+
+	// Перемещаем в Корзину через PowerShell
+	// Шелл.Application позволяет переместить в корзину
+	psScript := fmt.Sprintf(`
+		$shell = New-Object -ComObject Shell.Application
+		$folder = $shell.Namespace(0)
+		$folder.ParseName("%s").MoveToHere()
+	`, strings.ReplaceAll(path, "&", "_"))
+
+	cmd := exec.Command("powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", psScript)
+	if err := cmd.Run(); err != nil {
+		// Если PowerShell не сработал, пробуем альтернативный метод
+		// через MoveSpecialFolder с SID корзины
+		result.Error = fmt.Sprintf("не удалось переместить в корзину: %v", err)
+		return result
+	}
+
+	result.Success = true
+	result.MovedToRecycleBin = true
+	return result
+}
+
+// DeleteEmptyDir удаляет пустую папку безопасно (устаревший метод, используйте DeleteEmptyDirToRecycleBin).
+func DeleteEmptyDir(path string) error {
+	result := DeleteEmptyDirToRecycleBin(path)
+	if result.Error != "" {
+		return fmt.Errorf("%s", result.Error)
+	}
+	return nil
 }

@@ -37,10 +37,12 @@ import {
   Search as SearchIcon,
   Delete as DeleteIcon,
   Clear as ClearIcon,
-  Folder as FolderIcon,
   Storage as StorageIcon,
   FolderOff as EmptyFolderIcon,
   AppRegistration as RegistryIcon,
+  Cached as CacheIcon,
+  CheckCircle as KnownIcon,
+  HelpOutline as UnknownIcon,
 } from '@mui/icons-material';
 import { useLeftovers } from '../hooks';
 import type { LeftoverItem } from '@domain/index';
@@ -76,6 +78,18 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
     [filter, deletedPaths]
   );
 
+  const cacheItems = useMemo(
+    () => (result ? applyFilter(result.cacheItems) : []),
+    [result, applyFilter]
+  );
+  const orphanKnown = useMemo(
+    () => (result ? applyFilter(result.orphanKnownItems) : []),
+    [result, applyFilter]
+  );
+  const unknownFolders = useMemo(
+    () => (result ? applyFilter(result.unknownFolders) : []),
+    [result, applyFilter]
+  );
   const folders = useMemo(
     () => (result ? applyFilter(result.folders) : []),
     [result, applyFilter]
@@ -92,6 +106,10 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   const totalBytes = useMemo(
     () => folders.reduce((s, i) => s + Math.max(0, i.sizeBytes), 0),
     [folders]
+  );
+  const cacheTotalBytes = useMemo(
+    () => cacheItems.reduce((s, i) => s + Math.max(0, i.sizeBytes), 0),
+    [cacheItems]
   );
 
   const handleDelete = useCallback(async () => {
@@ -129,13 +147,13 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const totalItems = folders.length + empties.length + regKeys.length;
+  const totalItems = folders.length + empties.length + regKeys.length + cacheItems.length;
 
   return (
     <Box>
       {/* Header */}
       <Paper
-        elevation={3}
+        elevation={2}
         sx={{
           p: 3,
           mb: 2,
@@ -143,17 +161,17 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
             theme.palette.mode === 'dark'
               ? 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)'
               : 'linear-gradient(135deg, #e3f2fd 0%, #ede7f6 100%)',
-          borderRadius: 2,
+          borderRadius: 3,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <FolderDeleteIcon sx={{ mr: 1.5, fontSize: 28 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
             Остатки удалённых программ
           </Typography>
         </Box>
-        <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 2, borderRadius: 1.5 }}>
-          Это эвристика. Сканируются AppData, ProgramData, Program Files, реестр HKCU\Software.
+        <Alert severity="info" icon={<WarningIcon />} sx={{ mb: 2, borderRadius: 1.5 }}>
+          Поиск остатков + кеш из orphan DB. Сканируются AppData, ProgramData, Program Files, реестр.
         </Alert>
         <Button
           variant="contained"
@@ -167,44 +185,62 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </Button>
       </Paper>
 
-      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 2, height: 6 }} />}
 
       {/* Stat Cards */}
       {result && totalItems > 0 && (
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={3}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#1b5e20,#2e7d32)' : 'linear-gradient(135deg,#e8f5e9,#c8e6c9)' }}>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#1b5e20,#2e7d32)' : 'linear-gradient(135deg,#e8f5e9,#c8e6c9)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <StorageIcon sx={{ fontSize: 28, opacity: 0.8 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatBytes(totalBytes)}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8 }}>Размер папок</Typography>
+                <StorageIcon sx={{ fontSize: 24, opacity: 0.8 }} />
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>{formatBytes(totalBytes)}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Всего</Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={3}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#e65100,#f57c00)' : 'linear-gradient(135deg,#fff3e0,#ffe0b2)' }}>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#006064,#00838f)' : 'linear-gradient(135deg,#e0f7fa,#b2ebf2)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <FolderIcon sx={{ fontSize: 28, opacity: 0.8 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{folders.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8 }}>Папок-остатков</Typography>
+                <CacheIcon sx={{ fontSize: 24, opacity: 0.8 }} />
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>{cacheItems.length}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Кеш ({formatBytes(cacheTotalBytes)})</Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={3}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#4a148c,#6a1b9a)' : 'linear-gradient(135deg,#f3e5f5,#e1bee7)' }}>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#e65100,#f57c00)' : 'linear-gradient(135deg,#fff3e0,#ffe0b2)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <EmptyFolderIcon sx={{ fontSize: 28, opacity: 0.8 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{empties.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8 }}>Пустых папок</Typography>
+                <KnownIcon sx={{ fontSize: 24, opacity: 0.8 }} />
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>{orphanKnown.length}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Известные</Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={3}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#0d47a1,#1565c0)' : 'linear-gradient(135deg,#e3f2fd,#bbdefb)' }}>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#bf360c,#d84315)' : 'linear-gradient(135deg,#fbe9e7,#ffccbc)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <RegistryIcon sx={{ fontSize: 28, opacity: 0.8 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{regKeys.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8 }}>Ключей реестра</Typography>
+                <UnknownIcon sx={{ fontSize: 24, opacity: 0.8 }} />
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>{unknownFolders.length}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Неизвестные</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#4a148c,#6a1b9a)' : 'linear-gradient(135deg,#f3e5f5,#e1bee7)' }}>
+              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <EmptyFolderIcon sx={{ fontSize: 24, opacity: 0.8 }} />
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>{empties.length}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Пустые</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#0d47a1,#1565c0)' : 'linear-gradient(135deg,#e3f2fd,#bbdefb)' }}>
+              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <RegistryIcon sx={{ fontSize: 24, opacity: 0.8 }} />
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>{regKeys.length}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Реестр</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -217,11 +253,23 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
           <Tabs
             value={activeTab}
             onChange={(_, v) => setActiveTab(v)}
-            sx={{ mb: 1.5, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 40 } }}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              mb: 1.5,
+              bgcolor: (t) => (t.palette.mode === 'dark' ? '#1e293b' : '#ffffff'),
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 3,
+              p: 0.5,
+              '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 36, borderRadius: 2, fontSize: '0.8rem', py: 0 },
+            }}
           >
-            <Tab label={`Папки (${folders.length})`} icon={<FolderIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-            <Tab label={`Пустые (${empties.length})`} icon={<EmptyFolderIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-            <Tab label={`Реестр (${regKeys.length})`} icon={<RegistryIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+            <Tab label={`Кеш (${cacheItems.length})`} icon={<CacheIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+            <Tab label={`Известные (${orphanKnown.length})`} icon={<KnownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+            <Tab label={`Неизвестные (${unknownFolders.length})`} icon={<UnknownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+            <Tab label={`Пустые (${empties.length})`} icon={<EmptyFolderIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+            <Tab label={`Реестр (${regKeys.length})`} icon={<RegistryIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
           </Tabs>
           <TextField
             fullWidth
@@ -239,11 +287,96 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </>
       )}
 
-      {/* Tab 0: Folders */}
-      {activeTab === 0 && folders.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 2 }}>
+      {/* Tab 0: Cache items (safe to delete) */}
+      {activeTab === 0 && cacheItems.length > 0 && (
+        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
+          <Alert severity="info" sx={{ m: 1, borderRadius: 1.5 }}>
+            Кеш-файлы безопасно удалять — это временные данные, не затрагивающие настройки.
+          </Alert>
           <List dense disablePadding>
-            {folders.map((item, idx) => (
+            {cacheItems.map((item, idx) => (
+              <React.Fragment key={item.path}>
+                <ListItem
+                  sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
+                  secondaryAction={
+                    <Tooltip title="Удалить кеш">
+                      <IconButton edge="end" color="info" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
+                        sx={{ border: '1px solid', borderColor: 'info.main', borderRadius: 1.5, '&:hover': { bgcolor: 'info.main', color: 'white' } }}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
+                  <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
+                    <CacheIcon sx={{ fontSize: 18, opacity: 0.6 }} />
+                  </Box>
+                  <ListItemText
+                    primary={item.directoryName}
+                    secondary={item.path}
+                    primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
+                    secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
+                  />
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
+                    {item.orphanMatch && <Chip label={item.orphanMatch === 'cache' ? 'кеш' : item.orphanMatch} color="info" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />}
+                    <Chip label={item.sizeFormatted} color="info" size="small" sx={{ fontWeight: 600 }} />
+                  </Box>
+                </ListItem>
+                {idx < cacheItems.length - 1 && <Divider />}
+              </React.Fragment>
+            ))}
+          </List>
+        </Paper>
+      )}
+
+      {/* Tab 1: Known orphan items */}
+      {activeTab === 1 && orphanKnown.length > 0 && (
+        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
+          <Alert severity="warning" sx={{ m: 1, borderRadius: 1.5 }}>
+            Эти папки известны из orphan DB. Удаление может затронуть настройки и профили.
+          </Alert>
+          <List dense disablePadding>
+            {orphanKnown.map((item, idx) => (
+              <React.Fragment key={item.path}>
+                <ListItem
+                  sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
+                  secondaryAction={
+                    <Tooltip title="Удалить">
+                      <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
+                        sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
+                  <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
+                    <KnownIcon sx={{ fontSize: 18, color: 'warning.main' }} />
+                  </Box>
+                  <ListItemText
+                    primary={item.directoryName}
+                    secondary={item.path}
+                    primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
+                    secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
+                  />
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
+                    <Chip label={item.orphanMatch || 'остаток'} color="warning" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem', maxWidth: 160 }} />
+                    <Chip label={item.sizeFormatted} color="warning" size="small" sx={{ fontWeight: 600 }} />
+                  </Box>
+                </ListItem>
+                {idx < orphanKnown.length - 1 && <Divider />}
+              </React.Fragment>
+            ))}
+          </List>
+        </Paper>
+      )}
+
+      {/* Tab 2: Unknown folders */}
+      {activeTab === 2 && unknownFolders.length > 0 && (
+        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
+          <Alert severity="error" sx={{ m: 1, borderRadius: 1.5 }}>
+            Эти папки не найдены в orphan DB. Проверьте вручную перед удалением.
+          </Alert>
+          <List dense disablePadding>
+            {unknownFolders.map((item, idx) => (
               <React.Fragment key={item.path}>
                 <ListItem
                   sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
@@ -257,7 +390,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                   }
                 >
                   <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>{idx + 1}</Typography>
+                    <UnknownIcon sx={{ fontSize: 18, opacity: 0.6 }} />
                   </Box>
                   <ListItemText
                     primary={item.directoryName}
@@ -277,16 +410,16 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     </Typography>
                   </Box>
                 </ListItem>
-                {idx < folders.length - 1 && <Divider />}
+                {idx < unknownFolders.length - 1 && <Divider />}
               </React.Fragment>
             ))}
           </List>
         </Paper>
       )}
 
-      {/* Tab 1: Empty folders */}
-      {activeTab === 1 && empties.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 2 }}>
+      {/* Tab 3: Empty folders */}
+      {activeTab === 3 && empties.length > 0 && (
+        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {empties.map((item, idx) => (
               <React.Fragment key={item.path}>
@@ -317,9 +450,9 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </Paper>
       )}
 
-      {/* Tab 2: Registry keys */}
-      {activeTab === 2 && regKeys.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 2 }}>
+      {/* Tab 4: Registry keys */}
+      {activeTab === 4 && regKeys.length > 0 && (
+        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <Alert severity="info" sx={{ m: 1, borderRadius: 1.5 }}>
             Ключи реестра можно удалить через regedit или reg delete. Автоудаление не поддерживается.
           </Alert>
@@ -345,9 +478,11 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
       {/* Empty state per tab */}
       {!scanning && result && totalItems > 0 && (
-        (activeTab === 0 && folders.length === 0) ||
-        (activeTab === 1 && empties.length === 0) ||
-        (activeTab === 2 && regKeys.length === 0)
+        (activeTab === 0 && cacheItems.length === 0) ||
+        (activeTab === 1 && orphanKnown.length === 0) ||
+        (activeTab === 2 && unknownFolders.length === 0) ||
+        (activeTab === 3 && empties.length === 0) ||
+        (activeTab === 4 && regKeys.length === 0)
       ) && (
         <Alert severity="success" sx={{ borderRadius: 2 }}>
           {filter ? 'Ничего не найдено по фильтру.' : 'Нет элементов в этой категории.'}

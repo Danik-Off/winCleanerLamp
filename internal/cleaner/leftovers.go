@@ -1,6 +1,8 @@
 package cleaner
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,24 +23,54 @@ const (
 
 // LeftoverCandidate — папка/ключ, похожие на остаток от удалённой программы.
 type LeftoverCandidate struct {
-	Path   string
-	Size   int64
-	Files  int
-	Reason string       // почему помечена (например, "нет в Uninstall registry")
-	Type   LeftoverType // тип остатка
+	Path           string
+	Size           int64
+	Files          int
+	Reason         string       // почему помечена (например, "нет в Uninstall registry")
+	Type           LeftoverType // тип остатка
+	OrphanMatch    string       // имя программы из orphaned_apps.json (если совпало)
+	CacheHit       bool         // это кеш из orphan DB (cachePaths)
+	InstalledMatch bool         // программа установлена в системе
 }
 
-// ScanLeftovers ищет остатки удалённых программ:
-//   - Папки в AppData\Roaming, AppData\Local, ProgramData (ассоциативный поиск)
-//   - Папки в Program Files / Program Files (x86) (сверка с Uninstall)
-//   - Ключи реестра в HKCU\Software без соответствующих программ
-//   - Пустые папки в ключевых расположениях
-//
+// InstalledProgram — запись об установленной программе.
+type InstalledProgram struct {
+	DisplayName     string `json:"displayName"`
+	Publisher       string `json:"publisher,omitempty"`
+	InstallLocation string `json:"installLocation,omitempty"`
+	InOrphanDB      bool   `json:"inOrphanDB"`
+}
+
+// LeftoversResult — полный результат сканирования остатков.
+type LeftoversResult struct {
+	Candidates []LeftoverCandidate
+	Installed  []InstalledProgram
+}
+
+// LeftoverScanOptions — параметры сканирования.
+type LeftoverScanOptions struct {
+	OrphanCfg *OrphanConfig // orphaned_apps.json (может быть nil)
+	LogFile   string        // файл для логирования новых находок (если не пусто)
+}
+
+// ScanLeftovers ищет остатки удалённых программ.
 // ВНИМАНИЕ: это эвристика — возвращается только для просмотра, не удаляется автоматически.
 func ScanLeftovers() ([]LeftoverCandidate, error) {
+	r, err := ScanLeftoversEx(LeftoverScanOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return r.Candidates, nil
+}
+
+// ScanLeftoversEx — расширенное сканирование остатков с поддержкой orphaned_apps.json.
+func ScanLeftoversEx(opts LeftoverScanOptions) (*LeftoversResult, error) {
 	installed := installedProgramNames()
 	installPaths := installedProgramPaths()
 	whitelist := knownSystemFolders()
+
+	// Собираем orphan lookup из JSON
+	orphanPathIndex := buildOrphanPathIndex(opts.OrphanCfg)
 
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -93,7 +125,30 @@ func ScanLeftovers() ([]LeftoverCandidate, error) {
 		mu.Unlock()
 	}()
 
+	// 5. Кеш из orphan.json (cachePaths установленных программ)
+	if opts.OrphanCfg != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results := scanOrphanCachePaths(opts.OrphanCfg)
+			mu.Lock()
+			out = append(out, results...)
+			mu.Unlock()
+		}()
+	}
+
 	wg.Wait()
+
+	// Помечаем кандидатов по orphan DB
+	for i := range out {
+		if out[i].Type == LeftoverFolder || out[i].Type == LeftoverRegistry {
+			if match, ok := orphanPathIndex[strings.ToLower(filepath.Clean(out[i].Path))]; ok {
+				out[i].OrphanMatch = match.displayName
+				out[i].CacheHit = match.isCache
+				out[i].Reason = fmt.Sprintf("известно из orphan DB: %s", match.displayName)
+			}
+		}
+	}
 
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Type != out[j].Type {
@@ -101,7 +156,194 @@ func ScanLeftovers() ([]LeftoverCandidate, error) {
 		}
 		return out[i].Size > out[j].Size
 	})
-	return out, nil
+
+	// Логирование новых находок
+	if opts.LogFile != "" {
+		logUnknownLeftovers(out, opts.LogFile)
+	}
+
+	// Список установленных программ
+	programs := GetInstalledPrograms(opts.OrphanCfg)
+
+	return &LeftoversResult{
+		Candidates: out,
+		Installed:  programs,
+	}, nil
+}
+
+// orphanPathMatch — соответствие пути записи в orphan DB.
+type orphanPathMatch struct {
+	displayName string
+	isCache     bool
+}
+
+// buildOrphanPathIndex собирает индекс путей из orphan DB для быстрого lookup.
+func buildOrphanPathIndex(cfg *OrphanConfig) map[string]orphanPathMatch {
+	idx := make(map[string]orphanPathMatch)
+	if cfg == nil {
+		return idx
+	}
+	for _, app := range cfg.Apps {
+		for _, p := range app.InstallPaths {
+			if exp := ExpandPath(p); exp != "" {
+				idx[strings.ToLower(filepath.Clean(exp))] = orphanPathMatch{app.DisplayName, false}
+			}
+		}
+		for _, p := range app.AdditionalPaths {
+			if exp := ExpandPath(p); exp != "" {
+				idx[strings.ToLower(filepath.Clean(exp))] = orphanPathMatch{app.DisplayName, false}
+			}
+		}
+		for _, p := range app.CachePaths {
+			if exp := ExpandPath(p); exp != "" {
+				idx[strings.ToLower(filepath.Clean(exp))] = orphanPathMatch{app.DisplayName, true}
+			}
+		}
+	}
+	return idx
+}
+
+// scanOrphanCachePaths сканирует cachePaths из orphan DB и возвращает найденные.
+func scanOrphanCachePaths(cfg *OrphanConfig) []LeftoverCandidate {
+	var out []LeftoverCandidate
+	if cfg == nil {
+		return out
+	}
+	for _, app := range cfg.Apps {
+		for _, raw := range app.CachePaths {
+			p := ExpandPath(raw)
+			if p == "" {
+				continue
+			}
+			info, err := os.Stat(p)
+			if err != nil {
+				continue
+			}
+			var size int64
+			var files int
+			if info.IsDir() {
+				size, files = dirSizeWithTimeout(p, 2*time.Second)
+			} else {
+				size = info.Size()
+				files = 1
+			}
+			if size == 0 && files == 0 {
+				continue
+			}
+			out = append(out, LeftoverCandidate{
+				Path:        p,
+				Size:        size,
+				Files:       files,
+				Reason:      fmt.Sprintf("кеш %s (orphan DB)", app.DisplayName),
+				Type:        LeftoverFolder,
+				OrphanMatch: app.DisplayName,
+				CacheHit:    true,
+			})
+		}
+	}
+	return out
+}
+
+// GetInstalledPrograms возвращает список установленных программ из реестра.
+func GetInstalledPrograms(orphanCfg *OrphanConfig) []InstalledProgram {
+	orphanNames := make(map[string]bool)
+	if orphanCfg != nil {
+		for _, app := range orphanCfg.Apps {
+			orphanNames[strings.ToLower(app.DisplayName)] = true
+		}
+	}
+
+	keys := []string{
+		`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
+		`HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall`,
+		`HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
+	}
+	seen := make(map[string]bool)
+	var programs []InstalledProgram
+	for _, k := range keys {
+		out, err := exec.Command("reg", "query", k, "/s").Output()
+		if err != nil {
+			continue
+		}
+		var curName, curPublisher, curLocation string
+		for _, line := range strings.Split(string(out), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				if curName != "" && !seen[strings.ToLower(curName)] {
+					seen[strings.ToLower(curName)] = true
+					programs = append(programs, InstalledProgram{
+						DisplayName:     curName,
+						Publisher:       curPublisher,
+						InstallLocation: curLocation,
+						InOrphanDB:      orphanNames[strings.ToLower(curName)],
+					})
+				}
+				curName, curPublisher, curLocation = "", "", ""
+				continue
+			}
+			if strings.HasPrefix(line, "DisplayName") {
+				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
+					curName = strings.TrimSpace(line[idx+len("REG_SZ"):])
+				}
+			}
+			if strings.HasPrefix(line, "Publisher") {
+				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
+					curPublisher = strings.TrimSpace(line[idx+len("REG_SZ"):])
+				}
+			}
+			if strings.HasPrefix(line, "InstallLocation") {
+				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
+					curLocation = strings.TrimSpace(line[idx+len("REG_SZ"):])
+				}
+			}
+		}
+		// flush last entry
+		if curName != "" && !seen[strings.ToLower(curName)] {
+			seen[strings.ToLower(curName)] = true
+			programs = append(programs, InstalledProgram{
+				DisplayName:     curName,
+				Publisher:       curPublisher,
+				InstallLocation: curLocation,
+				InOrphanDB:      orphanNames[strings.ToLower(curName)],
+			})
+		}
+	}
+	sort.Slice(programs, func(i, j int) bool {
+		return strings.ToLower(programs[i].DisplayName) < strings.ToLower(programs[j].DisplayName)
+	})
+	return programs
+}
+
+// logUnknownLeftovers записывает находки, которых нет в orphan DB, в лог-файл.
+func logUnknownLeftovers(candidates []LeftoverCandidate, logFile string) {
+	type logEntry struct {
+		Path   string `json:"path"`
+		Size   int64  `json:"size_bytes"`
+		Files  int    `json:"files"`
+		Reason string `json:"reason"`
+		Type   string `json:"type"`
+	}
+	var unknowns []logEntry
+	for _, c := range candidates {
+		if c.OrphanMatch == "" && c.Type == LeftoverFolder {
+			unknowns = append(unknowns, logEntry{
+				Path:   c.Path,
+				Size:   c.Size,
+				Files:  c.Files,
+				Reason: c.Reason,
+				Type:   string(c.Type),
+			})
+		}
+	}
+	if len(unknowns) == 0 {
+		return
+	}
+	data, err := json.MarshalIndent(unknowns, "", "  ")
+	if err != nil {
+		return
+	}
+	_ = os.MkdirAll(filepath.Dir(logFile), 0o755)
+	_ = os.WriteFile(logFile, data, 0o644)
 }
 
 func typeOrder(t LeftoverType) int {

@@ -132,9 +132,9 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
     <Box>
       {/* Header */}
       <Paper
-        elevation={3}
+        elevation={2}
         sx={{
-          p: 3, mb: 2, borderRadius: 2,
+          p: 3, mb: 2, borderRadius: 3,
           background: (t) => t.palette.mode === 'dark'
             ? 'linear-gradient(135deg, #4a148c 0%, #6a1b9a 100%)'
             : 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
@@ -168,13 +168,13 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
         </Box>
       </Paper>
 
-      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 2, height: 6 }} />}
 
       {/* Stats */}
       {hasScanResult && (
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={4}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#4a148c,#6a1b9a)' : 'linear-gradient(135deg,#f3e5f5,#e1bee7)' }}>
+          <Grid item xs={12} sm={4}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#4a148c,#6a1b9a)' : 'linear-gradient(135deg,#f3e5f5,#e1bee7)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <StorageIcon sx={{ fontSize: 28, opacity: 0.8 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatBytes(totalWaste)}</Typography>
@@ -182,8 +182,8 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={4}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#e65100,#f57c00)' : 'linear-gradient(135deg,#fff3e0,#ffe0b2)' }}>
+          <Grid item xs={12} sm={4}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#e65100,#f57c00)' : 'linear-gradient(135deg,#fff3e0,#ffe0b2)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <FileIcon sx={{ fontSize: 28, opacity: 0.8 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{filteredGroups.length}</Typography>
@@ -191,8 +191,8 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={4}>
-            <Card elevation={2} sx={{ borderRadius: 2, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#0d47a1,#1565c0)' : 'linear-gradient(135deg,#e3f2fd,#bbdefb)' }}>
+          <Grid item xs={12} sm={4}>
+            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#0d47a1,#1565c0)' : 'linear-gradient(135deg,#e3f2fd,#bbdefb)' }}>
               <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <FolderIcon sx={{ fontSize: 28, opacity: 0.8 }} />
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{scannedFiles}</Typography>
@@ -221,7 +221,7 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
 
       {/* Groups */}
       {filteredGroups.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 480, overflow: 'auto', borderRadius: 2 }}>
+        <Paper variant="outlined" sx={{ maxHeight: 480, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {filteredGroups.map((group, gi) => {
               const livePaths = group.paths.filter(p => !deletedPaths.has(p));

@@ -19,6 +19,8 @@ type Report struct {
 	Errors        []string
 	Skipped       bool
 	SkippedReason string
+	// Записи о найденных файлах (для последующей записи в конфиг)
+	Records []JunkRecord
 }
 
 // Options управляют поведением сканера/чистильщика.
@@ -249,6 +251,12 @@ func walkAndDelete(root string, t Target, opts Options, r *Report, keepRoot bool
 		if opts.DryRun {
 			r.Bytes += sz
 			r.Files++
+			// Записываем в Records
+			r.Records = append(r.Records, JunkRecord{
+				Path:       path,
+				CategoryID: t.ID,
+				Size:       sz,
+			})
 			return nil
 		}
 		if err := os.Remove(path); err != nil {
@@ -261,6 +269,12 @@ func walkAndDelete(root string, t Target, opts Options, r *Report, keepRoot bool
 		}
 		r.Bytes += sz
 		r.Files++
+		// Записываем в Records
+		r.Records = append(r.Records, JunkRecord{
+			Path:       path,
+			CategoryID: t.ID,
+			Size:       sz,
+		})
 		if opts.Verbose {
 			opts.log("  [deleted] %s (%s)", path, human(sz))
 		}

@@ -17,11 +17,17 @@ interface ElectronAPI {
   deleteLeftover: (folderPath: string) => Promise<{ success: boolean; error?: string }>;
   getDuplicates: (rootPaths: string) => Promise<string>;
   getEmptyDirs: (rootPaths: string) => Promise<string>;
-  deleteEmptyDir: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
+  deleteEmptyDir: (dirPath: string) => Promise<{ success: boolean; error?: string; movedToRecycleBin?: boolean }>;
   deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  openExternal: (url: string) => void;
   onScanProgress: (callback: (data: string) => void) => void;
   onCleanProgress: (callback: (data: string) => void) => void;
   removeAllListeners: (channel: string) => void;
+  orphanScan: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
+  orphanDiscover: (options?: { roots?: string }) => Promise<{ output: string; error: string; code: number }>;
+  orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean }) => Promise<{ output: string; error: string; code: number }>;
+  orphanInfo: (displayName: string) => Promise<{ output: string; error: string; code: number }>;
+  orphanList: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
   windowMinimize: () => void;
   windowMaximize: () => void;
   windowClose: () => void;
@@ -51,6 +57,11 @@ const api: ElectronAPI = {
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 
+  openExternal: (url: string) => {
+    const { shell } = require('electron');
+    shell.openPath(url);
+  },
+
   onScanProgress: (callback: (data: string) => void) => {
     ipcRenderer.on('scan-progress', (_event: IpcRendererEvent, data: string) => callback(data));
   },
@@ -62,6 +73,12 @@ const api: ElectronAPI = {
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },
+
+  orphanScan: (configPath?: string) => ipcRenderer.invoke('orphan-scan', configPath),
+  orphanDiscover: (options?: { roots?: string }) => ipcRenderer.invoke('orphan-discover', options),
+  orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean }) => ipcRenderer.invoke('orphan-clean', options),
+  orphanInfo: (displayName: string) => ipcRenderer.invoke('orphan-info', displayName),
+  orphanList: (configPath?: string) => ipcRenderer.invoke('orphan-list', configPath),
 
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),

@@ -1,0 +1,1493 @@
+{
+  "apps": [
+      {
+      "displayName": "Minecraft (Java Edition)",
+      "publisher": "Mojang Studios",
+      "installPaths": [
+        "%APPDATA%\\.minecraft"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\.minecraft\\saves",
+        "%APPDATA%\\.minecraft\\resourcepacks",
+        "%APPDATA%\\.minecraft\\versions"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\.minecraft\\assets",
+        "%APPDATA%\\.minecraft\\libraries",
+        "%APPDATA%\\.minecraft\\logs"
+      ],
+      "notes": "Папка .minecraft в Roaming — основное хранилище игры. Остатки после удаления лаунчера."
+    },
+     {
+      "displayName": "Minecraft (Java Edition)",
+      "publisher": "Mojang Studios",
+      "installPaths": [
+        "%APPDATA%\\.minecraft"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\.minecraft\\saves",
+        "%APPDATA%\\.minecraft\\resourcepacks",
+        "%APPDATA%\\.minecraft\\versions"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\.minecraft\\assets",
+        "%APPDATA%\\.minecraft\\libraries",
+        "%APPDATA%\\.minecraft\\logs"
+      ],
+      "notes": "Основная папка .minecraft в Roaming (46.31 GB)."
+    },
+    {
+      "displayName": "uv (Python package installer)",
+      "publisher": "Astral",
+      "installPaths": [],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\uv",
+        "%APPDATA%\\uv"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\uv\\cache",
+        "%APPDATA%\\uv\\cache"
+      ],
+      "notes": "Кэш и данные uv (8.90 GB Local + 59.84 MB Roaming)."
+    },
+    {
+      "displayName": "Electron Framework (общий мусор)",
+      "publisher": "Различные",
+      "installPaths": [],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\electron",
+        "%APPDATA%\\Electron"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\electron\\Cache",
+        "%APPDATA%\\Electron\\Cache"
+      ],
+      "notes": "Остатки от приложений на Electron (1.15 GB Local + 462.87 MB Roaming)."
+    },
+    {
+      "displayName": "WPS Office",
+      "publisher": "Kingsoft Corp.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Kingsoft\\WPS Office"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\kingsoft",
+        "%PROGRAMDATA%\\WPS"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Kingsoft\\WPS Office"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Kingsoft\\WPS Office\\cache"
+      ],
+      "notes": "Остатки WPS Office (462.87 MB ProgramData/WPS, 102.78 MB Roaming/kingsoft)."
+    },
+    {
+      "displayName": "Go",
+      "publisher": "Google",
+      "installPaths": [
+        "%PROGRAMFILES%\\Go"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\go"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\go\\pkg\\mod\\cache"
+      ],
+      "notes": "Установка Go и кэш модулей (199.18 MB + 87.74 KB Roaming/go)."
+    },
+    {
+      "displayName": "ClamAV",
+      "publisher": "Cisco",
+      "installPaths": [
+        "%PROGRAMFILES%\\ClamAV"
+      ],
+      "additionalPaths": [],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Антивирус ClamAV (107.55 MB)."
+    },
+    {
+      "displayName": "FinalWire / AIDA64",
+      "publisher": "FinalWire Ltd.",
+      "installPaths": [
+        "%PROGRAMFILES%\\FinalWire"
+      ],
+      "additionalPaths": [],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Программа диагностики AIDA64 (103.60 MB)."
+    },
+    {
+      "displayName": "Unity",
+      "publisher": "Unity Technologies",
+      "installPaths": [
+        "%PROGRAMFILES%\\Unity"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Unity",
+        "%APPDATA%\\Unity"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Unity Technologies",
+        "HKCU\\Software\\Unity Technologies"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Unity\\Editor\\Caches"
+      ],
+      "notes": "Редактор Unity и кэш (102.80 MB Local + 40 KB Program Files)."
+    },
+    {
+      "displayName": "Chocolatey",
+      "publisher": "Chocolatey Software",
+      "installPaths": [
+        "%PROGRAMDATA%\\chocolatey"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\chocolatey\\lib",
+        "%PROGRAMDATA%\\chocolatey\\logs"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%PROGRAMDATA%\\chocolatey\\lib\\*\\tools"
+      ],
+      "notes": "Пакетный менеджер Chocolatey (20.49 MB)."
+    },
+    {
+      "displayName": "Upscayl",
+      "publisher": "Upscayl",
+      "installPaths": [],
+      "additionalPaths": [
+        "%APPDATA%\\Upscayl"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Приложение для апскейла изображений (13.31 MB)."
+    },
+    {
+      "displayName": "Termius",
+      "publisher": "Termius Corporation",
+      "installPaths": [],
+      "additionalPaths": [
+        "%APPDATA%\\Termius"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "SSH-клиент Termius (8.66 MB)."
+    },
+    {
+      "displayName": "Overwolf / ow-electron",
+      "publisher": "Overwolf",
+      "installPaths": [],
+      "additionalPaths": [
+        "%APPDATA%\\ow-electron"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Платформа для игровых оверлеев Overwolf (5.47 MB)."
+    },
+    {
+      "displayName": "BalenaEtcher",
+      "publisher": "Balena",
+      "installPaths": [
+        "%LOCALAPPDATA%\\balena_etcher"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\balenaEtcher"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\balena_etcher\\Cache"
+      ],
+      "notes": "Запись образов на флешки (4.35 MB Local + 4.28 MB Roaming)."
+    },
+    {
+      "displayName": "Necesse",
+      "publisher": "Fair Games",
+      "installPaths": [],
+      "additionalPaths": [
+        "%APPDATA%\\Necesse"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Игра Necesse (22.77 MB)."
+    },
+    {
+      "displayName": "Into the Radius 2",
+      "publisher": "CM Games",
+      "installPaths": [],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\IntoTheRadius2"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "VR-игра (271.72 KB)."
+    },
+    {
+      "displayName": "Battlefield 6",
+      "publisher": "EA",
+      "installPaths": [],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Battlefield 6"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Остатки Battlefield (6.41 KB)."
+    },
+    {
+      "displayName": "Mortal Kombat 11",
+      "publisher": "Warner Bros.",
+      "installPaths": [],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\MK11"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Остатки конфигурации MK11 (2.46 KB)."
+    },
+    {
+      "displayName": "AnyDesk",
+      "publisher": "AnyDesk Software",
+      "installPaths": [
+        "%PROGRAMFILES%\\AnyDesk"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\AnyDesk"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Удалённый доступ (186.54 KB)."
+    },
+    {
+      "displayName": "ZeroTier",
+      "publisher": "ZeroTier, Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\ZeroTier",
+        "%PROGRAMFILES(X86)%\\ZeroTier"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\ZeroTier",
+        "%PROGRAMDATA%\\ZeroTier"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Виртуальная сеть (15.39 KB ProgramData, локальные файлы)."
+    },
+    {
+      "displayName": "IObit Uninstaller / SystemCare",
+      "publisher": "IObit",
+      "installPaths": [
+        "%PROGRAMFILES%\\IObit"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\IObit",
+        "%APPDATA%\\IObit"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Продукты IObit (60.21 KB ProgramData, 44 B Roaming)."
+    },
+    {
+      "displayName": "Origin / EA app",
+      "publisher": "Electronic Arts",
+      "installPaths": [
+        "%PROGRAMFILES%\\Origin"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\Origin",
+        "%LOCALAPPDATA%\\Origin"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Клиент EA, бывший Origin (1.58 KB Local, 8.81 KB ProgramData)."
+    },
+    {
+      "displayName": "Google Chrome",
+      "publisher": "Google LLC",
+      "installPaths": [
+        "%PROGRAMFILES%\\Google\\Chrome\\Application",
+        "%PROGRAMFILES(X86)%\\Google\\Chrome\\Application"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data",
+        "%APPDATA%\\Google\\Chrome"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Google\\Chrome",
+        "HKLM\\SOFTWARE\\Google\\Chrome"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Cache",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Code Cache",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\GPUCache"
+      ],
+      "notes": "Chrome – данные профиля, кэш и реестр после удаления."
+    },
+    {
+      "displayName": "Mozilla Firefox",
+      "publisher": "Mozilla Foundation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Mozilla Firefox",
+        "%PROGRAMFILES(X86)%\\Mozilla Firefox"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Mozilla\\Firefox",
+        "%LOCALAPPDATA%\\Mozilla\\Firefox",
+        "%PROGRAMDATA%\\Mozilla"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Mozilla\\Firefox",
+        "HKLM\\SOFTWARE\\Mozilla\\Firefox"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Mozilla\\Firefox\\Profiles\\*\\cache2",
+        "%LOCALAPPDATA%\\Mozilla\\Firefox\\Profiles\\*\\Cache"
+      ],
+      "notes": "Firefox – профили, кэш и реестр."
+    },
+    {
+      "displayName": "Adobe Creative Cloud",
+      "publisher": "Adobe Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Adobe\\Adobe Creative Cloud",
+        "%PROGRAMFILES(X86)%\\Adobe\\Adobe Creative Cloud"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Adobe\\Creative Cloud",
+        "%LOCALAPPDATA%\\Adobe\\Creative Cloud",
+        "%PROGRAMDATA%\\Adobe\\Creative Cloud"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Adobe\\Creative Cloud",
+        "HKLM\\SOFTWARE\\Adobe\\Creative Cloud",
+        "HKLM\\SOFTWARE\\WOW6432Node\\Adobe\\Creative Cloud"
+      ],
+      "cachePaths": [
+        "%PROGRAMDATA%\\Adobe\\Installer",
+        "%LOCALAPPDATA%\\Temp\\cep_cache",
+        "%APPDATA%\\Adobe\\CoreSync\\plugins\\livestyle",
+        "%LOCALAPPDATA%\\Adobe\\OOBE",
+        "%LOCALAPPDATA%\\Adobe\\AAMUpdater",
+        "%PROGRAMFILES%\\Common Files\\Adobe\\SLCache",
+        "%PROGRAMFILES(X86)%\\Common Files\\Adobe\\SLCache",
+        "%PROGRAMDATA%\\Adobe\\SLStore"
+      ],
+      "notes": "Adobe CC – множество кэш-папок и остатков в реестре."
+    },
+    {
+      "displayName": "Microsoft Office",
+      "publisher": "Microsoft Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Microsoft Office",
+        "%PROGRAMFILES(X86)%\\Microsoft Office"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Microsoft\\Office",
+        "%LOCALAPPDATA%\\Microsoft\\Office",
+        "%PROGRAMDATA%\\Microsoft\\Office"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Microsoft\\Office",
+        "HKLM\\SOFTWARE\\Microsoft\\Office",
+        "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Office"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Microsoft\\Office\\16.0\\OfficeFileCache",
+        "%LOCALAPPDATA%\\Microsoft\\Office\\16.0\\Wef",
+        "%LOCALAPPDATA%\\Microsoft\\MSIPC",
+        "C:\\msocache",
+        "%USERPROFILE%\\AppData\\Local\\Microsoft\\Office\\*\\Cache",
+        "%USERPROFILE%\\AppData\\Local\\Microsoft\\Office\\*\\Web Services"
+      ],
+      "notes": "Microsoft Office – кэш установки, офисный кэш и папка MSOCache."
+    },
+    {
+      "displayName": "Steam",
+      "publisher": "Valve Corporation",
+      "installPaths": [
+        "%PROGRAMFILES(X86)%\\Steam",
+        "%PROGRAMFILES%\\Steam"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Steam",
+        "%LOCALAPPDATA%\\Steam"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Valve\\Steam",
+        "HKLM\\SOFTWARE\\Valve\\Steam",
+        "HKLM\\SOFTWARE\\WOW6432Node\\Valve\\Steam"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Steam",
+        "%PROGRAMFILES(X86)%\\Steam\\appcache",
+        "%PROGRAMFILES(X86)%\\Steam\\depotcache",
+        "%PROGRAMFILES(X86)%\\Steam\\config\\htmlcache",
+        "%PROGRAMFILES(X86)%\\Steam\\userdata"
+      ],
+      "notes": "Steam – кэш лаунчера, загрузок и пользовательские данные."
+    },
+    {
+      "displayName": "Epic Games Launcher",
+      "publisher": "Epic Games, Inc.",
+      "installPaths": [
+        "%PROGRAMFILES(X86)%\\Epic Games\\Launcher",
+        "%PROGRAMFILES%\\Epic Games\\Launcher"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Epic Games",
+        "%LOCALAPPDATA%\\Epic Games",
+        "%PROGRAMDATA%\\Epic Games"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Epic Games",
+        "HKLM\\SOFTWARE\\Epic Games",
+        "HKLM\\SOFTWARE\\WOW6432Node\\Epic Games"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\EpicGamesLauncher\\Saved\\webcache",
+        "%LOCALAPPDATA%\\EpicGamesLauncher\\Saved\\webcache_4430"
+      ],
+      "notes": "Epic Games – кэш веб-интерфейса лаунчера."
+    },
+    {
+      "displayName": "Java Runtime Environment",
+      "publisher": "Oracle Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Java\\jre-*",
+        "%PROGRAMFILES(X86)%\\Java\\jre-*"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\..\\LocalLow\\Sun\\Java",
+        "%LOCALAPPDATA%\\Sun\\Java",
+        "%PROGRAMDATA%\\Oracle\\Java"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\JavaSoft\\Java Runtime Environment",
+        "HKLM\\SOFTWARE\\WOW6432Node\\JavaSoft\\Java Runtime Environment"
+      ],
+      "cachePaths": [
+        "%USERPROFILE%\\AppData\\LocalLow\\Sun\\Java\\Deployment\\cache",
+        "%APPDATA%\\Sun\\Java\\Deployment\\cache"
+      ],
+      "notes": "Java – кэш развёртывания и остатки реестра."
+    },
+    {
+      "displayName": "Python",
+      "publisher": "Python Software Foundation",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Programs\\Python\\Python*",
+        "%PROGRAMFILES%\\Python*"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Python",
+        "%LOCALAPPDATA%\\Python",
+        "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Python*"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Python\\PythonCore",
+        "HKCU\\Software\\Python\\PythonCore"
+      ],
+      "cachePaths": [
+        "%USERPROFILE%\\AppData\\Local\\pip\\cache",
+        "%USERPROFILE%\\AppData\\Local\\uv\\cache"
+      ],
+      "notes": "Python – кэш pip/uv и остатки папок."
+    },
+    {
+      "displayName": "Discord",
+      "publisher": "Discord Inc.",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Discord"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\discord",
+        "%LOCALAPPDATA%\\Discord\\app-*"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Discord",
+        "HKLM\\SOFTWARE\\Discord\\Discord"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\discord\\Cache",
+        "%APPDATA%\\discord\\Code Cache",
+        "%APPDATA%\\discord\\GPUCache"
+      ],
+      "notes": "Discord – кэш изображений, GPU и кода."
+    },
+    {
+      "displayName": "VLC media player",
+      "publisher": "VideoLAN",
+      "installPaths": [
+        "%PROGRAMFILES%\\VideoLAN\\VLC",
+        "%PROGRAMFILES(X86)%\\VideoLAN\\VLC"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\vlc"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\VideoLAN\\VLC",
+        "HKLM\\SOFTWARE\\VideoLAN\\VLC",
+        "HKLM\\SOFTWARE\\WOW6432Node\\VideoLAN\\VLC"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\vlc"
+      ],
+      "notes": "VLC – папка настроек, кэш и реестр."
+    },
+    {
+      "displayName": "Norton AntiVirus",
+      "publisher": "Symantec Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Norton AntiVirus",
+        "%PROGRAMFILES(X86)%\\Norton AntiVirus",
+        "%PROGRAMFILES%\\Norton Security"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\Norton",
+        "%APPDATA%\\Norton",
+        "%LOCALAPPDATA%\\Norton"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Symantec\\Norton",
+        "HKCU\\Software\\Symantec\\Norton",
+        "HKLM\\SOFTWARE\\WOW6432Node\\Symantec\\Norton"
+      ],
+      "cachePaths": [
+        "%PROGRAMDATA%\\Norton\\*\\localdumps",
+        "%PROGRAMDATA%\\Norton\\*\\*\\CmnCl"
+      ],
+      "notes": "Norton – дампы, общий кэш и остатки в реестре."
+    },
+    {
+      "displayName": "7-Zip",
+      "publisher": "Igor Pavlov",
+      "installPaths": [
+        "%PROGRAMFILES%\\7-Zip",
+        "%PROGRAMFILES(X86)%\\7-Zip"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\7-Zip"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\7-Zip",
+        "HKCU\\Software\\7-Zip"
+      ],
+      "cachePaths": [
+        "%TEMP%\\*7-Zip*"
+      ],
+      "notes": "7-Zip – временные файлы в %TEMP% и ярлыки."
+    },
+    {
+      "displayName": "WinRAR",
+      "publisher": "RAR Labs",
+      "installPaths": [
+        "%PROGRAMFILES%\\WinRAR",
+        "%PROGRAMFILES(X86)%\\WinRAR"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\WinRAR",
+        "%LOCALAPPDATA%\\Microsoft\\Windows\\Cortana_cw5n1h2txyewy\\LocalState\\AppIconCache\\*\\*WinRAR*"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\WinRAR",
+        "HKCU\\Software\\WinRAR"
+      ],
+      "cachePaths": [
+        "%TEMP%"
+      ],
+      "notes": "WinRAR – временные файлы распаковки."
+    },
+    {
+      "displayName": "Notepad++",
+      "publisher": "Notepad++ Team",
+      "installPaths": [
+        "%PROGRAMFILES%\\Notepad++",
+        "%PROGRAMFILES(X86)%\\Notepad++"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Notepad++",
+        "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Notepad++"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Notepad++"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Notepad++\\backup"
+      ],
+      "notes": "Notepad++ – резервные копии сессий и настройки."
+    },
+    {
+      "displayName": "Skype",
+      "publisher": "Skype Technologies S.A.",
+      "installPaths": [
+        "%PROGRAMFILES(X86)%\\Microsoft\\Skype for Desktop"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Skype",
+        "%LOCALAPPDATA%\\Skype"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Skype",
+        "HKLM\\SOFTWARE\\Skype"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Skype\\Cache"
+      ],
+      "notes": "Skype – кэш чатов и профиль."
+    },
+    {
+      "displayName": "TeamViewer",
+      "publisher": "TeamViewer GmbH",
+      "installPaths": [
+        "%PROGRAMFILES%\\TeamViewer",
+        "%PROGRAMFILES(X86)%\\TeamViewer"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\TeamViewer",
+        "%APPDATA%\\TeamViewer"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\TeamViewer",
+        "HKCU\\Software\\TeamViewer"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\TeamViewer\\Cache"
+      ],
+      "notes": "TeamViewer – кэш удалённых подключений."
+    },
+    {
+      "displayName": "Dropbox",
+      "publisher": "Dropbox Inc.",
+      "installPaths": [
+        "%PROGRAMFILES(X86)%\\Dropbox"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Dropbox",
+        "%LOCALAPPDATA%\\Dropbox"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Dropbox",
+        "HKLM\\SOFTWARE\\Dropbox"
+      ],
+      "cachePaths": [
+        "%HOMEPATH%\\Dropbox\\.dropbox.cache"
+      ],
+      "notes": "Dropbox – кэш синхронизации."
+    },
+    {
+      "displayName": "OneDrive",
+      "publisher": "Microsoft Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Microsoft OneDrive"
+      ],
+      "additionalPaths": [
+        "%USERPROFILE%\\OneDrive",
+        "%LOCALAPPDATA%\\Microsoft\\OneDrive",
+        "%PROGRAMDATA%\\Microsoft OneDrive"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Microsoft\\OneDrive",
+        "HKLM\\SOFTWARE\\Microsoft\\OneDrive"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Microsoft\\OneDrive\\Cache",
+        "%LOCALAPPDATA%\\Microsoft\\OneDrive\\HttpCache"
+      ],
+      "notes": "OneDrive – кэш и остатки синхронизации."
+    },
+    {
+      "displayName": "Spotify",
+      "publisher": "Spotify AB",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Spotify"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Spotify",
+        "%LOCALAPPDATA%\\Packages\\SpotifyAB.SpotifyMusic_*\\LocalState\\Spotify"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Spotify",
+        "HKLM\\SOFTWARE\\Spotify"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Spotify\\Storage",
+        "%LOCALAPPDATA%\\Spotify\\Browser\\ChromeDWriteFontCache"
+      ],
+      "notes": "Spotify – кэш треков, шрифтов и данные."
+    },
+    {
+      "displayName": "iTunes",
+      "publisher": "Apple Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\iTunes",
+        "%PROGRAMFILES(X86)%\\iTunes"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Apple Computer\\iTunes",
+        "%LOCALAPPDATA%\\Apple Computer\\iTunes",
+        "%APPDATA%\\Apple Computer\\MobileSync"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Apple Inc.\\iTunes",
+        "HKCU\\Software\\Apple Inc.\\iTunes"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Apple Computer\\iTunes\\Cache.db"
+      ],
+      "notes": "iTunes – кэш магазина, резервные копии iOS."
+    },
+    {
+      "displayName": "Adobe Acrobat Reader",
+      "publisher": "Adobe Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Adobe\\Acrobat Reader DC",
+        "%PROGRAMFILES(X86)%\\Adobe\\Acrobat Reader DC"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Adobe\\Acrobat",
+        "%LOCALAPPDATA%\\Adobe\\Acrobat"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Adobe\\Acrobat Reader",
+        "HKCU\\Software\\Adobe\\Acrobat Reader"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Adobe\\Acrobat\\DC\\Cache"
+      ],
+      "notes": "Adobe Reader – кэш документов."
+    },
+    {
+      "displayName": "Visual Studio Code",
+      "publisher": "Microsoft Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Microsoft VS Code"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Code",
+        "%LOCALAPPDATA%\\Programs\\Microsoft VS Code"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Microsoft\\VisualStudioCode",
+        "HKCU\\Software\\Microsoft\\VisualStudioCode"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Code\\Cache",
+        "%LOCALAPPDATA%\\Microsoft\\vscode-cpptools",
+        "%USERPROFILE%\\.vscode"
+      ],
+      "notes": "VS Code – кэш расширений и C++."
+    },
+    {
+      "displayName": "Git for Windows",
+      "publisher": "The Git Development Community",
+      "installPaths": [
+        "%PROGRAMFILES%\\Git"
+      ],
+      "additionalPaths": [
+        "%USERPROFILE%\\.gitconfig"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\GitForWindows",
+        "HKCU\\Software\\GitForWindows"
+      ],
+      "cachePaths": [
+        "%USERPROFILE%\\.git\\cache"
+      ],
+      "notes": "Git – кэш репозиториев."
+    },
+    {
+      "displayName": "Node.js",
+      "publisher": "Node.js Foundation",
+      "installPaths": [
+        "%PROGRAMFILES%\\nodejs",
+        "%PROGRAMFILES(X86)%\\nodejs"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\npm",
+        "%APPDATA%\\npm-cache",
+        "%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Node.js"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Node.js",
+        "HKCU\\Software\\Node.js"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\npm-cache"
+      ],
+      "notes": "Node.js – кэш npm и папки установки."
+    },
+    {
+      "displayName": "Docker Desktop",
+      "publisher": "Docker Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Docker\\Docker"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Docker",
+        "%LOCALAPPDATA%\\docker-desktop-data"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Docker Inc.",
+        "HKCU\\Software\\Docker Inc."
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Docker\\wsl\\docker_desktop.vhdx",
+        "%LOCALAPPDATA%\\Docker\\wsl\\disk\\docker_data.vhdx"
+      ],
+      "notes": "Docker Desktop – виртуальные диски WSL."
+    },
+    {
+      "displayName": "VirtualBox",
+      "publisher": "Oracle Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Oracle\\VirtualBox"
+      ],
+      "additionalPaths": [
+        "%USERPROFILE%\\VirtualBox VMs",
+        "%USERPROFILE%\\.VirtualBox"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Oracle\\VirtualBox",
+        "HKCU\\Software\\Oracle\\VirtualBox"
+      ],
+      "cachePaths": [
+        "%USERPROFILE%\\AppData\\Local\\Temp\\*VirtualBox*"
+      ],
+      "notes": "VirtualBox – временные файлы ВМ."
+    },
+    {
+      "displayName": "Telegram Desktop",
+      "publisher": "Telegram FZ-LLC",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Telegram Desktop"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Telegram Desktop",
+        "%USERPROFILE%\\Downloads\\Telegram Desktop"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\TelegramDesktop"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Telegram Desktop\\cache",
+        "%APPDATA%\\Telegram Desktop\\tdata\\dumps"
+      ],
+      "notes": "Telegram – кэш медиафайлов и дампы."
+    },
+    {
+      "displayName": "Slack",
+      "publisher": "Slack Technologies Inc.",
+      "installPaths": [
+        "%LOCALAPPDATA%\\slack"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Slack",
+        "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Slack Technologies Inc"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Slack Technologies",
+        "HKLM\\SOFTWARE\\Slack Technologies"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Slack\\Cache"
+      ],
+      "notes": "Slack – кэш веб-интерфейса."
+    },
+    {
+      "displayName": "Zoom",
+      "publisher": "Zoom Video Communications, Inc.",
+      "installPaths": [
+        "%APPDATA%\\Zoom"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Zoom\\data",
+        "%USERPROFILE%\\Documents\\Zoom"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Zoom",
+        "HKLM\\SOFTWARE\\Zoom"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Zoom\\data\\avatar_*"
+      ],
+      "notes": "Zoom – аватары, записи конференций."
+    },
+    {
+      "displayName": "Microsoft Teams",
+      "publisher": "Microsoft Corporation",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Microsoft\\Teams"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Microsoft\\Teams",
+        "%LOCALAPPDATA%\\Packages\\MSTeams_8wekyb3d8bbwe\\LocalCache"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Microsoft\\Teams",
+        "HKCU\\Software\\Microsoft\\Teams"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Microsoft\\Teams\\Cache",
+        "%LOCALAPPDATA%\\Packages\\MSTeams_8wekyb3d8bbwe\\LocalCache\\Microsoft\\MSTeams"
+      ],
+      "notes": "Microsoft Teams – кэш чатов и файлов."
+    },
+    {
+      "displayName": "Notion",
+      "publisher": "Notion Labs, Inc.",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Programs\\Notion"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Notion",
+        "%LOCALAPPDATA%\\notion-updater"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Notion"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Notion\\Cache"
+      ],
+      "notes": "Notion – кэш страниц и обновлений."
+    },
+    {
+      "displayName": "uTorrent",
+      "publisher": "BitTorrent Inc.",
+      "installPaths": [
+        "%APPDATA%\\uTorrent"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\uTorrent\\apps",
+        "%LOCALAPPDATA%\\Temp\\uTorrent"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\BitTorrent\\uTorrent"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\uTorrent\\Cache"
+      ],
+      "notes": "uTorrent – кэш торрент-клиента и временные файлы."
+    },
+    {
+      "displayName": "BitTorrent",
+      "publisher": "BitTorrent Inc.",
+      "installPaths": [
+        "%APPDATA%\\BitTorrent"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\BitTorrent",
+        "%LOCALAPPDATA%\\Temp\\bittorrent"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\BitTorrent"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\BitTorrent\\Cache"
+      ],
+      "notes": "BitTorrent – кэш и временные файлы."
+    },
+    {
+      "displayName": "LibreOffice",
+      "publisher": "The Document Foundation",
+      "installPaths": [
+        "%PROGRAMFILES%\\LibreOffice"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\LibreOffice"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\LibreOffice",
+        "HKCU\\Software\\LibreOffice"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\LibreOffice\\4\\user\\backup",
+        "%TEMP%\\LibreOffice"
+      ],
+      "notes": "LibreOffice – резервные копии документов и временные файлы."
+    },
+    {
+      "displayName": "WPS Office",
+      "publisher": "Kingsoft Corp.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Kingsoft\\WPS Office"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Kingsoft\\office6\\backup",
+        "%LOCALAPPDATA%\\Kingsoft\\WPS Office"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Kingsoft\\WPS Office",
+        "HKCU\\Software\\Kingsoft\\WPS Office"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Kingsoft\\WPS Office\\cache",
+        "%APPDATA%\\Kingsoft\\office6\\backup"
+      ],
+      "notes": "WPS Office – резервные копии и кэш."
+    },
+    {
+      "displayName": "Foxit PDF Reader",
+      "publisher": "Foxit Software Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Foxit Software\\Foxit PDF Reader",
+        "%PROGRAMFILES(X86)%\\Foxit Software\\Foxit Reader"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Foxit Software"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Foxit Software",
+        "HKCU\\Software\\Foxit Software"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\Foxit Software\\Foxit PDF Reader\\Cache"
+      ],
+      "notes": "Foxit Reader – кэш PDF и настройки."
+    },
+    {
+      "displayName": "OBS Studio",
+      "publisher": "OBS Project",
+      "installPaths": [
+        "%PROGRAMFILES%\\obs-studio",
+        "%PROGRAMFILES(X86)%\\obs-studio"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\obs-studio",
+        "%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\OBS Studio"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\OBS Studio"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\obs-studio\\cache"
+      ],
+      "notes": "OBS Studio – кэш плагинов и настройки."
+    },
+    {
+      "displayName": "HandBrake",
+      "publisher": "HandBrake Team",
+      "installPaths": [
+        "%PROGRAMFILES%\\HandBrake",
+        "%PROGRAMFILES(X86)%\\HandBrake"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\HandBrake",
+        "%USERPROFILE%\\Documents\\HandBrake"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\HandBrake"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\HandBrake\\cache",
+        "%TEMP%\\HandBrake"
+      ],
+      "notes": "HandBrake – временные файлы конвертации."
+    },
+    {
+      "displayName": "qBittorrent",
+      "publisher": "The qBittorrent project",
+      "installPaths": [
+        "%PROGRAMFILES%\\qBittorrent",
+        "%PROGRAMFILES(X86)%\\qBittorrent"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\qBittorrent",
+        "%LOCALAPPDATA%\\qBittorrent"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\qBittorrent"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\qBittorrent\\cache"
+      ],
+      "notes": "qBittorrent – кэш торрентов и настройки."
+    },
+    {
+      "displayName": "Malwarebytes",
+      "publisher": "Malwarebytes Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Malwarebytes\\Anti-Malware"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\Malwarebytes",
+        "%APPDATA%\\Malwarebytes"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Malwarebytes",
+        "HKCU\\Software\\Malwarebytes"
+      ],
+      "cachePaths": [
+        "%PROGRAMDATA%\\Malwarebytes\\MBAMService\\Cache"
+      ],
+      "notes": "Malwarebytes – кэш сканирования и логи."
+    },
+    {
+      "displayName": "CCleaner",
+      "publisher": "Piriform Software Ltd.",
+      "installPaths": [
+        "%PROGRAMFILES%\\CCleaner"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\CCleaner",
+        "%LOCALAPPDATA%\\CCleaner"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Piriform\\CCleaner",
+        "HKCU\\Software\\Piriform\\CCleaner"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\CCleaner\\Cache"
+      ],
+      "notes": "CCleaner – собственный кэш и настройки."
+    },
+    {
+      "displayName": "Blender",
+      "publisher": "Blender Foundation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Blender Foundation\\Blender"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Blender Foundation\\Blender",
+        "%USERPROFILE%\\Documents\\Blender"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Blender Foundation",
+        "HKCU\\Software\\Blender Foundation"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Blender Foundation\\Blender\\Cache",
+        "%TEMP%\\Blender"
+      ],
+      "notes": "Blender – кэш рендера и временные файлы."
+    },
+    {
+      "displayName": "GIMP",
+      "publisher": "The GIMP Team",
+      "installPaths": [
+        "%PROGRAMFILES%\\GIMP 2"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\GIMP",
+        "%LOCALAPPDATA%\\GIMP"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\GIMP",
+        "HKCU\\Software\\GIMP"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\GIMP\\tmp",
+        "%TEMP%\\GIMP"
+      ],
+      "notes": "GIMP – кэш и временные файлы изображений."
+    },
+    {
+      "displayName": "Audacity",
+      "publisher": "Audacity Team",
+      "installPaths": [
+        "%PROGRAMFILES%\\Audacity",
+        "%PROGRAMFILES(X86)%\\Audacity"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Audacity",
+        "%LOCALAPPDATA%\\Audacity\\SessionData"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Audacity",
+        "HKCU\\Software\\Audacity"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Audacity\\SessionData",
+        "%TEMP%\\Audacity"
+      ],
+      "notes": "Audacity – временные файлы аудиозаписей."
+    },
+    {
+      "displayName": "KeePass",
+      "publisher": "KeePass Project",
+      "installPaths": [
+        "%PROGRAMFILES%\\KeePass Password Safe",
+        "%PROGRAMFILES(X86)%\\KeePass Password Safe"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\KeePass"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\KeePass"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\KeePass\\PluginCache"
+      ],
+      "notes": "KeePass – кэш плагинов и конфигурация."
+    },
+    {
+      "displayName": "LastPass",
+      "publisher": "LastPass US LP.",
+      "installPaths": [
+        "%PROGRAMFILES(X86)%\\LastPass"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\LastPass",
+        "%LOCALAPPDATA%\\LastPass"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\LastPass",
+        "HKCU\\Software\\LastPass"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\LastPass\\Cache"
+      ],
+      "notes": "LastPass – кэш и локальное хранилище."
+    },
+    {
+      "displayName": "Microsoft PowerToys",
+      "publisher": "Microsoft Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\PowerToys"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Microsoft\\PowerToys\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Microsoft\\PowerToys"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Microsoft\\PowerToys\\Cache"
+      ],
+      "notes": "PowerToys – логи и кэш."
+    },
+    {
+      "displayName": "Microsoft PC Manager",
+      "publisher": "Microsoft Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\Microsoft PC Manager"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Microsoft\\PCManager\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Microsoft\\PCManager"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Microsoft\\PCManager\\Cache"
+      ],
+      "notes": "Microsoft PC Manager – кэш и логи."
+    },
+    {
+      "displayName": "Cloudflare WARP",
+      "publisher": "Cloudflare Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Cloudflare\\Cloudflare WARP"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\Cloudflare\\WARP\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Cloudflare\\WARP",
+        "HKCU\\Software\\Cloudflare\\WARP"
+      ],
+      "cachePaths": [
+        "%PROGRAMDATA%\\Cloudflare\\WARP\\Cache"
+      ],
+      "notes": "Cloudflare WARP – кэш DNS и логи."
+    },
+    {
+      "displayName": "NordVPN",
+      "publisher": "Nord Security",
+      "installPaths": [
+        "%PROGRAMFILES%\\NordVPN"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\NordVPN\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\NordVPN",
+        "HKCU\\Software\\NordVPN"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\NordVPN\\Cache"
+      ],
+      "notes": "NordVPN – кэш и логи подключений."
+    },
+    {
+      "displayName": "ProtonVPN",
+      "publisher": "Proton AG",
+      "installPaths": [
+        "%PROGRAMFILES%\\ProtonVPN"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\ProtonVPN\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\ProtonVPN",
+        "HKCU\\Software\\ProtonVPN"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\ProtonVPN\\Cache"
+      ],
+      "notes": "ProtonVPN – кэш OpenVPN/WireGuard."
+    },
+    {
+      "displayName": "ExpressVPN",
+      "publisher": "ExpressVPN",
+      "installPaths": [
+        "%PROGRAMFILES%\\ExpressVPN"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\ExpressVPN\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\ExpressVPN",
+        "HKCU\\Software\\ExpressVPN"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\ExpressVPN\\Cache"
+      ],
+      "notes": "ExpressVPN – кэш и логи подключений."
+    },
+    {
+      "displayName": "Surfshark VPN",
+      "publisher": "Surfshark Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Surfshark"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Surfshark\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Surfshark",
+        "HKCU\\Software\\Surfshark"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Surfshark\\Cache"
+      ],
+      "notes": "Surfshark – кэш и логи."
+    },
+    {
+      "displayName": "CyberGhost VPN",
+      "publisher": "CyberGhost S.A.",
+      "installPaths": [
+        "%PROGRAMFILES%\\CyberGhost VPN"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\CyberGhost VPN\\Logs"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\CyberGhost VPN",
+        "HKCU\\Software\\CyberGhost VPN"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\CyberGhost VPN\\Cache"
+      ],
+      "notes": "CyberGhost VPN – кэш и логи."
+    },
+    {
+      "displayName": "Bitwarden",
+      "publisher": "Bitwarden Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Bitwarden"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Bitwarden\\Logs"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Bitwarden"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Bitwarden\\Cache"
+      ],
+      "notes": "Bitwarden – кэш паролей."
+    },
+    {
+      "displayName": "Authy Desktop",
+      "publisher": "Twilio Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\Authy Desktop"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\authy\\Logs"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Authy"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\authy\\Cache"
+      ],
+      "notes": "Authy Desktop – кэш токенов."
+    },
+    {
+      "displayName": "Todoist",
+      "publisher": "Doist Ltd.",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Todoist"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Todoist"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Todoist"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Todoist\\Cache"
+      ],
+      "notes": "Todoist – кэш задач."
+    },
+    {
+      "displayName": "Evernote",
+      "publisher": "Evernote Corporation",
+      "installPaths": [
+        "%PROGRAMFILES(X86)%\\Evernote"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Evernote",
+        "%LOCALAPPDATA%\\Evernote"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\Evernote",
+        "HKCU\\Software\\Evernote"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Evernote\\Cache"
+      ],
+      "notes": "Evernote – кэш заметок."
+    },
+    {
+      "displayName": "1Password",
+      "publisher": "AgileBits Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\1Password"
+      ],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\1Password\\Logs"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\1Password"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\1Password\\Cache"
+      ],
+      "notes": "1Password – кэш и логи."
+    },
+    {
+      "displayName": "KeePassXC",
+      "publisher": "KeePassXC Project",
+      "installPaths": [
+        "%PROGRAMFILES%\\KeePassXC"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\KeePassXC"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\KeePassXC"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\KeePassXC\\Cache"
+      ],
+      "notes": "KeePassXC – кэш паролей."
+    }
+  ]
+}

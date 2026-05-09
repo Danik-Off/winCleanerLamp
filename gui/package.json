@@ -1,7 +1,7 @@
 {
-  "name": "wincleanerlamp-gui",
-  "version": "1.0.0",
-  "description": "GUI для winCleanerLamp на Electron + React + MUI + TypeScript с Onion Architecture",
+  "name": "win-cleaner-lamp-gui",
+  "version": "1.1.0",
+  "description": "GUI для Win Cleaner Lamp на Electron + React + MUI + TypeScript с Onion Architecture",
   "license": "MIT",
   "author": "Danik Off",
   "repository": {
@@ -14,7 +14,7 @@
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron dist-electron/main.js",
     "build": "tsc && vite build && npm run build:electron",
-    "build:cli": "go build -ldflags \"-s -w\" -o ../wincleanerlamp.exe ..",
+    "build:cli": "go build -ldflags \"-s -w\" -o ../win-cleaner-lamp.exe ..",
     "build:electron": "tsc -p tsconfig.electron.json",
     "electron": "electron dist-electron/main.js",
     "start": "npm run build && electron dist-electron/main.js",
@@ -52,8 +52,8 @@
     "electron-builder": "^24.9.0"
   },
   "build": {
-    "appId": "com.wincleanerlamp.gui",
-    "productName": "WinCleanerLamp",
+    "appId": "com.win-cleaner-lamp.gui",
+    "productName": "Win Cleaner Lamp",
     "directories": {
       "output": "dist-release"
     },
@@ -64,7 +64,7 @@
     "extraResources": [
       {
         "from": "../",
-        "filter": ["wincleanerlamp.exe"],
+        "filter": ["win-cleaner-lamp.exe", "orphaned_apps.json"],
         "to": "."
       }
     ],

@@ -10,7 +10,9 @@ export class LeftoverItem {
     public readonly sizeBytes: number,
     public readonly fileCount: number,
     public readonly reason: string,
-    public readonly type: LeftoverType = 'folder'
+    public readonly type: LeftoverType = 'folder',
+    public readonly orphanMatch: string = '',
+    public readonly cacheHit: boolean = false
   ) {}
 
   get sizeFormatted(): string {
@@ -39,14 +41,28 @@ export class LeftoverItem {
     return this.type === 'folder';
   }
 
+  get isOrphanKnown(): boolean {
+    return this.orphanMatch !== '' && !this.cacheHit;
+  }
+
+  get isCache(): boolean {
+    return this.cacheHit;
+  }
+
+  get isUnknown(): boolean {
+    return this.orphanMatch === '' && this.isFolder;
+  }
+
   static create(
     path: string,
     sizeBytes: number,
     fileCount: number,
     reason: string = 'Нет в списке установленных программ',
-    itemType: LeftoverType = 'folder'
+    itemType: LeftoverType = 'folder',
+    orphanMatch: string = '',
+    cacheHit: boolean = false
   ): LeftoverItem {
-    return new LeftoverItem(path, sizeBytes, fileCount, reason, itemType);
+    return new LeftoverItem(path, sizeBytes, fileCount, reason, itemType, orphanMatch, cacheHit);
   }
 }
 
@@ -84,6 +100,18 @@ export class LeftoverSummary {
 
   get registryKeys(): LeftoverItem[] {
     return this.items.filter(i => i.isRegistry);
+  }
+
+  get cacheItems(): LeftoverItem[] {
+    return this.items.filter(i => i.cacheHit);
+  }
+
+  get orphanKnownItems(): LeftoverItem[] {
+    return this.items.filter(i => i.isOrphanKnown);
+  }
+
+  get unknownFolders(): LeftoverItem[] {
+    return this.items.filter(i => i.isUnknown);
   }
 
   get sortedBySize(): LeftoverItem[] {

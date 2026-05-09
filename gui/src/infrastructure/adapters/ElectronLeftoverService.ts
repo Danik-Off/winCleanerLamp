@@ -18,11 +18,33 @@ export class ElectronLeftoverService implements ILeftoverService {
     const lines = output.split('\n');
     const items: LeftoverItem[] = [];
     let currentSection: LeftoverType = 'folder';
+    let currentCacheHit = false;
     
     for (const line of lines) {
-      // Detect section headers
+      // Detect section headers (new categorized format)
+      if (line.includes('=== Кеш программ из orphan DB')) {
+        currentSection = 'folder';
+
+        currentCacheHit = true;
+        continue;
+      }
+      if (line.includes('=== Известные остатки из orphan DB')) {
+        currentSection = 'folder';
+
+        currentCacheHit = false;
+        continue;
+      }
+      if (line.includes('=== Неизвестные папки')) {
+        currentSection = 'folder';
+
+        currentCacheHit = false;
+        continue;
+      }
+      // Legacy format support
       if (line.includes('=== Папки-остатки')) {
         currentSection = 'folder';
+
+        currentCacheHit = false;
         continue;
       }
       if (line.includes('=== Пустые папки')) {
@@ -42,9 +64,9 @@ export class ElectronLeftoverService implements ILeftoverService {
       const trimmed = line.trim();
       if (!trimmed) continue;
 
-      // Parse folder data lines: "  SIZE  FILES  PATH"
+      // Parse folder data lines: "  SIZE  FILES  TAG  PATH"
       if (currentSection === 'folder') {
-        const parsed = this.parseFolderLine(trimmed);
+        const parsed = this.parseFolderLine(trimmed, currentCacheHit);
         if (parsed) items.push(parsed);
         continue;
       }
@@ -71,20 +93,36 @@ export class ElectronLeftoverService implements ILeftoverService {
     return items;
   }
 
-  private parseFolderLine(line: string): LeftoverItem | null {
-    // Parse lines like: "46.31 GB       68396  C:\Users\..."
-    // or: "~большой         0  C:\Users\..."
-    const match = line.match(/^([\d.]+\s*[KMGT]?B|~большой)\s+(\d+)\s+(.+)$/);
-    if (!match) return null;
-    
-    const [, sizeStr, files, path] = match;
-    let sizeBytes: number;
-    if (sizeStr.trim() === '~большой') {
-      sizeBytes = -1;
-    } else {
-      sizeBytes = this.parseSize(sizeStr.trim());
+  private parseFolderLine(line: string, sectionCacheHit: boolean): LeftoverItem | null {
+    // 4-column format: "SIZE  FILES  [TAG]  PATH"
+    // TAG is bracketed: [кеш], [?], [Google Chrome], etc.
+    const match4 = line.match(/^([\d.]+\s*[KMGT]?B|~большой)\s+(\d+)\s+\[([^\]]*)\]\s+(.+)$/);
+    if (match4) {
+      const [, sizeStr, files, tag, path] = match4;
+      const sizeBytes = sizeStr.trim() === '~большой' ? -1 : this.parseSize(sizeStr.trim());
+      const isCacheTag = tag === 'кеш' || sectionCacheHit;
+      const isUnknownTag = tag === '?';
+      const orphanName = (!isCacheTag && !isUnknownTag) ? tag : '';
+      const reason = isCacheTag
+        ? `кеш (orphan DB)`
+        : isUnknownTag
+          ? 'нет в orphan DB'
+          : `orphan DB: ${orphanName}`;
+      return LeftoverItem.create(
+        path.trim(),
+        sizeBytes,
+        parseInt(files, 10),
+        reason,
+        'folder',
+        isCacheTag ? 'cache' : orphanName,
+        isCacheTag
+      );
     }
-    
+    // Legacy 3-column: "SIZE  FILES  PATH"
+    const match3 = line.match(/^([\d.]+\s*[KMGT]?B|~большой)\s+(\d+)\s+(.+)$/);
+    if (!match3) return null;
+    const [, sizeStr, files, path] = match3;
+    const sizeBytes = sizeStr.trim() === '~большой' ? -1 : this.parseSize(sizeStr.trim());
     return LeftoverItem.create(path.trim(), sizeBytes, parseInt(files, 10), 'Нет в списке установленных программ', 'folder');
   }
 

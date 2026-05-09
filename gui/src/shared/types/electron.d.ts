@@ -51,6 +51,7 @@ interface CleanResultDto {
 interface DeleteResultDto {
   success: boolean;
   error?: string;
+  movedToRecycleBin?: boolean;
 }
 
 interface ElectronAPI {
@@ -64,9 +65,15 @@ interface ElectronAPI {
   getEmptyDirs: (rootPaths: string) => Promise<string>;
   deleteEmptyDir: (dirPath: string) => Promise<DeleteResultDto>;
   deleteFile: (filePath: string) => Promise<DeleteResultDto>;
+  openExternal: (path: string) => void;
   onScanProgress: (callback: (data: string) => void) => void;
   onCleanProgress: (callback: (data: string) => void) => void;
   removeAllListeners: (channel: string) => void;
+  orphanScan: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
+  orphanDiscover: (options?: { roots?: string }) => Promise<{ output: string; error: string; code: number }>;
+  orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean }) => Promise<{ output: string; error: string; code: number }>;
+  orphanInfo: (displayName: string) => Promise<{ output: string; error: string; code: number }>;
+  orphanList: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
   windowMinimize: () => void;
   windowMaximize: () => void;
   windowClose: () => void;
