@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/suzen/Win Cleaner Lamp/internal/cleaner"
+	"github.com/suzen/wincleanerlamp/internal/cleaner"
 )
 
 const version = "0.1.0"

@@ -1,0 +1,56 @@
+run:
+  timeout: 5m
+  go: "1.21"
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - nakedret
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+    - whitespace
+
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/suzen/wincleanerlamp
+  revive:
+    rules:
+      - name: blank-imports
+        disabled: false
+      - name: context-as-argument
+        disabled: false
+      - name: var-declaration
+        disabled: false
+      - name: package-comments
+        disabled: true
+      - name: exported
+        disabled: false
+        arguments:
+          - "checkPrivateReceivers"
+          - "disableStutteringCheck"
+      - name: indent-error-flow
+        disabled: false
+      - name: unexported-return
+        disabled: false
+      - name: unused-parameter
+        disabled: false
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-dirs:
+    - vendor
+    - third_party

@@ -1,9 +1,14 @@
 name: Release
 
 on:
+  # Триггер на изменения package.json в корне (поднятие версии)
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'package.json'
+  # Также можно запускать вручную или по тегам
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
@@ -13,9 +18,8 @@ permissions:
   contents: write
 
 jobs:
-  # Один Windows-runner: раньше CLI и GUI собирались отдельно и Go билдился дважды.
-  build:
-    name: 'Windows: CLI + GUI'
+  build-and-release:
+    name: 'Windows: CLI + GUI + Release'
     runs-on: windows-latest
     defaults:
       run:
@@ -26,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Go — установка
         uses: actions/setup-go@v5
@@ -72,66 +78,50 @@ jobs:
         working-directory: gui
         run: npm run dist:electron
 
-      - name: Артефакт — CLI
-        uses: actions/upload-artifact@v4
-        with:
-          name: cli-windows-amd64
-          path: wincleanerlamp.exe
-          if-no-files-found: error
-
-      - name: Артефакт — установщики GUI
-        uses: actions/upload-artifact@v4
-        with:
-          name: gui-windows-amd64
-          path: gui/dist-release/*.exe
-          if-no-files-found: error
-
-      - name: Сводка сборки
-        if: success()
-        shell: pwsh
+      - name: Получить версию из package.json
+        id: version
         run: |
-          @"
-          ## Сборка ${{ github.ref_name }}
-          - **CLI:** `wincleanerlamp.exe` в корне репозитория
-          - **GUI:** установщики в `gui/dist-release/`
-          "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=v$version"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
 
-  publish:
-    name: 'GitHub Release'
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Скачать артефакт CLI
-        uses: actions/download-artifact@v4
-        with:
-          name: cli-windows-amd64
-          path: artifacts/cli
-
-      - name: Скачать артефакт GUI
-        uses: actions/download-artifact@v4
-        with:
-          name: gui-windows-amd64
-          path: artifacts/gui
-
-      - name: Подготовить имена файлов (CLI)
+      - name: Создать и отправить тег
+        id: tag_created
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          mv "artifacts/cli/wincleanerlamp.exe" "artifacts/wincleanerlamp-cli-${TAG}-windows-amd64.exe"
+          $tag = "${{ steps.version.outputs.tag }}"
+          Write-Host "Checking if tag $tag exists..."
+          $exists = git tag -l $tag
+          if ($exists) {
+            Write-Host "Tag $tag already exists, skipping creation"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "created=false"
+          } else {
+            Write-Host "Creating tag $tag..."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a $tag -m "Release v${{ steps.version.outputs.version }}"
+            git push origin $tag
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "created=true"
+          }
 
       - name: Опубликовать релиз
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           files: |
-            artifacts/wincleanerlamp-cli-*
-            artifacts/gui/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            wincleanerlamp.exe
+            gui/dist-release/*.exe
 
       - name: Сводка релиза
         if: success()
+        shell: pwsh
         run: |
-          cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
-          ## Публикация
-          - Загружены CLI и GUI артефакты в GitHub Release.
-          EOF
+          $version = "${{ steps.version.outputs.version }}"
+          $tag = "${{ steps.version.outputs.tag }}"
+          $created = "${{ steps.tag_created.outputs.created }}"
+          @"
+          ## Релиз $tag
+          - **CLI:** `wincleanerlamp.exe` в релизе
+          - **GUI:** установщики в релизе
+          - **Тег создан:** $created
+          "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8

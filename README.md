@@ -30,21 +30,12 @@
 
 ```powershell
 npm run release:patch
+npm run release:push
 ```
 
 (или `release:minor` / `release:major` — то же самое, что `npm version patch|minor|major` с сообщением коммита `chore(release): …`.)
 
-Дальше отправить коммит и тег на удалённый репозиторий:
-
-```powershell
-npm run release:push
-```
-
-Вручную то же самое: `npm version patch`, затем `git push --follow-tags`.
-
-Рабочая копия должна быть **без незакоммиченных изменений**, иначе `npm version` завершится с ошибкой.
-
-Workflow GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)): один job **Windows** (Go один раз → GUI → артефакты), затем job **GitHub Release** — публикация при push тегов `v*`.
+**Автосборка:** GitHub Actions автоматически собирает CLI + GUI и публикует релиз при пуше тега `v*` или при изменении `package.json` в корне.
 
 ## Быстрый старт
 
@@ -56,6 +47,31 @@ go build -o wincleanerlamp.exe .
 ```
 
 **GUI** — нужны Go, [Node.js 20+](https://nodejs.org/) и собранный CLI; подробности в [docs/gui.md](docs/gui.md).
+
+## Линтинг и код-стайл
+
+Проект использует [golangci-lint](https://golangci-lint.run/) для статического анализа кода.
+
+**Установка:**
+
+```powershell
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+```
+
+**Запуск:**
+
+```powershell
+golangci-lint run
+```
+
+Или через Makefile:
+
+```powershell
+make lint
+make lint-install
+```
+
+Конфигурация линтера находится в [.golangci.yml](.golangci.yml).
 
 ## Важно (дисклеймер)
 
