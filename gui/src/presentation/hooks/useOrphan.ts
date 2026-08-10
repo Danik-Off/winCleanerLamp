@@ -8,9 +8,11 @@ export interface OrphanScanItem {
   displayName: string;
   totalSize: string;
   totalFiles: number;
-  paths: { size: string; path: string }[];
+  paths: { size: string; path: string; isUserData: boolean }[];
   regKeys: string[];
 }
+
+const USER_DATA_MARKER = '⚠ [ПОЛЬЗОВАТЕЛЬСКИЕ ДАННЫЕ] ';
 
 export interface DiscoverItem {
   path: string;
@@ -30,7 +32,7 @@ interface UseOrphanReturn {
   discoverOutput: string;
   orphanScan: () => Promise<void>;
   orphanDiscover: (roots?: string) => Promise<void>;
-  orphanClean: (names: string, recycle?: boolean, cacheOnly?: boolean) => Promise<string>;
+  orphanClean: (names: string, recycle?: boolean, cacheOnly?: boolean, includeUserData?: boolean) => Promise<string>;
   clear: () => void;
 }
 
@@ -63,10 +65,13 @@ function parseScanResults(output: string): OrphanScanItem[] {
       continue;
     }
 
-    // Path line: "    [  SIZE] PATH"
+    // Path line: "    [  SIZE] PATH" (путь может начинаться с маркера пользовательских данных)
     const pathMatch = trimmed.match(/^\[\s*([\d.]+\s*[KMGT]?B|~большой)\s*\]\s+(.+)$/);
     if (pathMatch && current) {
-      current.paths.push({ size: pathMatch[1].trim(), path: pathMatch[2].trim() });
+      let rawPath = pathMatch[2].trim();
+      const isUserData = rawPath.startsWith(USER_DATA_MARKER);
+      if (isUserData) rawPath = rawPath.slice(USER_DATA_MARKER.length);
+      current.paths.push({ size: pathMatch[1].trim(), path: rawPath, isUserData });
       continue;
     }
 
@@ -147,11 +152,11 @@ export function useOrphan(): UseOrphanReturn {
     }
   }, []);
 
-  const orphanClean = useCallback(async (names: string, recycle?: boolean, cacheOnly?: boolean): Promise<string> => {
+  const orphanClean = useCallback(async (names: string, recycle?: boolean, cacheOnly?: boolean, includeUserData?: boolean): Promise<string> => {
     setCleaning(true);
     setError(null);
     try {
-      const result = await window.electronAPI.orphanClean({ names, recycle, cacheOnly });
+      const result = await window.electronAPI.orphanClean({ names, recycle, cacheOnly, includeUserData });
       if (result.error) setError(result.error);
       return result.output;
     } catch (err) {

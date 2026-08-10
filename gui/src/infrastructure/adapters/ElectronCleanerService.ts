@@ -2,7 +2,7 @@
  * Infrastructure Adapter: ElectronCleanerService
  * Implements ICleanerService using Electron IPC
  */
-import type { ICleanerService, ScanOptions, CleanOptions } from '@application/ports/ICleanerService';
+import type { ICleanerService, ScanOptions, CleanOptions, CleanExecutionResult } from '@application/ports/ICleanerService';
 import { Category, ScanSummary, ScanResult, OperationLog } from '@domain/index';
 
 export class ElectronCleanerService implements ICleanerService {
@@ -28,14 +28,19 @@ export class ElectronCleanerService implements ICleanerService {
     return new ScanSummary(scanResults, 0);
   }
 
-  async clean(options: CleanOptions): Promise<OperationLog> {
+  async clean(options: CleanOptions): Promise<CleanExecutionResult> {
     const result = await window.electronAPI.clean({
       aggressive: options.aggressive,
       categories: options.selection.getSelectedIds(),
       yes: options.skipConfirmation
     });
 
-    return OperationLog.empty().addRaw(result.output);
+    return {
+      log: OperationLog.empty().addRaw(result.output),
+      bytesCleaned: result.bytesCleaned,
+      filesCleaned: result.filesCleaned,
+      errorCount: result.errorCount,
+    };
   }
 
   onScanProgress(callback: (log: string) => void): void {

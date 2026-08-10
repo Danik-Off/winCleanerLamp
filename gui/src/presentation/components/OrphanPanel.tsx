@@ -56,6 +56,7 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [cleanDialog, setCleanDialog] = useState<{ name: string; recycle: boolean; cacheOnly: boolean } | null>(null);
   const [cleanOutput, setCleanOutput] = useState<string | null>(null);
+  const [confirmText, setConfirmText] = useState('');
 
   const toggleExpand = (name: string) => {
     setExpandedItems((prev) => {
@@ -66,8 +67,23 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
     });
   };
 
+  // Пути, похожие на пользовательские данные (сохранения, проекты и т.п.) —
+  // для программы из cleanDialog. Сервер их и так не удалит без
+  // --orphan-include-user-data, но пользователь должен явно увидеть риск
+  // и подтвердить полную очистку, набрав имя программы.
+  const userDataPaths = cleanDialog
+    ? scanResults.find((r) => r.displayName === cleanDialog.name)?.paths.filter((p) => p.isUserData) ?? []
+    : [];
+  const requiresTypedConfirm = !!cleanDialog && !cleanDialog.cacheOnly && userDataPaths.length > 0;
+  const canConfirmClean = !requiresTypedConfirm || confirmText === cleanDialog?.name;
+
+  const openCleanDialog = (dialog: { name: string; recycle: boolean; cacheOnly: boolean }) => {
+    setConfirmText('');
+    setCleanDialog(dialog);
+  };
+
   const handleClean = async () => {
-    if (!cleanDialog) return;
+    if (!cleanDialog || !canConfirmClean) return;
     const output = await orphanClean(cleanDialog.name, cleanDialog.recycle, cleanDialog.cacheOnly);
     setCleanOutput(output);
     setCleanDialog(null);
@@ -188,7 +204,7 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
                           color="info"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setCleanDialog({ name: item.displayName, recycle: false, cacheOnly: true });
+                            openCleanDialog({ name: item.displayName, recycle: false, cacheOnly: true });
                           }}
                         >
                           <CleanIcon sx={{ fontSize: 16 }} />
@@ -200,7 +216,7 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
                           color="error"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setCleanDialog({ name: item.displayName, recycle: false, cacheOnly: false });
+                            openCleanDialog({ name: item.displayName, recycle: false, cacheOnly: false });
                           }}
                         >
                           <DeleteIcon sx={{ fontSize: 16 }} />
@@ -391,10 +407,30 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
             </Alert>
           ) : (
             <Alert severity="warning" sx={{ borderRadius: 2, fontSize: '0.8rem' }}>
-              <strong>⚠ ВНИМАНИЕ!</strong> Будут удалены <strong>все</strong> остатки программы:
-              настройки, профили, сохранения, кеш и ключи реестра.
-              Это может привести к потере личных данных!
+              <strong>⚠ ВНИМАНИЕ!</strong> Будут удалены остатки программы:
+              настройки, профили, кеш и ключи реестра.
+              {userDataPaths.length > 0
+                ? ' Пути ниже похожи на пользовательские данные и НЕ будут удалены автоматически.'
+                : ' Проверьте список перед удалением.'}
             </Alert>
+          )}
+
+          {!cleanDialog?.cacheOnly && userDataPaths.length > 0 && (
+            <Box sx={{ mt: 1.5 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'warning.main' }}>
+                Похоже на пользовательские данные (пропускаются):
+              </Typography>
+              <Box sx={{ mt: 0.5 }}>
+                {userDataPaths.map((p) => (
+                  <Box key={p.path} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 0.2 }}>
+                    <WarningIcon sx={{ fontSize: 13, color: 'warning.main' }} />
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.68rem', wordBreak: 'break-all' }}>
+                      {p.path}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
           )}
 
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
@@ -429,6 +465,29 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
               </Button>
             )}
           </Stack>
+
+          {requiresTypedConfirm && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                Для подтверждения введите имя программы: <strong>{cleanDialog?.name}</strong>
+              </Typography>
+              <input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={cleanDialog?.name}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(128,128,128,0.4)',
+                  background: 'transparent',
+                  color: 'inherit',
+                  fontSize: '0.85rem',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCleanDialog(null)}>Отмена</Button>
@@ -436,7 +495,7 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
             variant="contained"
             color={cleanDialog?.cacheOnly ? 'info' : 'error'}
             onClick={handleClean}
-            disabled={cleaning}
+            disabled={cleaning || !canConfirmClean}
             startIcon={cleaning ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
           >
             {cleaning ? 'Удаление...' : cleanDialog?.cacheOnly ? 'Очистить кеш' : 'Удалить всё'}

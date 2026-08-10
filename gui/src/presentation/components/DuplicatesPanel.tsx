@@ -47,6 +47,8 @@ interface DupGroup {
   waste: number;
   wasteFormatted: string;
   paths: string[];
+  /** Непусто, если группа содержит файлы вне пользовательских папок и/или исполняемые/библиотечные файлы. */
+  riskFlag?: string;
 }
 
 interface DuplicatesPanelProps {
@@ -229,12 +231,22 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
               const kept = keepSelection[gi] || livePaths[0];
               return (
                 <React.Fragment key={gi}>
-                  <Box sx={{ bgcolor: 'action.hover', px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ bgcolor: 'action.hover', px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       Группа {gi + 1}: {group.sizeFormatted} × {livePaths.length} файлов
                     </Typography>
-                    <Chip label={`Экономия: ${group.wasteFormatted}`} size="small" color="warning" sx={{ fontWeight: 600 }} />
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      {group.riskFlag && (
+                        <Tooltip title={group.riskFlag}>
+                          <Chip icon={<WarningIcon sx={{ fontSize: 14 }} />} label="риск" size="small" color="error" sx={{ fontWeight: 600 }} />
+                        </Tooltip>
+                      )}
+                      <Chip label={`Экономия: ${group.wasteFormatted}`} size="small" color="warning" sx={{ fontWeight: 600 }} />
+                    </Box>
                   </Box>
+                  {group.riskFlag && (
+                    <Alert severity="warning" sx={{ borderRadius: 0, fontSize: '0.75rem' }}>{group.riskFlag}</Alert>
+                  )}
                   {livePaths.map((p) => {
                     const fileName = p.split('\\').pop() || p;
                     const isKept = p === kept;
@@ -287,7 +299,7 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
       {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon color="error" />
+          <WarningIcon color="warning" />
           Удалить дубликат
         </DialogTitle>
         <DialogContent>
@@ -298,7 +310,10 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
                 <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-all' }}>{deleteTarget.path}</Typography>
                 <Typography variant="caption" color="text.secondary">{deleteTarget.group.sizeFormatted}</Typography>
               </Paper>
-              <Alert severity="error" sx={{ borderRadius: 1.5 }}>Это действие необратимо!</Alert>
+              {deleteTarget.group.riskFlag && (
+                <Alert severity="error" sx={{ borderRadius: 1.5, mb: 1 }}>⚠ {deleteTarget.group.riskFlag}</Alert>
+              )}
+              <Alert severity="success" sx={{ borderRadius: 1.5 }}>Файл будет перемещён в Корзину (можно восстановить).</Alert>
               {deleteError && <Alert severity="warning" sx={{ mt: 1, borderRadius: 1.5 }}>{deleteError}</Alert>}
             </Box>
           )}
@@ -306,9 +321,9 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ borderRadius: 1.5 }}>Отмена</Button>
-          <Button onClick={handleDelete} variant="contained" color="error" disabled={deleting}
+          <Button onClick={handleDelete} variant="contained" color="warning" disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} /> : <DeleteIcon />} sx={{ borderRadius: 1.5 }}>
-            {deleting ? 'Удаление...' : 'Удалить'}
+            {deleting ? 'Удаление...' : 'В Корзину'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -332,11 +347,11 @@ function parseDuplicatesOutput(output: string): { groups: DupGroup[]; scannedFil
       continue;
     }
 
-    // "  === Группа 1: 1.23 MB (x3 файлов) ==="
-    const groupMatch = line.match(/===\s+Группа\s+\d+:\s+(.+?)\s+\(x(\d+)\s+файлов\)\s+===/);
+    // "  === Группа 1: 1.23 MB (x3 файлов) ===" (опционально + " ⚠ РИСК: причина")
+    const groupMatch = line.match(/===\s+Группа\s+\d+:\s+(.+?)\s+\(x(\d+)\s+файлов\)\s+===(?:\s+⚠\s+РИСК:\s+(.+))?$/);
     if (groupMatch) {
       if (current) groups.push(current);
-      current = { size: 0, sizeFormatted: groupMatch[1], waste: 0, wasteFormatted: '', paths: [] };
+      current = { size: 0, sizeFormatted: groupMatch[1], waste: 0, wasteFormatted: '', paths: [], riskFlag: groupMatch[3] };
       continue;
     }
 

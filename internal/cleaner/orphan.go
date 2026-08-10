@@ -21,7 +21,15 @@ type OrphanApp struct {
 	AdditionalPaths []string `json:"additionalPaths,omitempty"`
 	RegistryKeys    []string `json:"registryKeys,omitempty"`
 	CachePaths      []string `json:"cachePaths,omitempty"`
-	Notes           string   `json:"notes,omitempty"`
+	// UserDataPaths — пути с пользовательскими данными (сохранения игр,
+	// проекты, документы и т.п.), которые технически лежат в папке
+	// программы, но НЕ являются мусором/остатками. В отличие от
+	// installPaths/additionalPaths, эти пути --orphan-clean никогда не
+	// удаляет без явного --orphan-include-user-data. Опционально: если в
+	// самом JSON это поле не заполнено, похожие пути всё равно ловит
+	// эвристика LikelyUserData (см. isLikelyUserDataPath).
+	UserDataPaths []string `json:"userDataPaths,omitempty"`
+	Notes         string   `json:"notes,omitempty"`
 }
 
 // OrphanConfigPath возвращает путь к orphaned_apps.json рядом с исполняемым файлом.
@@ -74,6 +82,10 @@ func sanitizeID(name string) string {
 // OrphanConfig — массив записей orphaned_apps.json.
 type OrphanConfig struct {
 	Apps []OrphanApp `json:"apps"`
+	// Warnings — предупреждения, найденные при загрузке (например,
+	// дублирующиеся displayName). Не сериализуется, файл не переписывается
+	// автоматически — это чужие данные пользователя.
+	Warnings []string `json:"-"`
 }
 
 // LoadOrphanConfig загружает orphaned_apps.json.
@@ -91,7 +103,29 @@ func LoadOrphanConfig(path string) (*OrphanConfig, error) {
 		}
 		cfg.Apps = apps
 	}
+	cfg.Warnings = validateOrphanConfig(&cfg)
 	return &cfg, nil
+}
+
+// validateOrphanConfig — мягкая проверка данных пользователя (без изменения
+// файла): предупреждает о дублирующихся displayName, но ничего не удаляет
+// и не переписывает.
+func validateOrphanConfig(cfg *OrphanConfig) []string {
+	var warnings []string
+	seen := make(map[string]int, len(cfg.Apps))
+	for _, app := range cfg.Apps {
+		key := strings.ToLower(strings.TrimSpace(app.DisplayName))
+		if key == "" {
+			continue
+		}
+		seen[key]++
+	}
+	for name, count := range seen {
+		if count > 1 {
+			warnings = append(warnings, fmt.Sprintf("дублирующаяся запись displayName %q встречается %d раз в orphaned_apps.json", name, count))
+		}
+	}
+	return warnings
 }
 
 // SaveOrphanConfig сохраняет orphaned_apps.json.
@@ -122,6 +156,33 @@ type OrphanFoundPath struct {
 	Size   int64
 	Files  int
 	Exists bool
+	// IsUserData — путь явно указан в userDataPaths записи в orphaned_apps.json.
+	IsUserData bool
+	// LikelyUserData — путь не помечен в JSON явно, но его последний сегмент
+	// похож на пользовательские данные (saves, screenshots, projects и т.п.).
+	// Эвристика нужна именно потому, что сам JSON мы не переписываем, а
+	// разметить его вручную пользователь мог не успеть — см. safety.go/orphan.go.
+	LikelyUserData bool
+}
+
+// commonUserDataDirNames — типичные имена папок с пользовательскими данными
+// (сохранения, документы, медиа), которые нельзя молча удалять как "остаток
+// программы", даже если они физически лежат внутри её каталога данных.
+var commonUserDataDirNames = map[string]bool{
+	"saves": true, "save": true, "savegames": true, "savegame": true,
+	"worlds": true, "world": true, "screenshots": true, "screenshot": true,
+	"photos": true, "photo": true, "documents": true, "projects": true,
+	"project": true, "mods": true, "modpacks": true, "music": true,
+	"videos": true, "recordings": true, "recording": true,
+	"my games": true, "userdata": true, "user data": true,
+	"backups": true, "backup": true, "resourcepacks": true,
+	"shaderpacks": true,
+}
+
+// isLikelyUserDataPath — эвристика по последнему сегменту пути.
+func isLikelyUserDataPath(path string) bool {
+	base := strings.ToLower(strings.TrimRight(filepath.Base(path), `\/`))
+	return commonUserDataDirNames[base]
 }
 
 // OrphanScan проверяет каждую запись из orphaned_apps.json.
@@ -150,11 +211,20 @@ func OrphanScan(cfg *OrphanConfig, verbose bool) []OrphanScanResult {
 func scanOneOrphan(app OrphanApp) OrphanScanResult {
 	r := OrphanScanResult{App: app}
 
-	// Проверяем installPaths + additionalPaths + cachePaths
-	allPaths := make([]string, 0, len(app.InstallPaths)+len(app.AdditionalPaths)+len(app.CachePaths))
+	// Проверяем installPaths + additionalPaths + cachePaths + userDataPaths.
+	// userDataPaths помечаются явно; остальные — эвристикой isLikelyUserDataPath.
+	userDataSet := make(map[string]bool, len(app.UserDataPaths))
+	for _, p := range app.UserDataPaths {
+		if exp := ExpandPath(p); exp != "" {
+			userDataSet[strings.ToLower(filepath.Clean(exp))] = true
+		}
+	}
+
+	allPaths := make([]string, 0, len(app.InstallPaths)+len(app.AdditionalPaths)+len(app.CachePaths)+len(app.UserDataPaths))
 	allPaths = append(allPaths, app.InstallPaths...)
 	allPaths = append(allPaths, app.AdditionalPaths...)
 	allPaths = append(allPaths, app.CachePaths...)
+	allPaths = append(allPaths, app.UserDataPaths...)
 
 	for _, raw := range allPaths {
 		p := ExpandPath(raw)
@@ -166,6 +236,8 @@ func scanOneOrphan(app OrphanApp) OrphanScanResult {
 			continue
 		}
 		fp := OrphanFoundPath{Path: p, Exists: true}
+		fp.IsUserData = userDataSet[strings.ToLower(filepath.Clean(p))]
+		fp.LikelyUserData = fp.IsUserData || isLikelyUserDataPath(p)
 		if info.IsDir() {
 			fp.Size, fp.Files = dirSizeWithTimeout(p, 3*time.Second)
 		} else {
@@ -430,7 +502,12 @@ type OrphanCleanOptions struct {
 	Recycle   bool   // в корзину вместо удаления (через PowerShell)
 	ExportReg string // экспорт реестра перед удалением
 	Verbose   bool
-	Logger    func(string)
+	// IncludeUserData — разрешить удаление путей, явно помеченных
+	// userDataPaths в orphaned_apps.json или похожих на пользовательские
+	// данные эвристикой (saves, screenshots, projects и т.п.). По умолчанию
+	// false: такие пути пропускаются даже при полной (не cache-only) очистке.
+	IncludeUserData bool
+	Logger          func(string)
 }
 
 // OrphanCleanResult — результат очистки одной программы.
@@ -438,9 +515,12 @@ type OrphanCleanResult struct {
 	App          OrphanApp
 	DeletedPaths []string
 	DeletedKeys  []string
-	FreedBytes   int64
-	FreedFiles   int
-	Errors       []string
+	// SkippedUserData — пути, пропущенные как вероятные пользовательские
+	// данные (см. OrphanCleanOptions.IncludeUserData).
+	SkippedUserData []string
+	FreedBytes      int64
+	FreedFiles      int
+	Errors          []string
 }
 
 // OrphanClean удаляет остатки указанных программ.
@@ -502,13 +582,30 @@ func cleanOneOrphan(app OrphanApp, opts OrphanCleanOptions) OrphanCleanResult {
 		pathsToClean = append(pathsToClean, app.CachePaths...)
 	}
 
+	userDataSet := make(map[string]bool, len(app.UserDataPaths))
+	for _, p := range app.UserDataPaths {
+		if exp := ExpandPath(p); exp != "" {
+			userDataSet[strings.ToLower(filepath.Clean(exp))] = true
+		}
+	}
+
 	for _, raw := range pathsToClean {
 		p := ExpandPath(raw)
 		if p == "" {
 			continue
 		}
-		if !safePath(p) {
-			r.Errors = append(r.Errors, fmt.Sprintf("небезопасный путь: %s", p))
+
+		if !opts.CacheOnly && !opts.IncludeUserData {
+			isUserData := userDataSet[strings.ToLower(filepath.Clean(p))] || isLikelyUserDataPath(p)
+			if isUserData {
+				r.SkippedUserData = append(r.SkippedUserData, p)
+				log("  [пропущено] похоже на пользовательские данные, не удаляется без --orphan-include-user-data: %s", p)
+				continue
+			}
+		}
+
+		if ok, reason := IsPathSafeToDelete(p); !ok {
+			r.Errors = append(r.Errors, fmt.Sprintf("небезопасный путь: %s (%s)", p, reason))
 			continue
 		}
 
@@ -518,7 +615,7 @@ func cleanOneOrphan(app OrphanApp, opts OrphanCleanOptions) OrphanCleanResult {
 		}
 
 		if opts.Recycle {
-			if err := moveToRecycle(p); err != nil {
+			if err := moveToRecycleBin(p, info.IsDir()); err != nil {
 				r.Errors = append(r.Errors, fmt.Sprintf("корзина %s: %v", p, err))
 				continue
 			}
@@ -570,18 +667,6 @@ func cleanOneOrphan(app OrphanApp, opts OrphanCleanOptions) OrphanCleanResult {
 	}
 
 	return r
-}
-
-// moveToRecycle перемещает файл/папку в корзину через PowerShell.
-func moveToRecycle(path string) error {
-	psCmd := fmt.Sprintf(`Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('%s', 'OnlyErrorDialogs', 'SendToRecycleBin')`,
-		strings.ReplaceAll(path, "'", "''"))
-	cmd := exec.Command("powershell", "-NoProfile", "-Command", psCmd)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
 }
 
 // ─── Info: подробная информация ───

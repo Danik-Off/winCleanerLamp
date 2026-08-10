@@ -59,8 +59,8 @@ func Process(t Target, opts Options) Report {
 		if p == "" {
 			continue
 		}
-		if !safePath(p) {
-			r.Errors = append(r.Errors, fmt.Sprintf("небезопасный путь пропущен: %s", p))
+		if ok, reason := IsPathSafeToDelete(p); !ok {
+			r.Errors = append(r.Errors, fmt.Sprintf("небезопасный путь пропущен: %s (%s)", p, reason))
 			continue
 		}
 
@@ -229,7 +229,7 @@ func walkAndDelete(root string, t Target, opts Options, r *Report, keepRoot bool
 			}
 			return nil
 		}
-		if !safePath(path) {
+		if ok, _ := IsPathSafeToDelete(path); !ok {
 			if d.IsDir() {
 				return fs.SkipDir
 			}
@@ -310,50 +310,6 @@ func tooYoung(info fs.FileInfo, t Target, opts Options) bool {
 		return false
 	}
 	return time.Since(info.ModTime()) < minAge
-}
-
-// safePath — защита от удаления чего-то критичного.
-// Мы запрещаем корень диска, системные каталоги, домашнюю папку пользователя целиком и т.д.
-func safePath(p string) bool {
-	if p == "" {
-		return false
-	}
-	abs, err := filepath.Abs(p)
-	if err != nil {
-		return false
-	}
-	abs = filepath.Clean(abs)
-	low := strings.ToLower(abs)
-
-	// Корни дисков
-	if len(abs) <= 3 { // "C:\"
-		return false
-	}
-
-	forbidden := []string{
-		`c:\windows\system32`,
-		`c:\windows\syswow64`,
-		`c:\windows\winsxs`,
-		`c:\program files`,
-		`c:\program files (x86)`,
-		`c:\programdata\microsoft\windows\start menu`,
-		`c:\users\default`,
-		`c:\users\public`,
-	}
-	for _, f := range forbidden {
-		if low == f {
-			return false
-		}
-	}
-
-	// Не позволяем удалять корень профиля пользователя.
-	if home, err := os.UserHomeDir(); err == nil {
-		if strings.EqualFold(abs, filepath.Clean(home)) {
-			return false
-		}
-	}
-
-	return true
 }
 
 // ---- Special actions ----

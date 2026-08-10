@@ -507,7 +507,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon color="error" />
+          <WarningIcon color="warning" />
           Подтвердите удаление
         </DialogTitle>
         <DialogContent>
@@ -526,8 +526,8 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                   </Typography>
                 )}
               </Paper>
-              <Alert severity="error" sx={{ borderRadius: 1.5 }}>
-                Это действие необратимо! Папка будет удалена безвозвратно.
+              <Alert severity="success" sx={{ borderRadius: 1.5 }}>
+                Папка будет перемещена в Корзину (можно восстановить).
               </Alert>
               {deleteError && (
                 <Alert severity="warning" sx={{ mt: 1, borderRadius: 1.5 }}>{deleteError}</Alert>
@@ -538,9 +538,9 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ borderRadius: 1.5 }}>Отмена</Button>
-          <Button onClick={handleDelete} variant="contained" color="error" disabled={deleting}
+          <Button onClick={handleDelete} variant="contained" color="warning" disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} /> : <DeleteIcon />} sx={{ borderRadius: 1.5 }}>
-            {deleting ? 'Удаление...' : 'Удалить'}
+            {deleting ? 'Удаление...' : 'В Корзину'}
           </Button>
         </DialogActions>
       </Dialog>

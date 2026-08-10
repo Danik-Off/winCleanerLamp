@@ -15,6 +15,13 @@ export interface CleanOptions {
   readonly skipConfirmation: boolean;
 }
 
+export interface CleanExecutionResult {
+  readonly log: OperationLog;
+  readonly bytesCleaned: number;
+  readonly filesCleaned: number;
+  readonly errorCount: number;
+}
+
 export interface ICleanerService {
   /**
    * Scan for junk files
@@ -24,7 +31,7 @@ export interface ICleanerService {
   /**
    * Clean junk files
    */
-  clean(options: CleanOptions): Promise<OperationLog>;
+  clean(options: CleanOptions): Promise<CleanExecutionResult>;
 
   /**
    * Get available categories

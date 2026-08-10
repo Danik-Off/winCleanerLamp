@@ -19,13 +19,14 @@ interface ElectronAPI {
   getEmptyDirs: (rootPaths: string) => Promise<string>;
   deleteEmptyDir: (dirPath: string) => Promise<{ success: boolean; error?: string; movedToRecycleBin?: boolean }>;
   deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
-  openExternal: (url: string) => void;
+  /** Открывает локальный путь в системном обработчике (Проводник/приложение по умолчанию). Не для http(s)-ссылок. */
+  openPath: (localPath: string) => void;
   onScanProgress: (callback: (data: string) => void) => void;
   onCleanProgress: (callback: (data: string) => void) => void;
   removeAllListeners: (channel: string) => void;
   orphanScan: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
   orphanDiscover: (options?: { roots?: string }) => Promise<{ output: string; error: string; code: number }>;
-  orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean }) => Promise<{ output: string; error: string; code: number }>;
+  orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean; includeUserData?: boolean }) => Promise<{ output: string; error: string; code: number }>;
   orphanInfo: (displayName: string) => Promise<{ output: string; error: string; code: number }>;
   orphanList: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
   windowMinimize: () => void;
@@ -57,9 +58,9 @@ const api: ElectronAPI = {
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 
-  openExternal: (url: string) => {
+  openPath: (localPath: string) => {
     const { shell } = require('electron');
-    shell.openPath(url);
+    shell.openPath(localPath);
   },
 
   onScanProgress: (callback: (data: string) => void) => {
@@ -76,7 +77,7 @@ const api: ElectronAPI = {
 
   orphanScan: (configPath?: string) => ipcRenderer.invoke('orphan-scan', configPath),
   orphanDiscover: (options?: { roots?: string }) => ipcRenderer.invoke('orphan-discover', options),
-  orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean }) => ipcRenderer.invoke('orphan-clean', options),
+  orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean; includeUserData?: boolean }) => ipcRenderer.invoke('orphan-clean', options),
   orphanInfo: (displayName: string) => ipcRenderer.invoke('orphan-info', displayName),
   orphanList: (configPath?: string) => ipcRenderer.invoke('orphan-list', configPath),
 

@@ -18,6 +18,11 @@ type DuplicateGroup struct {
 	Size      int64    // размер каждого файла
 	Paths     []string // пути к дубликатам (≥2)
 	WasteSize int64    // Size * (len(Paths)-1) — экономия при удалении лишних
+	// RiskFlag непусто, если группа содержит файлы вне пользовательских папок
+	// (Program Files, Windows) и/или исполняемые/библиотечные файлы —
+	// совпадение содержимого НЕ означает, что файл можно безопасно удалить:
+	// это может быть общий рантайм/DLL, используемый несколькими программами.
+	RiskFlag string
 }
 
 // DuplicateScanOptions — параметры сканирования дубликатов.
@@ -27,15 +32,22 @@ type DuplicateScanOptions struct {
 	MaxSize    int64    // максимальный размер (0 = без ограничения)
 	Extensions []string // только эти расширения (пусто = все)
 	Timeout    time.Duration
+	// AllowSystemDirs разрешает сканировать корни внутри системных/установочных
+	// каталогов (Program Files, Windows, ProgramData). По умолчанию false —
+	// такие корни пропускаются с предупреждением, чтобы не предлагать
+	// "дубликаты" общих DLL/рантаймов разных программ к удалению.
+	AllowSystemDirs bool
 }
 
 // DuplicateScanResult — результат сканирования дубликатов.
 type DuplicateScanResult struct {
-	Groups     []DuplicateGroup
-	TotalWaste int64
-	TotalFiles int
+	Groups       []DuplicateGroup
+	TotalWaste   int64
+	TotalFiles   int
 	ScannedFiles int
-	Duration   time.Duration
+	Duration     time.Duration
+	// SkippedRoots — корни, пропущенные как системные (см. AllowSystemDirs).
+	SkippedRoots []string
 }
 
 // ScanDuplicates ищет дубликаты файлов по алгоритму:
@@ -62,7 +74,12 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 		extFilter[strings.ToLower(strings.TrimPrefix(ext, "."))] = true
 	}
 
+	var skippedRoots []string
 	for _, root := range opts.Roots {
+		if !opts.AllowSystemDirs && isSystemDirRoot(root) {
+			skippedRoots = append(skippedRoots, root)
+			continue
+		}
 		_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return nil // пропускаем недоступные
@@ -161,6 +178,7 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 						Size:      c.size,
 						Paths:     ps,
 						WasteSize: waste,
+						RiskFlag:  duplicateGroupRiskFlag(ps),
 					})
 				}
 			}
@@ -187,7 +205,56 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 		TotalFiles:   totalFiles,
 		ScannedFiles: scanned,
 		Duration:     time.Since(start),
+		SkippedRoots: skippedRoots,
 	}, nil
+}
+
+// isSystemDirRoot проверяет, что корень сканирования лежит внутри
+// системного/установочного каталога (Program Files, Windows, ProgramData) —
+// такие корни по умолчанию исключаются из поиска дубликатов, см.
+// DuplicateScanOptions.AllowSystemDirs.
+func isSystemDirRoot(root string) bool {
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	low := strings.ToLower(filepath.Clean(abs))
+	systemRoots := []string{
+		`c:\windows`,
+		`c:\program files`,
+		`c:\program files (x86)`,
+		`c:\programdata`,
+	}
+	for _, s := range systemRoots {
+		if low == s || strings.HasPrefix(low, s+`\`) {
+			return true
+		}
+	}
+	return false
+}
+
+// riskyDuplicateExt — расширения, для которых "дубликат" может оказаться
+// разделяемым между программами файлом (рантайм, библиотека, драйвер), а не
+// просто лишней копией.
+var riskyDuplicateExt = map[string]bool{
+	".exe": true, ".dll": true, ".sys": true, ".ocx": true, ".msi": true,
+}
+
+// duplicateGroupRiskFlag возвращает непустое предупреждение, если группа
+// дубликатов содержит файлы вне пользовательских папок и/или исполняемые
+// или библиотечные файлы — такие "дубликаты" не стоит удалять не глядя.
+func duplicateGroupRiskFlag(paths []string) string {
+	for _, p := range paths {
+		low := strings.ToLower(p)
+		ext := strings.ToLower(filepath.Ext(p))
+		if isSystemDirRoot(filepath.Dir(low)) {
+			return "файл находится в системной/установочной папке — удаление может затронуть другую программу"
+		}
+		if riskyDuplicateExt[ext] {
+			return "исполняемый или библиотечный файл — совпадение содержимого не гарантирует, что он не используется другой программой"
+		}
+	}
+	return ""
 }
 
 // partialHash вычисляет SHA-256 от первых n байт файла.
@@ -228,9 +295,10 @@ func skipDir(name string) bool {
 	skip := map[string]bool{
 		"$recycle.bin": true, "system volume information": true,
 		"$windows.~bt": true, "$windows.~ws": true,
-		"windows": true, "winsxs": true, ".git": true,
+		"windows": true, "windows.old": true, "winsxs": true, ".git": true,
 		"node_modules": true, "__pycache__": true, ".cache": true,
 		"appdata": true, "recovery": true,
+		"program files": true, "program files (x86)": true,
 	}
 	return skip[name]
 }

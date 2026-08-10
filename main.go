@@ -20,23 +20,32 @@ const version = "0.1.0"
 
 func main() {
 	var (
-		listFlag     = flag.Bool("list", false, "показать все категории и выйти")
-		scanFlag     = flag.Bool("scan", false, "только посчитать размер мусора (ничего не удалять)")
-		cleanFlag    = flag.Bool("clean", false, "удалить мусор")
-		yesFlag      = flag.Bool("yes", false, "не запрашивать подтверждение")
-		verboseFlag  = flag.Bool("verbose", false, "подробный вывод")
-		categories   = flag.String("categories", "", "список категорий через запятую (по умолчанию — все безопасные)")
-		exclude      = flag.String("exclude", "", "исключить категории (через запятую)")
-		minAgeHours  = flag.Int("min-age-hours", 0, "удалять файлы старше N часов (применяется ко всем категориям)")
-		aggressive   = flag.Bool("aggressive", false, "включить агрессивные категории (Windows.old, $WINDOWS.~BT, event-logs, старые Downloads и т.п.)")
-		leftovers    = flag.Bool("leftovers", false, "найти возможные остатки удалённых программ в AppData/ProgramData (только отчёт)")
-		leftoversLog = flag.String("leftovers-log", "", "записать неизвестные находки в JSON-файл для обновления orphan DB")
-		sysinfo      = flag.Bool("sysinfo", false, "показать размеры системных файлов (hiberfil.sys, pagefile.sys, swapfile.sys, WinSxS) и советы")
-		duplicates   = flag.String("duplicates", "", "найти дубликаты файлов в указанных папках (через запятую, например C:\\Users\\Me)")
-		emptyDirs    = flag.String("empty-dirs", "", "найти пустые папки в указанных папках (через запятую)")
-		showEmpty    = flag.Bool("show-empty", false, "показывать в таблице категории с нулевым размером")
-		parallelN    = flag.Int("parallel", 8, "число параллельных сканеров (1 = последовательно)")
-		showVer      = flag.Bool("version", false, "показать версию")
+		listFlag         = flag.Bool("list", false, "показать все категории и выйти")
+		scanFlag         = flag.Bool("scan", false, "только посчитать размер мусора (ничего не удалять)")
+		cleanFlag        = flag.Bool("clean", false, "удалить мусор")
+		yesFlag          = flag.Bool("yes", false, "не запрашивать подтверждение")
+		verboseFlag      = flag.Bool("verbose", false, "подробный вывод")
+		categories       = flag.String("categories", "", "список категорий через запятую (по умолчанию — все безопасные)")
+		exclude          = flag.String("exclude", "", "исключить категории (через запятую)")
+		minAgeHours      = flag.Int("min-age-hours", 0, "удалять файлы старше N часов (применяется ко всем категориям)")
+		aggressive       = flag.Bool("aggressive", false, "включить агрессивные категории (Windows.old, $WINDOWS.~BT, event-logs, старые Downloads и т.п.)")
+		leftovers        = flag.Bool("leftovers", false, "найти возможные остатки удалённых программ в AppData/ProgramData (только отчёт)")
+		leftoversLog     = flag.String("leftovers-log", "", "записать неизвестные находки в JSON-файл для обновления orphan DB")
+		sysinfo          = flag.Bool("sysinfo", false, "показать размеры системных файлов (hiberfil.sys, pagefile.sys, swapfile.sys, WinSxS) и советы")
+		duplicates       = flag.String("duplicates", "", "найти дубликаты файлов в указанных папках (через запятую, например C:\\Users\\Me)")
+		duplicatesSystem = flag.Bool("duplicates-system", false, "разрешить поиск дубликатов внутри системных папок (Program Files, Windows, ProgramData) — по умолчанию они пропускаются")
+		emptyDirs        = flag.String("empty-dirs", "", "найти пустые папки в указанных папках (через запятую)")
+		showEmpty        = flag.Bool("show-empty", false, "показывать в таблице категории с нулевым размером")
+		parallelN        = flag.Int("parallel", 8, "число параллельных сканеров (1 = последовательно)")
+		showVer          = flag.Bool("version", false, "показать версию")
+		jsonFlag         = flag.Bool("json", false, "структурированный JSON-вывод вместо текста (для --list/--scan/--clean/--delete-path/--delete-dir)")
+
+		// Flags для безопасного удаления одного файла/папки (используется GUI
+		// вместо прямых fs-операций в Electron — единая проверка безопасности
+		// и перемещение в Корзину для дубликатов/остатков/пустых папок).
+		deletePathFlag = flag.String("delete-path", "", "безопасно удалить один файл (по умолчанию — в Корзину)")
+		deleteDirFlag  = flag.String("delete-dir", "", "безопасно удалить папку целиком (по умолчанию — в Корзину)")
+		permanentFlag  = flag.Bool("permanent", false, "удалить навсегда вместо перемещения в Корзину (для --delete-path/--delete-dir)")
 
 		// Flags для учёта мусора в конфиге
 		recordFlag = flag.Bool("record", false, "записать найденный мусор в конфиг-файл для последующей авточистки")
@@ -58,6 +67,7 @@ func main() {
 		orphanRecycle    = flag.Bool("orphan-recycle", false, "перемещать в корзину вместо удаления (для orphan-clean)")
 		orphanExportReg  = flag.String("orphan-export-reg", "", "экспортировать ключи реестра перед удалением (папка)")
 		orphanCacheOnly  = flag.Bool("orphan-cache-only", false, "удалять только кеш программ (безопасно, не трогает настройки)")
+		orphanIncludeUD  = flag.Bool("orphan-include-user-data", false, "разрешить удаление путей, похожих на пользовательские данные (сохранения, проекты и т.п.) — по умолчанию они пропускаются")
 	)
 	flag.Usage = usage
 	flag.Parse()
@@ -71,6 +81,26 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Предупреждение: это приложение предназначено для Windows. На другой ОС большинство путей будут отсутствовать.")
 	}
 
+	// Безопасное удаление одного файла/папки — самостоятельная команда,
+	// не требует загрузки категорий. Используется GUI вместо прямых
+	// fs-операций в Electron (там раньше не было вообще никакой проверки пути).
+	if *deletePathFlag != "" {
+		result := cleaner.DeleteFile(*deletePathFlag, *permanentFlag)
+		printDeleteResult(result, *jsonFlag)
+		if !result.Success {
+			os.Exit(1)
+		}
+		return
+	}
+	if *deleteDirFlag != "" {
+		result := cleaner.DeleteDir(*deleteDirFlag, *permanentFlag)
+		printDeleteResult(result, *jsonFlag)
+		if !result.Success {
+			os.Exit(1)
+		}
+		return
+	}
+
 	all := cleaner.AllTargets()
 
 	// Загружаем orphaned_apps.json и добавляем кеш-таргеты в обычный scan/clean
@@ -81,13 +111,20 @@ func main() {
 		if *verboseFlag {
 			fmt.Printf("Orphan DB: %d приложений загружено, %d категорий кеша добавлено.\n", len(orphCfg.Apps), len(cacheTargets))
 		}
+		for _, w := range orphCfg.Warnings {
+			fmt.Fprintf(os.Stderr, "Предупреждение (orphaned_apps.json): %s\n", w)
+		}
 	} else if *verboseFlag || *scanFlag || *cleanFlag {
 		fmt.Fprintf(os.Stderr, "Предупреждение: не удалось загрузить orphaned_apps.json (%s): %v\n", *orphanConfig, orphErr)
 		fmt.Fprintln(os.Stderr, "Категории кеша приложений не будут доступны. Положите orphaned_apps.json рядом с exe.")
 	}
 
 	if *listFlag {
-		printList(all)
+		if *jsonFlag {
+			printListJSON(all)
+		} else {
+			printList(all)
+		}
 		return
 	}
 
@@ -148,7 +185,7 @@ func main() {
 
 	if *orphanCleanNames != "" {
 		names := splitCSV(*orphanCleanNames)
-		runOrphanClean(*orphanConfig, names, *orphanRecycle, *orphanExportReg, *verboseFlag, *orphanCacheOnly)
+		runOrphanClean(*orphanConfig, names, *orphanRecycle, *orphanExportReg, *verboseFlag, *orphanCacheOnly, *orphanIncludeUD)
 		if !*scanFlag && !*cleanFlag {
 			return
 		}
@@ -162,7 +199,7 @@ func main() {
 	}
 
 	if *duplicates != "" {
-		runDuplicates(*duplicates)
+		runDuplicates(*duplicates, *duplicatesSystem)
 		if !*scanFlag && !*cleanFlag && !*recordFlag && *emptyDirs == "" {
 			return
 		}
@@ -188,7 +225,7 @@ func main() {
 
 	opts := cleaner.Options{
 		DryRun:  *scanFlag && !*cleanFlag,
-		Verbose: *verboseFlag,
+		Verbose: *verboseFlag && !*jsonFlag,
 		MinAge:  time.Duration(*minAgeHours) * time.Hour,
 		Logger:  func(s string) { fmt.Println(s) },
 	}
@@ -207,36 +244,57 @@ func main() {
 	}
 
 	// Сначала всегда делаем сканирование, чтобы показать сводку.
-	fmt.Printf("Сканирую %d категори%s...\n", len(selected), pluralRu(len(selected)))
+	if !*jsonFlag {
+		fmt.Printf("Сканирую %d категори%s...\n", len(selected), pluralRu(len(selected)))
+	}
 	scanOpts := opts
 	scanOpts.DryRun = true
 	scanOpts.Verbose = false
 
 	start := time.Now()
-	rows := parallelScan(selected, scanOpts, *parallelN, junkCfg, *recordFlag, junkPath)
+	rows := parallelScan(selected, scanOpts, *parallelN, junkCfg, *recordFlag, junkPath, *jsonFlag)
 	var totalBytes int64
 	var totalFiles int
 	for _, r := range rows {
 		totalBytes += r.Bytes
 		totalFiles += r.Files
 	}
-	fmt.Printf("Сканирование заняло %.1f сек.\n\n", time.Since(start).Seconds())
-	printTable(rows, totalBytes, totalFiles, *showEmpty)
+	scanDuration := time.Since(start)
+	if !*jsonFlag {
+		fmt.Printf("Сканирование заняло %.1f сек.\n\n", scanDuration.Seconds())
+		printTable(rows, totalBytes, totalFiles, *showEmpty)
+	}
 
 	if opts.DryRun {
 		// Если записываем в конфиг — сохраняем даже при сканировании
 		if *recordFlag && junkCfg != nil {
 			if err := cleaner.SaveJunkConfig(junkCfg, junkPath); err != nil {
-				fmt.Fprintf(os.Stderr, "Ошибка сохранения конфига: %v\n", err)
-			} else {
+				if !*jsonFlag {
+					fmt.Fprintf(os.Stderr, "Ошибка сохранения конфига: %v\n", err)
+				}
+			} else if !*jsonFlag {
 				fmt.Printf("Записано %d элементов мусора в %s\n", len(junkCfg.Records), junkPath)
 			}
+		}
+		if *jsonFlag {
+			printJSON(jsonScanResult{
+				Categories:      rowsToJSON(rows),
+				TotalBytes:      totalBytes,
+				TotalFiles:      totalFiles,
+				DurationSeconds: scanDuration.Seconds(),
+			})
 		}
 		return
 	}
 
-	// Подтверждение
+	// Подтверждение. В --json (машинный режим, например GUI) интерактивный
+	// prompt не имеет смысла и заблокировал бы процесс на чтении stdin —
+	// вместо этого требуем явный --yes и выходим с ошибкой, если его нет.
 	if !*yesFlag {
+		if *jsonFlag {
+			printJSON(map[string]any{"error": "требуется --yes в связке с --json (интерактивное подтверждение не поддерживается)"})
+			os.Exit(2)
+		}
 		fmt.Printf("\nУдалить перечисленное? [y/N]: ")
 		reader := bufio.NewReader(os.Stdin)
 		line, _ := reader.ReadString('\n')
@@ -247,10 +305,14 @@ func main() {
 		}
 	}
 
-	fmt.Println("\nОчистка...")
+	if !*jsonFlag {
+		fmt.Println("\nОчистка...")
+	}
+	cleanStart := time.Now()
 	var cleanedBytes int64
 	var cleanedFiles int
 	var allErrors []string
+	cleanedByCategory := make(map[string]cleaner.Report, len(rows))
 	// Очищаем только непустые (те что нашли мусор при скане) — экономия времени.
 	nonEmpty := make(map[string]bool, len(rows))
 	for _, r := range rows {
@@ -262,41 +324,65 @@ func main() {
 		if !nonEmpty[t.ID] {
 			continue
 		}
-		fmt.Printf("[%d/%d] → %s\n", i+1, len(selected), t.Name)
+		if !*jsonFlag {
+			fmt.Printf("[%d/%d] → %s\n", i+1, len(selected), t.Name)
+		}
 		r := cleaner.Process(t, opts)
+		cleanedByCategory[t.ID] = r
 		cleanedBytes += r.Bytes
 		cleanedFiles += r.Files
 		if len(r.Errors) > 0 {
 			allErrors = append(allErrors, r.Errors...)
-			if *verboseFlag {
+			if *verboseFlag && !*jsonFlag {
 				for _, e := range r.Errors {
 					fmt.Printf("   ! %s\n", e)
 				}
 			}
 		}
-		fmt.Printf("   освобождено: %s (%d файл%s)\n", cleaner.Human(r.Bytes), r.Files, pluralFilesRu(r.Files))
-
-		// Записываем в конфиг, если требуется
-		if *recordFlag && junkCfg != nil {
-			// Здесь нужно добавить логику записи — см. ниже в параллельном скане
+		if !*jsonFlag {
+			fmt.Printf("   освобождено: %s (%d файл%s)\n", cleaner.Human(r.Bytes), r.Files, pluralFilesRu(r.Files))
 		}
 	}
 
-	fmt.Printf("\nГотово. Освобождено: %s в %d файлах.\n", cleaner.Human(cleanedBytes), cleanedFiles)
-	if len(allErrors) > 0 {
-		fmt.Printf("Ошибок/пропусков: %d (часть файлов могла быть занята или требует прав администратора).\n", len(allErrors))
-		if !*verboseFlag {
-			fmt.Println("Запустите с --verbose для подробностей.")
+	if !*jsonFlag {
+		fmt.Printf("\nГотово. Освобождено: %s в %d файлах.\n", cleaner.Human(cleanedBytes), cleanedFiles)
+		if len(allErrors) > 0 {
+			fmt.Printf("Ошибок/пропусков: %d (часть файлов могла быть занята или требует прав администратора).\n", len(allErrors))
+			if !*verboseFlag {
+				fmt.Println("Запустите с --verbose для подробностей.")
+			}
 		}
 	}
 
 	// Сохраняем конфиг после очистки
 	if *recordFlag && junkCfg != nil {
 		if err := cleaner.SaveJunkConfig(junkCfg, junkPath); err != nil {
-			fmt.Fprintf(os.Stderr, "Ошибка сохранения конфига: %v\n", err)
-		} else {
+			if !*jsonFlag {
+				fmt.Fprintf(os.Stderr, "Ошибка сохранения конфига: %v\n", err)
+			}
+		} else if !*jsonFlag {
 			fmt.Printf("Конфиг сохранён: %s (всего записей: %d)\n", junkPath, len(junkCfg.Records))
 		}
+	}
+
+	if *jsonFlag {
+		categories := rowsToJSON(rows)
+		for i, c := range categories {
+			if r, ok := cleanedByCategory[c.ID]; ok {
+				categories[i].Bytes = r.Bytes
+				categories[i].Files = r.Files
+				categories[i].Errors = r.Errors
+			}
+		}
+		printJSON(jsonCleanResult{
+			Categories:      categories,
+			ScannedBytes:    totalBytes,
+			ScannedFiles:    totalFiles,
+			CleanedBytes:    cleanedBytes,
+			CleanedFiles:    cleanedFiles,
+			Errors:          allErrors,
+			DurationSeconds: time.Since(cleanStart).Seconds(),
+		})
 	}
 }
 
@@ -325,6 +411,17 @@ func usage() {
   Win Cleaner Lamp --orphan-discover --orphan-out unknown.json
   Win Cleaner Lamp --orphan-clean "Имя1,Имя2"  удалить остатки указанных программ
   Win Cleaner Lamp --orphan-clean "Имя" --orphan-recycle  удалить в корзину
+  Win Cleaner Lamp --orphan-clean "Имя"  (пути с пользовательскими данными пропускаются;
+                                          --orphan-include-user-data — включить и их)
+
+  # Безопасное удаление одного файла/папки (используется GUI)
+  Win Cleaner Lamp --delete-path "C:\путь\файл"   удалить файл (в Корзину)
+  Win Cleaner Lamp --delete-dir "C:\путь\папка"    удалить папку (в Корзину)
+  Win Cleaner Lamp --delete-path "..." --permanent удалить навсегда, минуя Корзину
+
+  # JSON-вывод (для GUI/скриптов)
+  Win Cleaner Lamp --scan --json               структурированный JSON вместо таблицы
+  Win Cleaner Lamp --list --json
 
 Флаги:
 `, version)
@@ -337,7 +434,7 @@ func usage() {
   • Сначала используйте --scan, чтобы убедиться, что всё корректно.
   
   • Для авточистки: сначала --scan --record, затем позже --auto-clean
-  • Конфиг хранится в: %LOCALAPPDATA%\Win Cleaner Lamp\junk.json
+  • Конфиг хранится в: %LOCALAPPDATA%\winCleanerLamp\junk.json
   
   • OrphanCleaner: используйте --orphan-scan для проверки orphaned_apps.json
   • Команда --orphan-discover найдёт папки, не связанные с установленными программами
@@ -360,6 +457,110 @@ func printList(all []cleaner.Target) {
 			continue
 		}
 		fmt.Printf("  %s\n    %s\n    %s\n\n", t.ID, t.Name, t.Description)
+	}
+}
+
+// ─── JSON-вывод (--json) ───
+//
+// Раньше GUI (gui/electron/main.ts) разбирал текстовый вывод CLI регэкспами
+// (parseCategories, parseScanOutput) — хрупко и ломалось при любой правке
+// форматирования таблиц. --json даёт машинно-читаемую альтернативу для тех
+// же команд.
+
+type jsonCategoryDTO struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Aggressive  bool   `json:"aggressive"`
+}
+
+type jsonCategoriesResult struct {
+	Safe       []jsonCategoryDTO `json:"safe"`
+	Aggressive []jsonCategoryDTO `json:"aggressive"`
+}
+
+type jsonCategoryResult struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Bytes         int64    `json:"bytes"`
+	Files         int      `json:"files"`
+	Skipped       bool     `json:"skipped,omitempty"`
+	SkippedReason string   `json:"skippedReason,omitempty"`
+	Errors        []string `json:"errors,omitempty"`
+}
+
+type jsonScanResult struct {
+	Categories      []jsonCategoryResult `json:"categories"`
+	TotalBytes      int64                `json:"totalBytes"`
+	TotalFiles      int                  `json:"totalFiles"`
+	DurationSeconds float64              `json:"durationSeconds"`
+}
+
+type jsonCleanResult struct {
+	Categories      []jsonCategoryResult `json:"categories"`
+	ScannedBytes    int64                `json:"scannedBytes"`
+	ScannedFiles    int                  `json:"scannedFiles"`
+	CleanedBytes    int64                `json:"cleanedBytes"`
+	CleanedFiles    int                  `json:"cleanedFiles"`
+	Errors          []string             `json:"errors,omitempty"`
+	DurationSeconds float64              `json:"durationSeconds"`
+}
+
+// printJSON сериализует v в JSON и печатает его в stdout одной строкой.
+func printJSON(v any) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, `{"error":%q}`+"\n", err.Error())
+		return
+	}
+	fmt.Println(string(data))
+}
+
+func printListJSON(all []cleaner.Target) {
+	result := jsonCategoriesResult{}
+	for _, t := range all {
+		dto := jsonCategoryDTO{ID: t.ID, Name: t.Name, Description: t.Description, Aggressive: t.Aggressive}
+		if t.Aggressive {
+			result.Aggressive = append(result.Aggressive, dto)
+		} else {
+			result.Safe = append(result.Safe, dto)
+		}
+	}
+	printJSON(result)
+}
+
+// rowsToJSON конвертирует отчёты сканирования в DTO для JSON-вывода.
+func rowsToJSON(rows []cleaner.Report) []jsonCategoryResult {
+	out := make([]jsonCategoryResult, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, jsonCategoryResult{
+			ID:            r.Target.ID,
+			Name:          r.Target.Name,
+			Bytes:         r.Bytes,
+			Files:         r.Files,
+			Skipped:       r.Skipped,
+			SkippedReason: r.SkippedReason,
+			Errors:        r.Errors,
+		})
+	}
+	return out
+}
+
+// printDeleteResult выводит результат --delete-path/--delete-dir в
+// человекочитаемом или JSON-виде.
+func printDeleteResult(r cleaner.DeleteResult, jsonOut bool) {
+	if jsonOut {
+		printJSON(r)
+		return
+	}
+	if !r.Success {
+		fmt.Fprintf(os.Stderr, "Ошибка: %s\n", r.Error)
+		return
+	}
+	if r.MovedToRecycleBin {
+		fmt.Printf("Перемещено в Корзину: %s\n", r.Path)
+	} else {
+		fmt.Printf("Удалено безвозвратно: %s\n", r.Path)
 	}
 }
 
@@ -530,7 +731,7 @@ func runLeftovers(orphanCfgPath string, logFile string) {
 	fmt.Println("  Для реестра: regedit или reg delete <ключ>.")
 }
 
-func runDuplicates(pathsCSV string) {
+func runDuplicates(pathsCSV string, allowSystemDirs bool) {
 	roots := splitCSV(pathsCSV)
 	if len(roots) == 0 {
 		fmt.Fprintln(os.Stderr, "Укажите папки для поиска дубликатов через запятую.")
@@ -541,12 +742,18 @@ func runDuplicates(pathsCSV string) {
 	fmt.Println()
 
 	result, err := cleaner.ScanDuplicates(cleaner.DuplicateScanOptions{
-		Roots:   roots,
-		MinSize: 1024,
+		Roots:           roots,
+		MinSize:         1024,
+		AllowSystemDirs: allowSystemDirs,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
 		return
+	}
+
+	if len(result.SkippedRoots) > 0 {
+		fmt.Printf("Пропущены системные папки (используйте --duplicates-system, если это осознанный выбор): %s\n\n",
+			strings.Join(result.SkippedRoots, ", "))
 	}
 
 	if len(result.Groups) == 0 {
@@ -563,7 +770,11 @@ func runDuplicates(pathsCSV string) {
 	}
 
 	for i, g := range result.Groups[:limit] {
-		fmt.Printf("  === Группа %d: %s (x%d файлов) ===\n", i+1, cleaner.Human(g.Size), len(g.Paths))
+		header := fmt.Sprintf("  === Группа %d: %s (x%d файлов) ===", i+1, cleaner.Human(g.Size), len(g.Paths))
+		if g.RiskFlag != "" {
+			header += " ⚠ РИСК: " + g.RiskFlag
+		}
+		fmt.Println(header)
 		for _, p := range g.Paths {
 			fmt.Printf("    %s\n", p)
 		}
@@ -685,7 +896,7 @@ func printTable(rows []cleaner.Report, totalBytes int64, totalFiles int, showEmp
 }
 
 // parallelScan прогоняет сканирование целей параллельно с прогресс-баром.
-func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int, junkCfg *cleaner.JunkConfig, record bool, junkPath string) []cleaner.Report {
+func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int, junkCfg *cleaner.JunkConfig, record bool, junkPath string, quiet bool) []cleaner.Report {
 	if workers < 1 {
 		workers = 1
 	}
@@ -705,10 +916,15 @@ func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int, j
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	total := len(targets)
+	// quiet=true (--json) отключает прогресс-бар: он пишет "\r"-строки в
+	// stdout, что при перенаправлении в файл/пайп (не TTY) ломает JSON —
+	// carriage return не стирает предыдущий текст, а остаётся как есть.
 	progress := func(name string) {
 		mu.Lock()
 		done++
-		fmt.Printf("\r  [%d/%d] %-60s", done, total, truncateRunes(name, 58))
+		if !quiet {
+			fmt.Printf("\r  [%d/%d] %-60s", done, total, truncateRunes(name, 58))
+		}
 		mu.Unlock()
 	}
 
@@ -724,7 +940,9 @@ func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int, j
 		}()
 	}
 	wg.Wait()
-	fmt.Printf("\r%s\r", strings.Repeat(" ", 80))
+	if !quiet {
+		fmt.Printf("\r%s\r", strings.Repeat(" ", 80))
+	}
 
 	// Записываем все записи в конфиг
 	if record && junkCfg != nil {
@@ -925,7 +1143,11 @@ func runOrphanScan(cfgPath string, verbose bool) {
 			if p.Size == -1 {
 				size = "~большой"
 			}
-			fmt.Printf("    [%8s] %s\n", size, p.Path)
+			path := p.Path
+			if p.LikelyUserData {
+				path = "⚠ [ПОЛЬЗОВАТЕЛЬСКИЕ ДАННЫЕ] " + path
+			}
+			fmt.Printf("    [%8s] %s\n", size, path)
 		}
 		for _, k := range r.FoundRegKeys {
 			fmt.Printf("    [реестр]   %s\n", k)
@@ -936,6 +1158,7 @@ func runOrphanScan(cfgPath string, verbose bool) {
 	fmt.Println(strings.Repeat("-", 70))
 	fmt.Printf("ИТОГО: %d программ, ~%s на диске\n", len(results), cleaner.Human(totalSize))
 	fmt.Println("Для удаления: Win Cleaner Lamp --orphan-clean \"Имя программы1,Имя программы2\"")
+	fmt.Println("Пути с пометкой [ПОЛЬЗОВАТЕЛЬСКИЕ ДАННЫЕ] --orphan-clean не удаляет без --orphan-include-user-data.")
 }
 
 func runOrphanInfo(cfgPath, displayName string) {
@@ -1033,7 +1256,7 @@ func runOrphanDiscover(cfgPath string, roots []string, jsonOutput bool, outFile 
 	}
 }
 
-func runOrphanClean(cfgPath string, names []string, recycle bool, exportReg string, verbose bool, cacheOnly bool) {
+func runOrphanClean(cfgPath string, names []string, recycle bool, exportReg string, verbose bool, cacheOnly bool, includeUserData bool) {
 	cfg, err := cleaner.LoadOrphanConfig(cfgPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
@@ -1046,17 +1269,22 @@ func runOrphanClean(cfgPath string, names []string, recycle bool, exportReg stri
 		fmt.Printf("Очистка остатков для: %s\n", strings.Join(names, ", "))
 		fmt.Println("⚠  ВНИМАНИЕ: полная очистка удаляет настройки, профили и данные программы!")
 		fmt.Println("   Для безопасного удаления только кеша используйте: --orphan-cache-only")
+		if !includeUserData {
+			fmt.Println("   Пути, похожие на пользовательские данные (сохранения, проекты и т.п.), будут пропущены.")
+			fmt.Println("   Чтобы удалить и их — добавьте --orphan-include-user-data (внимательно проверьте список).")
+		}
 	}
 	if recycle {
 		fmt.Println("Режим: перемещение в корзину")
 	}
 
 	results := cleaner.OrphanClean(cfg, names, cleaner.OrphanCleanOptions{
-		CacheOnly: cacheOnly,
-		Recycle:   recycle,
-		ExportReg: exportReg,
-		Verbose:   verbose,
-		Logger:    func(s string) { fmt.Println(s) },
+		CacheOnly:       cacheOnly,
+		Recycle:         recycle,
+		ExportReg:       exportReg,
+		Verbose:         verbose,
+		IncludeUserData: includeUserData,
+		Logger:          func(s string) { fmt.Println(s) },
 	})
 
 	if len(results) == 0 {
@@ -1073,6 +1301,12 @@ func runOrphanClean(cfgPath string, names []string, recycle bool, exportReg stri
 			fmt.Printf("    Удалено путей: %d\n", len(r.DeletedPaths))
 			for _, p := range r.DeletedPaths {
 				fmt.Printf("      ✓ %s\n", p)
+			}
+		}
+		if len(r.SkippedUserData) > 0 {
+			fmt.Printf("    Пропущено как пользовательские данные: %d\n", len(r.SkippedUserData))
+			for _, p := range r.SkippedUserData {
+				fmt.Printf("      ⚠ %s\n", p)
 			}
 		}
 		if len(r.DeletedKeys) > 0 {
@@ -1165,4 +1399,3 @@ func runAutoClean(configPath string, verbose bool) {
 		}
 	}
 }
-

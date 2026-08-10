@@ -2,7 +2,7 @@
  * Electron Main Process
  * TypeScript implementation of main process
  */
-import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
@@ -151,52 +151,62 @@ function executeCli(args: string[]): Promise<{ stdout: string; stderr: string; c
   });
 }
 
-// Get Categories IPC Handler
+// Get Categories IPC Handler — CLI отдаёт --list --json, парсинг текста регэкспами не нужен.
 ipcMain.handle('get-categories', async () => {
-  const { stdout } = await executeCli(['--list']);
-  return parseCategories(stdout);
+  const { stdout } = await executeCli(['--list', '--json']);
+  const parsed: JsonCategoriesResult = JSON.parse(stdout);
+  return {
+    safe: parsed.safe.map(toCategoryDto),
+    aggressive: parsed.aggressive.map(toCategoryDto),
+  };
 });
 
 // Scan IPC Handler
-ipcMain.handle('scan', async (event: IpcMainInvokeEvent, options: { aggressive: boolean; categories?: string[] }) => {
-  const args = ['--scan'];
+ipcMain.handle('scan', async (_event: IpcMainInvokeEvent, options: { aggressive: boolean; categories?: string[] }) => {
+  const args = ['--scan', '--json'];
   if (options.aggressive) args.push('--aggressive');
   if (options.categories?.length) args.push('--categories', options.categories.join(','));
 
   const { stdout } = await executeCli(args);
-  const parsed = parseScanOutput(stdout);
-  
-  // Debug logging
-  console.log('=== SCAN OUTPUT ===');
-  console.log('Categories found:', parsed.categories.length);
-  console.log('Total bytes:', parsed.totalBytes);
-  console.log('Total files:', parsed.totalFiles);
-  if (parsed.categories.length > 0) {
-    console.log('First category:', JSON.stringify(parsed.categories[0]));
-  }
-  
-  const result = {
-    output: stdout,
-    parsed,
+  const parsed: JsonScanResult = JSON.parse(stdout);
+
+  return {
+    output: buildScanLogText(parsed),
+    parsed: {
+      categories: parsed.categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        size: formatBytes(c.bytes),
+        sizeBytes: c.bytes,
+        files: c.files,
+      })),
+      totalBytes: parsed.totalBytes,
+      totalFiles: parsed.totalFiles,
+    },
     code: 0,
   };
-  
-  console.log('Returning result:', JSON.stringify(result.parsed));
-  return result;
 });
 
 // Clean IPC Handler
-ipcMain.handle('clean', async (event: IpcMainInvokeEvent, options: { aggressive: boolean; categories?: string[]; yes: boolean }) => {
-  const args = ['--clean'];
+ipcMain.handle('clean', async (_event: IpcMainInvokeEvent, options: { aggressive: boolean; categories?: string[]; yes: boolean }) => {
+  const args = ['--clean', '--json'];
   if (options.aggressive) args.push('--aggressive');
   if (options.yes) args.push('--yes');
   if (options.categories?.length) args.push('--categories', options.categories.join(','));
 
   const { stdout, stderr, code } = await executeCli(args);
+  if (code !== 0 || !stdout.trim()) {
+    // Отменено пользователем (нет --yes) или ошибка запуска — нет JSON на stdout.
+    return { output: stdout || stderr, error: stderr, code, bytesCleaned: 0, filesCleaned: 0, errorCount: 0 };
+  }
+  const parsed: JsonCleanResult = JSON.parse(stdout);
   return {
-    output: stdout,
+    output: buildCleanLogText(parsed),
     error: stderr,
     code,
+    bytesCleaned: parsed.cleanedBytes,
+    filesCleaned: parsed.cleanedFiles,
+    errorCount: parsed.errors?.length ?? 0,
   };
 });
 
@@ -232,96 +242,49 @@ ipcMain.handle('get-empty-dirs', async (_event: IpcMainInvokeEvent, rootPaths: s
   return stdout;
 });
 
-// Delete Empty Dir IPC Handler
+// ─── Безопасное удаление ───
+//
+// Раньше эти три хендлера делали fs.unlinkSync/fs.rmSync/собственный
+// PowerShell-скрипт прямо в Electron — без единой проверки безопасности пути
+// (delete-file и delete-leftover вообще без какой-либо проверки) и с ломаным
+// экранированием (`replace(/"/g, '\"')` не меняет строку). Теперь всё удаление
+// идёт через CLI (--delete-path/--delete-dir), который использует единую
+// cleaner.IsPathSafeToDelete и корректно экранированный PowerShell
+// (-EncodedCommand). Electron здесь — только тонкая обёртка.
+
+async function runDeleteCli(flag: '--delete-path' | '--delete-dir', targetPath: string): Promise<DeleteResultDto> {
+  const { stdout, stderr } = await executeCli([flag, targetPath, '--json']);
+  const raw = stdout.trim();
+  if (!raw) {
+    return { success: false, error: stderr || 'CLI не вернул результат' };
+  }
+  try {
+    const parsed = JSON.parse(raw) as { success: boolean; movedToRecycleBin: boolean; error?: string };
+    return { success: parsed.success, error: parsed.error, movedToRecycleBin: parsed.movedToRecycleBin };
+  } catch {
+    return { success: false, error: raw };
+  }
+}
+
+interface DeleteResultDto {
+  success: boolean;
+  error?: string;
+  movedToRecycleBin?: boolean;
+}
+
+// Delete Empty Dir IPC Handler — перемещение в Корзину (см. runDeleteCli).
 ipcMain.handle('delete-empty-dir', async (_event: IpcMainInvokeEvent, dirPath: string) => {
-  try {
-    if (!fs.existsSync(dirPath)) {
-      return { success: false, error: 'Папка не найдена' };
-    }
-    const stat = fs.statSync(dirPath);
-    if (!stat.isDirectory()) {
-      return { success: false, error: 'Путь не является папкой' };
-    }
-
-    // Проверка безопасности: запрещаем удаление системных директорий
-    const absPath = path.resolve(dirPath);
-    const lowerPath = absPath.toLowerCase();
-
-    const forbiddenPaths = [
-      'c:\\windows',
-      'c:\\program files',
-      'c:\\program files (x86)',
-      'c:\\programdata',
-      'c:\\users\\all users',
-      'c:\\users\\default',
-      'c:\\users\\public',
-      'c:\\perflogs',
-    ];
-
-    for (const forbidden of forbiddenPaths) {
-      if (lowerPath.startsWith(forbidden)) {
-        return { 
-          success: false, 
-          error: 'Удаление этой папки небезопасно (системная директория)' 
-        };
-      }
-    }
-
-    // Запрещаем удаление корня диска
-    if (absPath.length <= 3) {
-      return { success: false, error: 'Нельзя удалить корень диска' };
-    }
-
-    // Перемещаем в Корзину через PowerShell
-    const psScript = `
-      $shell = New-Object -ComObject Shell.Application
-      $folder = $shell.Namespace(0)
-      $folder.ParseName("${absPath.replace(/"/g, '\"')}").MoveToHere()
-    `;
-
-    const { execSync } = await import('child_process');
-    execSync(`powershell -NoProfile -WindowStyle Hidden -Command "${psScript.replace(/\r?\n/g, ' ')}"`, {
-      stdio: 'pipe',
-      timeout: 10000,
-    });
-
-    return { success: true, movedToRecycleBin: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { success: false, error: `Не удалось переместить в корзину: ${message}` };
-  }
+  return runDeleteCli('--delete-dir', dirPath);
 });
 
-// Delete File IPC Handler (for duplicates)
+// Delete File IPC Handler (для дубликатов) — перемещение в Корзину.
 ipcMain.handle('delete-file', async (_event: IpcMainInvokeEvent, filePath: string) => {
-  try {
-    if (!fs.existsSync(filePath)) {
-      return { success: false, error: 'Файл не найден' };
-    }
-    fs.unlinkSync(filePath);
-    return { success: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { success: false, error: message };
-  }
+  return runDeleteCli('--delete-path', filePath);
 });
 
-// Delete Leftover Folder IPC Handler
+// Delete Leftover Folder IPC Handler — перемещение в Корзину.
 ipcMain.handle('delete-leftover', async (_event: IpcMainInvokeEvent, folderPath: string) => {
-  try {
-    if (!fs.existsSync(folderPath)) {
-      return { success: false, error: 'Папка не найдена' };
-    }
-    const stat = fs.statSync(folderPath);
-    if (!stat.isDirectory()) {
-      return { success: false, error: 'Путь не является папкой' };
-    }
-    fs.rmSync(folderPath, { recursive: true, force: true });
-    return { success: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { success: false, error: message };
-  }
+  return runDeleteCli('--delete-dir', folderPath);
 });
 
 // ─── OrphanCleaner IPC Handlers ───
@@ -343,10 +306,11 @@ ipcMain.handle('orphan-discover', async (_event: IpcMainInvokeEvent, options?: {
 });
 
 // Orphan Clean: delete leftovers for specified programs
-ipcMain.handle('orphan-clean', async (_event: IpcMainInvokeEvent, options: { names: string; recycle?: boolean; cacheOnly?: boolean }) => {
+ipcMain.handle('orphan-clean', async (_event: IpcMainInvokeEvent, options: { names: string; recycle?: boolean; cacheOnly?: boolean; includeUserData?: boolean }) => {
   const args = ['--orphan-clean', options.names];
   if (options.recycle) args.push('--orphan-recycle');
   if (options.cacheOnly) args.push('--orphan-cache-only');
+  if (options.includeUserData) args.push('--orphan-include-user-data');
   args.push('--verbose');
   const { stdout, stderr, code } = await executeCli(args);
   return { output: stdout, error: stderr, code };
@@ -388,124 +352,82 @@ ipcMain.handle('window-is-maximized', () => {
   return mainWindow?.isMaximized() ?? false;
 });
 
-// Category Parser
-interface CategoryDto {
+// ─── JSON DTO из CLI (--json) ───
+//
+// Раньше здесь разбирался текстовый вывод CLI регэкспами (parseCategories,
+// parseScanOutput) — хрупко, ломалось при любой правке форматирования таблиц
+// на Go-стороне. Теперь CLI умеет отдавать структурированный JSON напрямую
+// (см. main.go: --json), поэтому парсинг сводится к JSON.parse.
+
+interface JsonCategoryDto {
   id: string;
   name: string;
   description: string;
+  aggressive: boolean;
 }
 
-interface CategoriesResult {
-  safe: CategoryDto[];
-  aggressive: CategoryDto[];
+interface JsonCategoriesResult {
+  safe: JsonCategoryDto[];
+  aggressive: JsonCategoryDto[];
 }
 
-function parseCategories(output: string): CategoriesResult {
-  const lines = output.split('\n');
-  const safe: CategoryDto[] = [];
-  const aggressive: CategoryDto[] = [];
-  let currentSection: 'safe' | 'aggressive' | null = null;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (line.includes('безопасные по умолчанию')) {
-      currentSection = 'safe';
-      continue;
-    }
-    if (line.includes('Агрессивные категории')) {
-      currentSection = 'aggressive';
-      continue;
-    }
-
-    const match = line.match(/^\s{2}(\S+)\s*$/);
-    if (match && currentSection) {
-      const id = match[1];
-      const name = lines[i + 1]?.trim() ?? '';
-      const description = lines[i + 2]?.trim() ?? '';
-
-      const category: CategoryDto = { id, name, description };
-
-      if (currentSection === 'safe') {
-        safe.push(category);
-      } else {
-        aggressive.push(category);
-      }
-    }
-  }
-
-  return { safe, aggressive };
+function toCategoryDto(c: JsonCategoryDto): { id: string; name: string; description: string } {
+  return { id: c.id, name: c.name, description: c.description };
 }
 
-// Scan Output Parser
-interface ScanResultDto {
+interface JsonCategoryResult {
   id: string;
   name: string;
-  size: string;
-  sizeBytes: number;
+  bytes: number;
   files: number;
+  skipped?: boolean;
+  skippedReason?: string;
+  errors?: string[];
 }
 
-interface ScanParsedResult {
-  categories: ScanResultDto[];
+interface JsonScanResult {
+  categories: JsonCategoryResult[];
   totalBytes: number;
   totalFiles: number;
+  durationSeconds: number;
 }
 
-function parseScanOutput(output: string): ScanParsedResult {
-  const lines = output.split('\n');
-  const categories: ScanResultDto[] = [];
-  let totalBytes = 0;
-  let totalFiles = 0;
+interface JsonCleanResult {
+  categories: JsonCategoryResult[];
+  scannedBytes: number;
+  scannedFiles: number;
+  cleanedBytes: number;
+  cleanedFiles: number;
+  errors?: string[];
+  durationSeconds: number;
+}
 
-  for (const line of lines) {
-    // Parse table rows from CLI:
-    // Format: "  {id}  {name}  {size}  {files}"
-    // Example: "  event-logs  Журналы событий Windows (*.evtx)   346.12 MB     400"
-    // Use \s{2,} for 2 or more spaces (variable column spacing)
-    const match = line.match(/^\s{2}(\S+)\s{2,}(.+?)\s{2,}([\d.,]+\s*[KMGT]?B|-)\s{2,}(\d+)\s*$/);
-    if (match) {
-      const [, id, name, sizeStr, files] = match;
-      const sizeBytes = parseSize(sizeStr.trim());
-      categories.push({
-        id: id.trim(),
-        name: name.trim(),
-        size: sizeStr.trim(),
-        sizeBytes,
-        files: parseInt(files, 10),
-      });
-      totalBytes += sizeBytes;
-      totalFiles += parseInt(files, 10);
-    }
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const k = 1024;
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${units[i]}`;
+}
 
-    // Parse total line: "  ИТОГО: 425.83 MB в 1494 файлах  (скрыто...)"
-    const totalMatch = line.match(/ИТОГО:\s+([\d.,]+\s*[KMGT]?B|-)\s+в\s+(\d+)\s+файла/);
-    if (totalMatch) {
-      totalBytes = parseSize(totalMatch[1]);
-      totalFiles = parseInt(totalMatch[2], 10);
-    }
+/** Человекочитаемый лог для панели "Лог операций" — строится из структурированных данных, а не из сырого текста CLI. */
+function buildScanLogText(parsed: JsonScanResult): string {
+  const lines = parsed.categories
+    .filter((c) => c.bytes > 0 || c.files > 0)
+    .map((c) => `  ${c.name}: ${formatBytes(c.bytes)} (${c.files} файлов)`);
+  lines.push('');
+  lines.push(`Найдено: ${formatBytes(parsed.totalBytes)} в ${parsed.totalFiles} файлах.`);
+  return lines.join('\n');
+}
+
+function buildCleanLogText(parsed: JsonCleanResult): string {
+  const lines = parsed.categories
+    .filter((c) => c.bytes > 0 || c.files > 0)
+    .map((c) => `  ${c.name}: ${formatBytes(c.bytes)} (${c.files} файлов)`);
+  lines.push('');
+  lines.push(`Готово. Освобождено: ${formatBytes(parsed.cleanedBytes)} в ${parsed.cleanedFiles} файлах.`);
+  if (parsed.errors?.length) {
+    lines.push(`Ошибок/пропусков: ${parsed.errors.length}`);
   }
-
-  return { categories, totalBytes, totalFiles };
-}
-
-function parseSize(sizeStr: string): number {
-  if (sizeStr === '-' || sizeStr === '') return 0;
-  
-  const units: Record<string, number> = {
-    B: 1,
-    KB: 1024,
-    MB: 1024 ** 2,
-    GB: 1024 ** 3,
-    TB: 1024 ** 4,
-  };
-  
-  // Handle formats like "346.12 MB", "491.13 KB", "735 B", "4 B"
-  const match = sizeStr.match(/^([\d.,]+)\s*(B|KB|MB|GB|TB)?$/i);
-  if (!match) return 0;
-  
-  const [, numStr, unit] = match;
-  // Replace comma with dot for European format if needed
-  const num = parseFloat(numStr.replace(',', '.'));
-  return num * (unit ? units[unit.toUpperCase()] || 1 : 1);
+  return lines.join('\n');
 }

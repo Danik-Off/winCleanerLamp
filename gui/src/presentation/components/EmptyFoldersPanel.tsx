@@ -60,7 +60,7 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
 
   const handleOpenInExplorer = useCallback((dirPath: string) => {
     // Открыть папку в Проводнике
-    window.electronAPI.openExternal(dirPath);
+    window.electronAPI.openPath(dirPath);
   }, []);
 
   const handleScan = useCallback(async () => {
