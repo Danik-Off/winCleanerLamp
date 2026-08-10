@@ -31,6 +31,23 @@ import {
 
 type UpdateState = 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'downloaded' | 'error';
 
+/**
+ * GitHub-провайдер electron-updater отдаёт releaseNotes как HTML (auto-generated
+ * release notes GitHub'а — параграфы, ссылки на коммиты/PR, блок "Full Changelog").
+ * Раньше это просто выводилось как текст внутри Typography — пользователь видел
+ * сырые теги вида `<p><strong>...`. DOMParser здесь только извлекает текст
+ * (textContent не выполняет встроенные скрипты), без dangerouslySetInnerHTML.
+ */
+function htmlToPlainText(html: string): string {
+  if (!html) return '';
+  if (!/<[a-z][\s\S]*>/i.test(html)) return html;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('p, br, li, h1, h2, h3, div').forEach((el) => {
+    el.insertAdjacentText('afterend', '\n');
+  });
+  return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 export function AboutPanel(): JSX.Element {
   const theme = useTheme();
 
@@ -52,7 +69,7 @@ export function AboutPanel(): JSX.Element {
   useEffect(() => {
     window.electronAPI.onUpdateAvailable((info) => {
       setNewVersion(info.version);
-      setReleaseNotes(info.releaseNotes || '');
+      setReleaseNotes(htmlToPlainText(info.releaseNotes || ''));
       setUpdateState('available');
       setDialogOpen(true);
     });

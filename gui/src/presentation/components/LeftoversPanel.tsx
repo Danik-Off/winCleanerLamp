@@ -29,6 +29,7 @@ import {
   Grid,
   Tabs,
   Tab,
+  Stack,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -42,6 +43,9 @@ import {
   Cached as CacheIcon,
   CheckCircle as KnownIcon,
   HelpOutline as UnknownIcon,
+  LinkOff as ShortcutsIcon,
+  BookmarkAdd as TrackIcon,
+  BookmarkAdded as TrackedIcon,
 } from '@mui/icons-material';
 import { useLeftovers } from '../hooks';
 import { ScanningIndicator } from './ScanningIndicator';
@@ -49,6 +53,12 @@ import type { LeftoverItem } from '@domain/index';
 
 interface LeftoversPanelProps {
   onError: (error: string) => void;
+}
+
+interface BrokenShortcutItem {
+  path: string;
+  targetPath?: string;
+  reason: string;
 }
 
 export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
@@ -59,6 +69,23 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   const [deletedPaths, setDeletedPaths] = useState<Set<string>>(new Set());
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
+
+  // Отслеживание неизвестных папок (добавление в orphaned_apps.json) — раньше
+  // жило в отдельной вкладке-панели "Программы", которая по сути дублировала
+  // этот же список неизвестных папок. Кнопка "добавить в отслеживание"
+  // перенесена сюда, отдельная панель удалена.
+  const [trackedPaths, setTrackedPaths] = useState<Set<string>>(new Set());
+  const [trackingPath, setTrackingPath] = useState<string | null>(null);
+
+  // Битые ярлыки — отдельный источник данных (своё сканирование), но
+  // показывается как ещё одна вкладка в этой же секции, а не отдельным
+  // пунктом навигации.
+  const [shortcutsScanning, setShortcutsScanning] = useState(false);
+  const [shortcutsScanned, setShortcutsScanned] = useState<number | null>(null);
+  const [shortcutsBroken, setShortcutsBroken] = useState<BrokenShortcutItem[]>([]);
+  const [shortcutDeleteTarget, setShortcutDeleteTarget] = useState<BrokenShortcutItem | null>(null);
+  const [shortcutDeleting, setShortcutDeleting] = useState(false);
+  const [shortcutDeleteError, setShortcutDeleteError] = useState<string | null>(null);
 
   if (error) {
     onError(error);
@@ -146,6 +173,55 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
     scan();
   }, [scan]);
 
+  const handleTrack = useCallback(async (path: string) => {
+    setTrackingPath(path);
+    try {
+      const res = await window.electronAPI.orphanTrack({ path });
+      if (res.success) {
+        setTrackedPaths((prev) => new Set(prev).add(path));
+      } else {
+        onError(res.error || 'Не удалось добавить в orphaned_apps.json');
+      }
+    } finally {
+      setTrackingPath(null);
+    }
+  }, [onError]);
+
+  const handleShortcutsScan = useCallback(async () => {
+    setShortcutsScanning(true);
+    try {
+      const res = await window.electronAPI.getBrokenShortcuts();
+      if (res.error) {
+        onError(res.error);
+      }
+      setShortcutsScanned(res.scanned);
+      setShortcutsBroken(res.broken || []);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Ошибка поиска ярлыков');
+    } finally {
+      setShortcutsScanning(false);
+    }
+  }, [onError]);
+
+  const handleDeleteShortcut = useCallback(async () => {
+    if (!shortcutDeleteTarget) return;
+    setShortcutDeleting(true);
+    setShortcutDeleteError(null);
+    try {
+      const res = await window.electronAPI.deleteFile(shortcutDeleteTarget.path);
+      if (res.success) {
+        setShortcutsBroken((prev) => prev.filter((b) => b.path !== shortcutDeleteTarget.path));
+        setShortcutDeleteTarget(null);
+      } else {
+        setShortcutDeleteError(res.error || 'Неизвестная ошибка');
+      }
+    } catch (err) {
+      setShortcutDeleteError(err instanceof Error ? err.message : 'Ошибка удаления');
+    } finally {
+      setShortcutDeleting(false);
+    }
+  }, [shortcutDeleteTarget]);
+
   const formatBytes = (bytes: number): string => {
     if (bytes === -1) return '~большой';
     if (bytes === 0) return '0 B';
@@ -159,27 +235,49 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
   return (
     <Box>
-      {/* Компактная панель управления — общий заголовок секции теперь в ResidualsPanel,
-          здесь только действие и краткая подсказка, без дублирующего заголовка. */}
+      {/* Панель управления — контекстная кнопка сканирования: остатки для вкладок 0-4,
+          отдельный поиск для вкладки "Ярлыки" (другой источник данных). */}
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
-        <Button
-          variant="contained"
-          onClick={handleScan}
-          disabled={scanning}
-          startIcon={scanning ? <CircularProgress size={18} color="inherit" /> : <RefreshIcon />}
-          sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
-        >
-          {scanning ? 'Сканирование...' : 'Сканировать остатки'}
-        </Button>
-        {result && totalItems > 0 && (
-          <Chip label={`${totalItems} найдено`} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600 }} />
+        {activeTab === 5 ? (
+          <>
+            <Button
+              variant="contained"
+              onClick={handleShortcutsScan}
+              disabled={shortcutsScanning}
+              startIcon={shortcutsScanning ? <CircularProgress size={18} color="inherit" /> : <RefreshIcon />}
+              sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
+            >
+              {shortcutsScanning ? 'Поиск...' : 'Найти битые ярлыки'}
+            </Button>
+            {shortcutsScanned !== null && (
+              <Chip label={`проверено: ${shortcutsScanned}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+            )}
+            {shortcutsBroken.length > 0 && (
+              <Chip label={`битых: ${shortcutsBroken.length}`} size="small" color="error" sx={{ fontWeight: 600 }} />
+            )}
+          </>
+        ) : (
+          <>
+            <Button
+              variant="contained"
+              onClick={handleScan}
+              disabled={scanning}
+              startIcon={scanning ? <CircularProgress size={18} color="inherit" /> : <RefreshIcon />}
+              sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
+            >
+              {scanning ? 'Сканирование...' : 'Сканировать остатки'}
+            </Button>
+            {result && totalItems > 0 && (
+              <Chip label={`${totalItems} найдено`} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600 }} />
+            )}
+            <Tooltip title="Поиск по AppData, ProgramData, Program Files и реестру — сопоставляет находки со списком установленных программ и базой orphaned_apps.json.">
+              <WarningIcon sx={{ fontSize: 18, opacity: 0.4, cursor: 'help' }} />
+            </Tooltip>
+          </>
         )}
-        <Tooltip title="Эвристический поиск по AppData, ProgramData, Program Files и реестру — сопоставляет находки со списком установленных программ. Может быть менее точным, чем проверка по базе известных программ.">
-          <WarningIcon sx={{ fontSize: 18, opacity: 0.4, cursor: 'help' }} />
-        </Tooltip>
       </Box>
 
-      <ScanningIndicator active={scanning} />
+      <ScanningIndicator active={activeTab === 5 ? shortcutsScanning : scanning} />
 
       {/* Stat Cards */}
       {result && totalItems > 0 && (
@@ -241,44 +339,53 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </Grid>
       )}
 
-      {/* Tabs + Filter */}
-      {result && totalItems > 0 && (
-        <>
-          <Tabs
-            value={activeTab}
-            onChange={(_, v) => setActiveTab(v)}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              mb: 1.5,
-              bgcolor: (t) => (t.palette.mode === 'dark' ? '#1e293b' : '#ffffff'),
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 3,
-              p: 0.5,
-              '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 36, borderRadius: 2, fontSize: '0.8rem', py: 0 },
-            }}
-          >
-            <Tab label={`Кеш (${cacheItems.length})`} icon={<CacheIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
-            <Tab label={`Удалённые программы (${removedProgramItems.length})`} icon={<KnownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
-            <Tab label={`Неизвестные (${unknownFolders.length})`} icon={<UnknownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
-            <Tab label={`Пустые (${empties.length})`} icon={<EmptyFolderIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
-            <Tab label={`Реестр (${regKeys.length})`} icon={<RegistryIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
-          </Tabs>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Фильтр по имени или пути..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            sx={{ mb: 2 }}
-            InputProps={{
-              startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ opacity: 0.5 }} /></InputAdornment>),
-              endAdornment: filter ? (<InputAdornment position="end"><IconButton size="small" onClick={() => setFilter('')}><ClearIcon fontSize="small" /></IconButton></InputAdornment>) : null,
-              sx: { borderRadius: 2 },
-            }}
-          />
-        </>
+      {/* Tabs + Filter — вкладки всегда видны (можно сразу перейти к "Ярлыки",
+          не дожидаясь скана остатков — это независимый источник данных). */}
+      <Tabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{
+          mb: 1.5,
+          bgcolor: (t) => (t.palette.mode === 'dark' ? '#1e293b' : '#ffffff'),
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 3,
+          p: 0.5,
+          '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 36, borderRadius: 2, fontSize: '0.8rem', py: 0 },
+        }}
+      >
+        <Tab label={`Кеш (${cacheItems.length})`} icon={<CacheIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+        <Tab label={`Удалённые программы (${removedProgramItems.length})`} icon={<KnownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+        <Tab label={`Неизвестные (${unknownFolders.length})`} icon={<UnknownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+        <Tab label={`Пустые (${empties.length})`} icon={<EmptyFolderIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+        <Tab label={`Реестр (${regKeys.length})`} icon={<RegistryIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+        <Tab label={`Ярлыки${shortcutsBroken.length ? ` (${shortcutsBroken.length})` : ''}`} icon={<ShortcutsIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+      </Tabs>
+      {activeTab !== 5 && (
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Фильтр по имени или пути..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          sx={{ mb: 2 }}
+          InputProps={{
+            startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ opacity: 0.5 }} /></InputAdornment>),
+            endAdornment: filter ? (<InputAdornment position="end"><IconButton size="small" onClick={() => setFilter('')}><ClearIcon fontSize="small" /></IconButton></InputAdornment>) : null,
+            sx: { borderRadius: 2 },
+          }}
+        />
+      )}
+
+      {!result && !scanning && activeTab !== 5 && (
+        <Paper elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 2, border: '1px solid', borderColor: (t) => (t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0') }}>
+          <SearchIcon sx={{ fontSize: 48, opacity: 0.2, mb: 1 }} />
+          <Typography variant="body2" sx={{ opacity: 0.5 }}>
+            Нажмите «Сканировать остатки», чтобы найти кеш, остатки удалённых программ, неизвестные и пустые папки, ключи реестра.
+          </Typography>
+        </Paper>
       )}
 
       {/* Tab 0: Cache items (safe to delete) */}
@@ -419,12 +526,32 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                 <ListItem
                   sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
                   secondaryAction={
-                    <Tooltip title="Удалить папку">
-                      <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
-                        sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Tooltip title={trackedPaths.has(item.path) ? 'Уже добавлено в orphaned_apps.json' : 'Добавить в отслеживание (orphaned_apps.json), чтобы система запоминала эту программу'}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color={trackedPaths.has(item.path) ? 'success' : 'default'}
+                            disabled={trackedPaths.has(item.path) || trackingPath === item.path}
+                            onClick={() => handleTrack(item.path)}
+                          >
+                            {trackingPath === item.path ? (
+                              <CircularProgress size={16} />
+                            ) : trackedPaths.has(item.path) ? (
+                              <TrackedIcon sx={{ fontSize: 18 }} />
+                            ) : (
+                              <TrackIcon sx={{ fontSize: 18 }} />
+                            )}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Удалить папку">
+                        <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
+                          sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
                   }
                 >
                   <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
@@ -523,8 +650,57 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </Paper>
       )}
 
-      {/* Empty state per tab */}
-      {!scanning && result && totalItems > 0 && (
+      {/* Tab 5: Broken shortcuts */}
+      {activeTab === 5 && shortcutsBroken.length > 0 && (
+        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
+          <List dense disablePadding>
+            {shortcutsBroken.map((item, idx) => (
+              <React.Fragment key={item.path}>
+                <ListItem
+                  sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
+                  secondaryAction={
+                    <Tooltip title="Удалить ярлык">
+                      <IconButton edge="end" color="error" size="small"
+                        onClick={() => { setShortcutDeleteError(null); setShortcutDeleteTarget(item); }}
+                        sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
+                  <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
+                    <ShortcutsIcon sx={{ fontSize: 18, color: '#ef4444' }} />
+                  </Box>
+                  <ListItemText
+                    primary={item.path.split('\\').pop()}
+                    secondary={item.targetPath ? `${item.path} → ${item.targetPath}` : item.path}
+                    primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
+                    secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
+                  />
+                </ListItem>
+                {idx < shortcutsBroken.length - 1 && <Divider />}
+              </React.Fragment>
+            ))}
+          </List>
+        </Paper>
+      )}
+      {activeTab === 5 && shortcutsScanned === null && !shortcutsScanning && (
+        <Paper elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 2, border: '1px solid', borderColor: (t) => (t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0') }}>
+          <ShortcutsIcon sx={{ fontSize: 48, opacity: 0.2, mb: 1 }} />
+          <Typography variant="body2" sx={{ opacity: 0.5 }}>
+            Проверяет ярлыки (.lnk) на рабочем столе и в меню Пуск — те, что указывают на несуществующие файлы.
+          </Typography>
+          <Typography variant="caption" sx={{ opacity: 0.3, display: 'block', mt: 1 }}>
+            Ярлыки на временно недоступные сетевые пути тоже могут попасть в список — проверьте перед удалением.
+          </Typography>
+        </Paper>
+      )}
+      {activeTab === 5 && !shortcutsScanning && shortcutsScanned !== null && shortcutsBroken.length === 0 && (
+        <Alert severity="success" sx={{ borderRadius: 2 }}>Битых ярлыков не найдено.</Alert>
+      )}
+
+      {/* Empty state per tab (0-4) */}
+      {!scanning && result && totalItems > 0 && activeTab !== 5 && (
         (activeTab === 0 && cacheItems.length === 0) ||
         (activeTab === 1 && orphanKnown.length === 0) ||
         (activeTab === 2 && unknownFolders.length === 0) ||
@@ -537,7 +713,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
       )}
 
       {/* No results at all */}
-      {!scanning && result && totalItems === 0 && (
+      {!scanning && result && totalItems === 0 && activeTab !== 5 && (
         <Alert severity="success" sx={{ borderRadius: 2 }}>
           {deletedPaths.size > 0
             ? 'Все остатки удалены!'
@@ -593,6 +769,50 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
           <Button onClick={handleDelete} variant="contained" color="warning" disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} /> : <DeleteIcon />} sx={{ borderRadius: 1.5 }}>
             {deleting ? 'Удаление...' : 'В Корзину'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Shortcut Dialog */}
+      <Dialog
+        open={!!shortcutDeleteTarget}
+        onClose={() => !shortcutDeleting && setShortcutDeleteTarget(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          Удалить ярлык?
+        </DialogTitle>
+        <DialogContent>
+          {shortcutDeleteTarget && (
+            <Box>
+              <Paper variant="outlined" sx={{ p: 1.5, mb: 2, bgcolor: 'action.hover', borderRadius: 1.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-all' }}>
+                  {shortcutDeleteTarget.path}
+                </Typography>
+                {shortcutDeleteTarget.targetPath && (
+                  <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all', display: 'block' }}>
+                    цель: {shortcutDeleteTarget.targetPath}
+                  </Typography>
+                )}
+              </Paper>
+              <Alert severity="success" sx={{ borderRadius: 1.5 }}>
+                Ярлык будет перемещён в Корзину (можно восстановить).
+              </Alert>
+              {shortcutDeleteError && (
+                <Alert severity="warning" sx={{ mt: 1, borderRadius: 1.5 }}>{shortcutDeleteError}</Alert>
+              )}
+            </Box>
+          )}
+          {shortcutDeleting && <LinearProgress sx={{ mt: 2 }} />}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setShortcutDeleteTarget(null)} disabled={shortcutDeleting} sx={{ borderRadius: 1.5 }}>Отмена</Button>
+          <Button onClick={handleDeleteShortcut} variant="contained" color="warning" disabled={shortcutDeleting}
+            startIcon={shortcutDeleting ? <CircularProgress size={16} /> : <DeleteIcon />} sx={{ borderRadius: 1.5 }}>
+            {shortcutDeleting ? 'Удаление...' : 'В Корзину'}
           </Button>
         </DialogActions>
       </Dialog>

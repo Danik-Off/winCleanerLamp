@@ -7,4 +7,3 @@ export { useScan } from './useScan';
 export { useClean } from './useClean';
 export { useSystemInfo } from './useSystemInfo';
 export { useLeftovers } from './useLeftovers';
-export { useOrphan } from './useOrphan';

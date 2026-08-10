@@ -36,7 +36,7 @@ import {
 // Feature Components
 import { CleanupPanel } from './presentation/components/CleanupPanel';
 import { SystemInfoPanel } from './presentation/components/SystemInfoPanel';
-import { ResidualsPanel } from './presentation/components/ResidualsPanel';
+import { LeftoversPanel } from './presentation/components/LeftoversPanel';
 import { DuplicatesPanel } from './presentation/components/DuplicatesPanel';
 import { EmptyFoldersPanel } from './presentation/components/EmptyFoldersPanel';
 import { AutostartPanel } from './presentation/components/AutostartPanel';
@@ -113,7 +113,7 @@ function App(): JSX.Element {
     { id: 0, label: 'Главная', icon: <RocketIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
     { id: 1, label: 'Очистка', icon: <SpeedIcon sx={{ fontSize: 18 }} />, accent: '#3b82f6' },
     { id: 2, label: 'Система', icon: <StorageIcon sx={{ fontSize: 18 }} />, accent: '#06b6d4' },
-    { id: 3, label: 'Остатки и программы', icon: <FolderDeleteIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
+    { id: 3, label: 'Остатки', icon: <FolderDeleteIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
     { id: 4, label: 'Дубликаты', icon: <DupIcon sx={{ fontSize: 18 }} />, accent: '#f59e0b' },
     { id: 5, label: 'Пустые папки', icon: <EmptyFolderIcon sx={{ fontSize: 18 }} />, accent: '#ef4444' },
     { id: 6, label: 'Автозагрузка', icon: <AutostartIcon sx={{ fontSize: 18 }} />, accent: '#a855f7' },
@@ -349,7 +349,7 @@ function App(): JSX.Element {
               <SystemInfoPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={3}>
-              <ResidualsPanel onError={setError} />
+              <LeftoversPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={4}>
               <DuplicatesPanel onError={setError} />

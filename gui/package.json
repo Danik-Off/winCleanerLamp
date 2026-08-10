@@ -1,6 +1,6 @@
 {
   "name": "win-cleaner-lamp-gui",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "GUI для Win Cleaner Lamp на Electron + React + MUI + TypeScript с Onion Architecture",
   "license": "MIT",
   "author": "Danik Off",
@@ -98,7 +98,11 @@
       "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true,
-      "installerSidebar": null
+      "installerSidebar": null,
+      "artifactName": "WinCleanerLamp-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "WinCleanerLamp-Portable-${version}.${ext}"
     }
   }
 }
