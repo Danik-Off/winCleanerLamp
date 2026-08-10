@@ -264,13 +264,6 @@ export function AutostartPanel({ onError }: AutostartPanelProps): JSX.Element {
                       primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600, opacity: entry.enabled ? 1 : 0.55 } }}
                       secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: entry.enabled ? 0.7 : 0.4 } }}
                     />
-                    <Chip
-                      label={entry.enabled ? 'включено' : 'выключено'}
-                      size="small"
-                      color={entry.enabled ? 'success' : 'default'}
-                      variant={entry.enabled ? 'filled' : 'outlined'}
-                      sx={{ fontWeight: 600, fontSize: '0.65rem', flexShrink: 0 }}
-                    />
                   </ListItem>
                   {idx < list.length - 1 && <Divider />}
                 </Box>

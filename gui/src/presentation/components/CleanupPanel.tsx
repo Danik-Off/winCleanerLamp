@@ -154,9 +154,7 @@ export function CleanupPanel({ onError }: CleanupPanelProps): JSX.Element {
   const selectedSafeCount = categories.safe.filter((cat) => selection.isSelected(cat.id)).length;
   const selectedAggressiveCount = categories.aggressive.filter((cat) => selection.isSelected(cat.id)).length;
   const totalSelected = selectedSafeCount + selectedAggressiveCount;
-  const totalAvailable = categories.safe.length + categories.aggressive.length;
   const riskLevel = selectedAggressiveCount > 0 ? 'Высокий риск' : 'Безопасный режим';
-  const potentialCleanup = scanResult?.totalBytes ?? 0;
 
   const applyPreset = useCallback(
     (preset: 'quick' | 'balanced' | 'deep') => {
@@ -280,82 +278,6 @@ export function CleanupPanel({ onError }: CleanupPanelProps): JSX.Element {
             </ButtonBase>
           </Grid>
         ))}
-      </Grid>
-
-      {/* ── Step 2: Stats row ── */}
-      <Grid container spacing={1.5} sx={{ mb: 2 }}>
-        <Grid item xs={6} sm={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: (t) => t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0',
-              bgcolor: 'background.paper',
-              textAlign: 'center',
-            }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'primary.main' }}>
-              {totalSelected}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.5 }}>из {totalAvailable}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: (t) => t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0',
-              bgcolor: 'background.paper',
-              textAlign: 'center',
-            }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'success.main' }}>
-              {formatBytes(potentialCleanup)}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.5 }}>потенциал</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: (t) => t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0',
-              bgcolor: 'background.paper',
-              textAlign: 'center',
-            }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 800, color: selectedAggressiveCount > 0 ? 'warning.main' : 'text.secondary' }}>
-              {selectedAggressiveCount > 0 ? 'High' : 'Low'}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.5 }}>риск</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: (t) => t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0',
-              bgcolor: 'background.paper',
-              textAlign: 'center',
-            }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary' }}>
-              {presetLabel}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.5 }}>сценарий</Typography>
-          </Paper>
-        </Grid>
       </Grid>
 
       {/* ── Progress ── */}

@@ -65,9 +65,7 @@ const sysFileDescriptions: Record<string, {
     impact: 'low',
   },
   'WinSxS': {
-    description: 'Хранилище компонентов Windows (Side-by-Side). Содержит все версии системных файлов для обновлений и восстановления. Можно безопасно сжать через DISM.',
-    command: 'dism /Online /Cleanup-Image /StartComponentCleanup /ResetBase',
-    commandLabel: 'Очистить хранилище',
+    description: 'Хранилище компонентов Windows (Side-by-Side). НЕ удаляйте вручную — сломает Windows Update. Официальный способ (без /ResetBase, чтобы сохранить возможность отката последнего обновления) уже есть в этом приложении: вкладка «Очистка» → агрессивные категории → «Очистка хранилища компонентов WinSxS (DISM)».',
     icon: <DeleteIcon sx={{ fontSize: 20 }} />,
     color: '#c62828',
     impact: 'high',
@@ -152,7 +150,8 @@ export function SystemInfoPanel({ onError }: SystemInfoPanelProps): JSX.Element 
 
   return (
     <Box>
-      {/* Header Card */}
+      {/* Header — заголовок и итоговая статистика в одном компактном блоке
+          вместо двух отдельных градиентных карточек подряд. */}
       <Card
         elevation={2}
         sx={{
@@ -162,10 +161,9 @@ export function SystemInfoPanel({ onError }: SystemInfoPanelProps): JSX.Element 
             theme.palette.mode === 'dark'
               ? 'linear-gradient(135deg, #0d47a1 0%, #1565c0 100%)'
               : 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-          p: 1,
         }}
       >
-        <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <Box sx={{
             p: 1.5,
             bgcolor: 'rgba(255,255,255,0.2)',
@@ -184,56 +182,29 @@ export function SystemInfoPanel({ onError }: SystemInfoPanelProps): JSX.Element 
               Файлы, которые занимают место, но не удаляются автоматически
             </Typography>
           </Box>
-        </Box>
+          {info && info.existingFiles.length > 0 && (
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>
+                {formatBytes(info.totalBytes)}
+              </Typography>
+              <Chip
+                label={`${info.existingFiles.length} файлов`}
+                size="small"
+                sx={{
+                  mt: 0.5,
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  fontWeight: 600,
+                  border: '1px solid rgba(255,255,255,0.3)',
+                }}
+              />
+            </Box>
+          )}
+        </CardContent>
       </Card>
 
       {info && info.existingFiles.length > 0 && (
         <>
-          {/* Total Stats Card */}
-          <Card
-            elevation={1}
-            sx={{
-              mb: 3,
-              borderRadius: 3,
-              background: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)'
-                  : 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
-            }}
-          >
-            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3, py: 2.5 }}>
-              <Box sx={{
-                p: 1.5,
-                bgcolor: 'rgba(255,255,255,0.2)',
-                borderRadius: 3,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <StorageIcon sx={{ color: 'white', fontSize: 32 }} />
-              </Box>
-              <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>
-                  {formatBytes(info.totalBytes)}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mt: 0.5 }}>
-                  всего системных файлов
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'right' }}>
-                <Chip
-                  label={`${info.existingFiles.length} файлов`}
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 600,
-                    border: '1px solid rgba(255,255,255,0.3)',
-                  }}
-                />
-              </Box>
-            </CardContent>
-          </Card>
-
           {/* Files List */}
           <Stack spacing={2}>
             {info.existingFiles.map((file, idx) => {

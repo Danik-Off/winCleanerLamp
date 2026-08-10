@@ -113,6 +113,13 @@ interface AuditExportResultDto {
   error?: string;
 }
 
+interface ExportJsonResultDto {
+  success: boolean;
+  canceled?: boolean;
+  path?: string;
+  error?: string;
+}
+
 interface ElectronAPI {
   getCategories: () => Promise<CategoriesResponseDto>;
   scan: (options: ScanOptionsDto) => Promise<ScanResultDto>;
@@ -139,6 +146,7 @@ interface ElectronAPI {
   autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
   getBrokenShortcuts: () => Promise<ShortcutsResultDto>;
   exportAudit: () => Promise<AuditExportResultDto>;
+  exportJson: (options: { suggestedName?: string; data: unknown }) => Promise<ExportJsonResultDto>;
   checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
   onUpdateAvailable: (callback: (info: UpdateInfoDto) => void) => void;

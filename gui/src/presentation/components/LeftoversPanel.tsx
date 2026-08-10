@@ -24,9 +24,6 @@ import {
   DialogContent,
   DialogActions,
   LinearProgress,
-  Card,
-  CardContent,
-  Grid,
   Tabs,
   Tab,
   Stack,
@@ -37,7 +34,6 @@ import {
   Search as SearchIcon,
   Delete as DeleteIcon,
   Clear as ClearIcon,
-  Storage as StorageIcon,
   FolderOff as EmptyFolderIcon,
   AppRegistration as RegistryIcon,
   Cached as CacheIcon,
@@ -46,6 +42,7 @@ import {
   LinkOff as ShortcutsIcon,
   BookmarkAdd as TrackIcon,
   BookmarkAdded as TrackedIcon,
+  FileDownload as ExportIcon,
 } from '@mui/icons-material';
 import { useLeftovers } from '../hooks';
 import { ScanningIndicator } from './ScanningIndicator';
@@ -61,6 +58,15 @@ interface BrokenShortcutItem {
   reason: string;
 }
 
+const TAB_CAPTIONS: Record<number, string> = {
+  0: 'Кеш-файлы — безопасно удалять, это временные данные, не затрагивающие настройки.',
+  1: 'Сверено со списком установленных программ: удалённые — приоритетный кандидат на очистку, установленные — действующие данные.',
+  2: 'Не найдены в базе известных программ — проверьте вручную перед удалением.',
+  3: 'Папки без содержимого.',
+  4: 'Ключи реестра без владельца. Автоудаление не поддерживается — используйте regedit.',
+  5: 'Ярлыки (.lnk), указывающие на несуществующие файлы.',
+};
+
 export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   const { scanning, result, error, scan } = useLeftovers();
   const [filter, setFilter] = useState('');
@@ -71,21 +77,20 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   const [activeTab, setActiveTab] = useState(0);
 
   // Отслеживание неизвестных папок (добавление в orphaned_apps.json) — раньше
-  // жило в отдельной вкладке-панели "Программы", которая по сути дублировала
-  // этот же список неизвестных папок. Кнопка "добавить в отслеживание"
-  // перенесена сюда, отдельная панель удалена.
+  // жило в отдельной панели "Программы", дублировавшей этот же список.
   const [trackedPaths, setTrackedPaths] = useState<Set<string>>(new Set());
   const [trackingPath, setTrackingPath] = useState<string | null>(null);
 
-  // Битые ярлыки — отдельный источник данных (своё сканирование), но
-  // показывается как ещё одна вкладка в этой же секции, а не отдельным
-  // пунктом навигации.
+  // Битые ярлыки — отдельный источник данных (своё сканирование), показан
+  // как ещё одна вкладка в этой же секции, а не отдельным пунктом навигации.
   const [shortcutsScanning, setShortcutsScanning] = useState(false);
   const [shortcutsScanned, setShortcutsScanned] = useState<number | null>(null);
   const [shortcutsBroken, setShortcutsBroken] = useState<BrokenShortcutItem[]>([]);
   const [shortcutDeleteTarget, setShortcutDeleteTarget] = useState<BrokenShortcutItem | null>(null);
   const [shortcutDeleting, setShortcutDeleting] = useState(false);
   const [shortcutDeleteError, setShortcutDeleteError] = useState<string | null>(null);
+
+  const [exporting, setExporting] = useState(false);
 
   if (error) {
     onError(error);
@@ -136,15 +141,6 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   const regKeys = useMemo(
     () => (result ? applyFilter(result.registryKeys) : []),
     [result, applyFilter]
-  );
-
-  const totalBytes = useMemo(
-    () => folders.reduce((s, i) => s + Math.max(0, i.sizeBytes), 0),
-    [folders]
-  );
-  const cacheTotalBytes = useMemo(
-    () => cacheItems.reduce((s, i) => s + Math.max(0, i.sizeBytes), 0),
-    [cacheItems]
   );
 
   const handleDelete = useCallback(async () => {
@@ -222,22 +218,36 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
     }
   }, [shortcutDeleteTarget]);
 
-  const formatBytes = (bytes: number): string => {
-    if (bytes === -1) return '~большой';
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  const canExport = !!result || shortcutsScanned !== null;
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      const res = await window.electronAPI.exportJson({
+        suggestedName: `wincleanerlamp-leftovers-${new Date().toISOString().slice(0, 10)}.json`,
+        data: {
+          generatedAt: new Date().toISOString(),
+          leftovers: result,
+          brokenShortcuts: shortcutsScanned !== null ? { scanned: shortcutsScanned, broken: shortcutsBroken } : undefined,
+        },
+      });
+      if (!res.success && !res.canceled) {
+        onError(res.error || 'Не удалось сохранить файл');
+      }
+    } finally {
+      setExporting(false);
+    }
+  }, [result, shortcutsScanned, shortcutsBroken, onError]);
 
   const totalItems = folders.length + empties.length + regKeys.length + cacheItems.length;
 
   return (
     <Box>
       {/* Панель управления — контекстная кнопка сканирования: остатки для вкладок 0-4,
-          отдельный поиск для вкладки "Ярлыки" (другой источник данных). */}
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
+          отдельный поиск для вкладки "Ярлыки" (другой источник данных). Плюс экспорт
+          текущих находок в JSON — чтобы можно было проанализировать список и дополнить
+          базу программ/категорий очистки офлайн. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
         {activeTab === 5 ? (
           <>
             <Button
@@ -270,74 +280,29 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
             {result && totalItems > 0 && (
               <Chip label={`${totalItems} найдено`} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600 }} />
             )}
-            <Tooltip title="Поиск по AppData, ProgramData, Program Files и реестру — сопоставляет находки со списком установленных программ и базой orphaned_apps.json.">
-              <WarningIcon sx={{ fontSize: 18, opacity: 0.4, cursor: 'help' }} />
-            </Tooltip>
           </>
         )}
+        <Tooltip title="Сохранить найденные остатки и ярлыки в JSON — для анализа и дополнения списка программ/категорий очистки">
+          <span>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleExport}
+              disabled={!canExport || exporting}
+              startIcon={exporting ? <CircularProgress size={14} /> : <ExportIcon sx={{ fontSize: 16 }} />}
+              sx={{ borderRadius: 2, fontWeight: 600, ml: 'auto' }}
+            >
+              Экспорт
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
 
-      <ScanningIndicator active={activeTab === 5 ? shortcutsScanning : scanning} />
+      <Typography variant="caption" sx={{ display: 'block', opacity: 0.55, mb: 1.5 }}>
+        {TAB_CAPTIONS[activeTab]}
+      </Typography>
 
-      {/* Stat Cards */}
-      {result && totalItems > 0 && (
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={6} sm={4} md={2}>
-            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#1b5e20,#2e7d32)' : 'linear-gradient(135deg,#e8f5e9,#c8e6c9)' }}>
-              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <StorageIcon sx={{ fontSize: 24, opacity: 0.8 }} />
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>{formatBytes(totalBytes)}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Всего</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={4} md={2}>
-            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#006064,#00838f)' : 'linear-gradient(135deg,#e0f7fa,#b2ebf2)' }}>
-              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <CacheIcon sx={{ fontSize: 24, opacity: 0.8 }} />
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>{cacheItems.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Кеш ({formatBytes(cacheTotalBytes)})</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={4} md={2}>
-            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#e65100,#f57c00)' : 'linear-gradient(135deg,#fff3e0,#ffe0b2)' }}>
-              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <KnownIcon sx={{ fontSize: 24, opacity: 0.8 }} />
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>{orphanKnown.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Известные</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={4} md={2}>
-            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#bf360c,#d84315)' : 'linear-gradient(135deg,#fbe9e7,#ffccbc)' }}>
-              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <UnknownIcon sx={{ fontSize: 24, opacity: 0.8 }} />
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>{unknownFolders.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Неизвестные</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={4} md={2}>
-            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#4a148c,#6a1b9a)' : 'linear-gradient(135deg,#f3e5f5,#e1bee7)' }}>
-              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <EmptyFolderIcon sx={{ fontSize: 24, opacity: 0.8 }} />
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>{empties.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Пустые</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={4} md={2}>
-            <Card elevation={1} sx={{ borderRadius: 3, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(135deg,#0d47a1,#1565c0)' : 'linear-gradient(135deg,#e3f2fd,#bbdefb)' }}>
-              <CardContent sx={{ textAlign: 'center', py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <RegistryIcon sx={{ fontSize: 24, opacity: 0.8 }} />
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>{regKeys.length}</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.65rem' }}>Реестр</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
+      <ScanningIndicator active={activeTab === 5 ? shortcutsScanning : scanning} />
 
       {/* Tabs + Filter — вкладки всегда видны (можно сразу перейти к "Ярлыки",
           не дожидаясь скана остатков — это независимый источник данных). */}
@@ -390,10 +355,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
       {/* Tab 0: Cache items (safe to delete) */}
       {activeTab === 0 && cacheItems.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
-          <Alert severity="info" sx={{ m: 1, borderRadius: 1.5 }}>
-            Кеш-файлы безопасно удалять — это временные данные, не затрагивающие настройки.
-          </Alert>
+        <Paper variant="outlined" sx={{ maxHeight: 440, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {cacheItems.map((item, idx) => (
               <React.Fragment key={item.path}>
@@ -417,10 +379,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
                     secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
                   />
-                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
-                    {item.orphanMatch && <Chip label={item.orphanMatch === 'cache' ? 'кеш' : item.orphanMatch} color="info" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />}
-                    <Chip label={item.sizeFormatted} color="info" size="small" sx={{ fontWeight: 600 }} />
-                  </Box>
+                  <Chip label={item.sizeFormatted} color="info" size="small" sx={{ fontWeight: 600, mr: 2, flexShrink: 0 }} />
                 </ListItem>
                 {idx < cacheItems.length - 1 && <Divider />}
               </React.Fragment>
@@ -431,12 +390,12 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
       {/* Tab 1: Known orphan items — сначала удалённые программы (приоритет), затем ещё установленные */}
       {activeTab === 1 && orphanKnown.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
+        <Paper variant="outlined" sx={{ maxHeight: 440, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           {removedProgramItems.length > 0 && (
             <>
-              <Alert severity="success" icon={<KnownIcon />} sx={{ m: 1, borderRadius: 1.5 }}>
-                ★ Программа удалена из системы — приоритетный кандидат на очистку ({removedProgramItems.length}).
-              </Alert>
+              <Typography variant="caption" sx={{ display: 'block', px: 2, pt: 1.5, pb: 0.5, fontWeight: 700, color: 'success.main' }}>
+                ★ Программа удалена ({removedProgramItems.length})
+              </Typography>
               <List dense disablePadding>
                 {removedProgramItems.map((item, idx) => (
                   <React.Fragment key={item.path}>
@@ -460,10 +419,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                         primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
                         secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
                       />
-                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
-                        <Chip label={item.orphanMatch || 'остаток'} color="success" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem', maxWidth: 160 }} />
-                        <Chip label={item.sizeFormatted} color="success" size="small" sx={{ fontWeight: 600 }} />
-                      </Box>
+                      <Chip label={item.sizeFormatted} color="success" size="small" sx={{ fontWeight: 600, mr: 2, flexShrink: 0 }} />
                     </ListItem>
                     {idx < removedProgramItems.length - 1 && <Divider />}
                   </React.Fragment>
@@ -474,9 +430,9 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
           {installedProgramItems.length > 0 && (
             <>
-              <Alert severity="warning" sx={{ m: 1, borderRadius: 1.5 }}>
-                Программа всё ещё установлена — это действующие данные, а не мусор. Удаляйте осторожно ({installedProgramItems.length}).
-              </Alert>
+              <Typography variant="caption" sx={{ display: 'block', px: 2, pt: 1.5, pb: 0.5, fontWeight: 700, color: 'warning.main' }}>
+                Программа ещё установлена ({installedProgramItems.length})
+              </Typography>
               <List dense disablePadding>
                 {installedProgramItems.map((item, idx) => (
                   <React.Fragment key={item.path}>
@@ -500,10 +456,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                         primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
                         secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
                       />
-                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
-                        <Chip label={item.orphanMatch || 'остаток'} color="warning" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem', maxWidth: 160 }} />
-                        <Chip label={item.sizeFormatted} color="warning" size="small" sx={{ fontWeight: 600 }} />
-                      </Box>
+                      <Chip label={item.sizeFormatted} color="warning" size="small" sx={{ fontWeight: 600, mr: 2, flexShrink: 0 }} />
                     </ListItem>
                     {idx < installedProgramItems.length - 1 && <Divider />}
                   </React.Fragment>
@@ -516,10 +469,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
       {/* Tab 2: Unknown folders */}
       {activeTab === 2 && unknownFolders.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
-          <Alert severity="error" sx={{ m: 1, borderRadius: 1.5 }}>
-            Эти папки не найдены в orphan DB. Проверьте вручную перед удалением.
-          </Alert>
+        <Paper variant="outlined" sx={{ maxHeight: 440, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {unknownFolders.map((item, idx) => (
               <React.Fragment key={item.path}>
@@ -527,7 +477,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                   sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
                   secondaryAction={
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Tooltip title={trackedPaths.has(item.path) ? 'Уже добавлено в orphaned_apps.json' : 'Добавить в отслеживание (orphaned_apps.json), чтобы система запоминала эту программу'}>
+                      <Tooltip title={trackedPaths.has(item.path) ? 'Уже добавлено в orphaned_apps.json' : 'Добавить в отслеживание (orphaned_apps.json)'}>
                         <span>
                           <IconButton
                             size="small"
@@ -593,7 +543,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
       {/* Tab 3: Empty folders */}
       {activeTab === 3 && empties.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
+        <Paper variant="outlined" sx={{ maxHeight: 440, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {empties.map((item, idx) => (
               <React.Fragment key={item.path}>
@@ -615,7 +565,6 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
                     secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
                   />
-                  <Chip label="пусто" size="small" variant="outlined" sx={{ ml: 1 }} />
                 </ListItem>
                 {idx < empties.length - 1 && <Divider />}
               </React.Fragment>
@@ -626,10 +575,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
       {/* Tab 4: Registry keys */}
       {activeTab === 4 && regKeys.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
-          <Alert severity="info" sx={{ m: 1, borderRadius: 1.5 }}>
-            Ключи реестра можно удалить через regedit или reg delete. Автоудаление не поддерживается.
-          </Alert>
+        <Paper variant="outlined" sx={{ maxHeight: 440, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {regKeys.map((item, idx) => (
               <React.Fragment key={item.path}>
@@ -641,7 +587,6 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
                     secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
                   />
-                  <Chip label="реестр" size="small" color="info" variant="outlined" sx={{ ml: 1 }} />
                 </ListItem>
                 {idx < regKeys.length - 1 && <Divider />}
               </React.Fragment>
@@ -652,7 +597,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
       {/* Tab 5: Broken shortcuts */}
       {activeTab === 5 && shortcutsBroken.length > 0 && (
-        <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
+        <Paper variant="outlined" sx={{ maxHeight: 440, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
           <List dense disablePadding>
             {shortcutsBroken.map((item, idx) => (
               <React.Fragment key={item.path}>
@@ -688,10 +633,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         <Paper elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 2, border: '1px solid', borderColor: (t) => (t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0') }}>
           <ShortcutsIcon sx={{ fontSize: 48, opacity: 0.2, mb: 1 }} />
           <Typography variant="body2" sx={{ opacity: 0.5 }}>
-            Проверяет ярлыки (.lnk) на рабочем столе и в меню Пуск — те, что указывают на несуществующие файлы.
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.3, display: 'block', mt: 1 }}>
-            Ярлыки на временно недоступные сетевые пути тоже могут попасть в список — проверьте перед удалением.
+            Проверяет ярлыки на рабочем столе и в меню Пуск.
           </Typography>
         </Paper>
       )}

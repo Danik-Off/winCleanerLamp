@@ -60,6 +60,13 @@ interface AuditExportResultDto {
   error?: string;
 }
 
+interface ExportJsonResultDto {
+  success: boolean;
+  canceled?: boolean;
+  path?: string;
+  error?: string;
+}
+
 /**
  * ElectronAPI type (mirrored from src/shared/types/electron.d.ts)
  * Keep in sync with the shared type definition.
@@ -90,6 +97,7 @@ interface ElectronAPI {
   autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
   getBrokenShortcuts: () => Promise<ShortcutsResultDto>;
   exportAudit: () => Promise<AuditExportResultDto>;
+  exportJson: (options: { suggestedName?: string; data: unknown }) => Promise<ExportJsonResultDto>;
   checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
   onUpdateAvailable: (callback: (info: UpdateInfoDto) => void) => void;
@@ -155,6 +163,7 @@ const api: ElectronAPI = {
 
   getBrokenShortcuts: () => ipcRenderer.invoke('get-broken-shortcuts'),
   exportAudit: () => ipcRenderer.invoke('export-audit'),
+  exportJson: (options: { suggestedName?: string; data: unknown }) => ipcRenderer.invoke('export-json', options),
 
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   installUpdate: () => ipcRenderer.invoke('install-update'),

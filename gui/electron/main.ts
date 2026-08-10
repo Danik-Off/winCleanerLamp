@@ -384,6 +384,31 @@ interface JsonAuditExport {
   installedPrograms: unknown[] | null;
 }
 
+// Универсальный экспорт: рендерер уже держит в памяти результат сканирования
+// (список остатков, ярлыков и т.п.) — просто просим пользователя выбрать
+// файл и сохраняем то, что прислали, без повторного обращения к CLI.
+// Используется кнопкой "Экспорт" в панелях, чтобы можно было потом вручную
+// проанализировать находки и дополнить orphaned_apps.json/список категорий.
+ipcMain.handle('export-json', async (_event: IpcMainInvokeEvent, options: { suggestedName?: string; data: unknown }) => {
+  if (!mainWindow) {
+    return { success: false, error: 'Окно приложения недоступно' };
+  }
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Сохранить для анализа',
+    defaultPath: options.suggestedName || `wincleanerlamp-export-${new Date().toISOString().slice(0, 10)}.json`,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (canceled || !filePath) {
+    return { success: false, canceled: true };
+  }
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(options.data, null, 2), 'utf-8');
+    return { success: true, path: filePath };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
 ipcMain.handle('export-audit', async () => {
   if (!mainWindow) {
     return { success: false, error: 'Окно приложения недоступно' };
