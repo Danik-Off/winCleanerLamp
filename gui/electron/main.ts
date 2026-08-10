@@ -2,7 +2,7 @@
  * Electron Main Process
  * TypeScript implementation of main process
  */
-import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
@@ -347,6 +347,82 @@ ipcMain.handle('delete-leftover', async (_event: IpcMainInvokeEvent, folderPath:
   return runDeleteCli('--delete-dir', folderPath);
 });
 
+// ─── Битые ярлыки ───
+// Удаление найденных ярлыков идёт через уже существующий delete-file
+// (--delete-path --json) — ярлык это обычный файл, отдельная команда не нужна.
+interface JsonBrokenShortcut {
+  path: string;
+  targetPath?: string;
+  reason: string;
+}
+interface JsonShortcutScanResult {
+  broken: JsonBrokenShortcut[] | null;
+  scanned: number;
+}
+
+ipcMain.handle('get-broken-shortcuts', async () => {
+  const { stdout, stderr, code } = await executeCli(['--shortcuts-scan', '--json'], (line) => mainWindow?.webContents.send('scan-progress', line));
+  if (code !== 0 || !stdout.trim()) {
+    return { broken: [], scanned: 0, error: stderr || 'CLI не вернул результат' };
+  }
+  try {
+    const parsed: JsonShortcutScanResult = JSON.parse(stdout);
+    return { broken: parsed.broken || [], scanned: parsed.scanned, error: '' };
+  } catch {
+    return { broken: [], scanned: 0, error: stdout || stderr };
+  }
+});
+
+// ─── Экспорт снимка для анализа ───
+// Комбинирует orphan-discover (неизвестные папки) + список установленных
+// программ в один JSON-файл — пользователь сам выбирает, куда сохранить,
+// затем может проанализировать/дополнить orphaned_apps.json вручную.
+// orphaned_apps.json при этом не меняется.
+interface JsonAuditExport {
+  generatedAt: string;
+  unknownFolders: unknown[] | null;
+  installedPrograms: unknown[] | null;
+}
+
+ipcMain.handle('export-audit', async () => {
+  if (!mainWindow) {
+    return { success: false, error: 'Окно приложения недоступно' };
+  }
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Сохранить снимок для анализа',
+    defaultPath: `wincleanerlamp-audit-${new Date().toISOString().slice(0, 10)}.json`,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (canceled || !filePath) {
+    return { success: false, canceled: true };
+  }
+
+  const { stdout, stderr, code } = await executeCli(['--audit-export', filePath, '--json']);
+  if (code !== 0 || !stdout.trim()) {
+    return { success: false, error: stderr || 'CLI не вернул результат' };
+  }
+  try {
+    const parsed = JSON.parse(stdout) as { success: boolean; path?: string; error?: string };
+    if (!parsed.success) {
+      return { success: false, error: parsed.error || 'неизвестная ошибка' };
+    }
+    // Читаем сохранённый файл, чтобы вернуть в рендерер краткую сводку (счётчики).
+    let unknownCount = 0;
+    let installedCount = 0;
+    try {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const audit = JSON.parse(raw) as JsonAuditExport;
+      unknownCount = audit.unknownFolders?.length ?? 0;
+      installedCount = audit.installedPrograms?.length ?? 0;
+    } catch {
+      // Файл создан, но сводку прочитать не удалось — не критично для успеха операции.
+    }
+    return { success: true, path: filePath, unknownCount, installedCount };
+  } catch {
+    return { success: false, error: stdout || stderr };
+  }
+});
+
 // ─── Autostart Manager IPC Handlers ───
 // Функция в первую очередь для GUI (см. docs/research-autostart.md) — CLI-сторона
 // сознательно минимальна (--json-only, без текстового UX), обёртки здесь тонкие.
@@ -465,8 +541,27 @@ autoUpdater.on('update-not-available', () => {
 });
 
 autoUpdater.on('error', (err) => {
-  mainWindow?.webContents.send('update-error', err.message || String(err));
+  const raw = err.message || String(err);
+  console.error('autoUpdater error:', raw);
+  mainWindow?.webContents.send('update-error', friendlyUpdateError(raw));
 });
+
+/**
+ * electron-updater отдаёт сырые HTTP-ошибки builder-util-runtime (с полными
+ * заголовками ответа в одну строку) — показывать это пользователю в диалоге
+ * бессмысленно и пугающе. Здесь только текст для UI; полная ошибка всегда
+ * уходит в консоль (см. выше) для диагностики.
+ */
+function friendlyUpdateError(raw: string): string {
+  if (/latest\.yml/i.test(raw) || /404/.test(raw)) {
+    return 'Сервер обновлений вернул неполный релиз (отсутствует latest.yml). Попробуйте позже — это будет исправлено в следующем релизе.';
+  }
+  if (/ENOTFOUND|ETIMEDOUT|ECONNREFUSED|net::/i.test(raw)) {
+    return 'Не удалось подключиться к серверу обновлений. Проверьте интернет-соединение.';
+  }
+  const firstLine = raw.split('\n')[0].trim();
+  return firstLine.length > 200 ? firstLine.slice(0, 200) + '…' : firstLine;
+}
 
 autoUpdater.on('download-progress', (progress) => {
   mainWindow?.webContents.send('update-download-progress', Math.round(progress.percent));

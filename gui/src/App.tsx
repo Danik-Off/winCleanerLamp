@@ -22,7 +22,6 @@ import {
   ContentCopy as DupIcon,
   FolderOff as EmptyFolderIcon,
   PowerSettingsNew as AutostartIcon,
-  FolderShared as OrphanIcon,
   Info as InfoIcon,
   Minimize as MinimizeIcon,
   CropSquare as MaximizeIcon,
@@ -37,8 +36,7 @@ import {
 // Feature Components
 import { CleanupPanel } from './presentation/components/CleanupPanel';
 import { SystemInfoPanel } from './presentation/components/SystemInfoPanel';
-import { LeftoversPanel } from './presentation/components/LeftoversPanel';
-import { OrphanPanel } from './presentation/components/OrphanPanel';
+import { ResidualsPanel } from './presentation/components/ResidualsPanel';
 import { DuplicatesPanel } from './presentation/components/DuplicatesPanel';
 import { EmptyFoldersPanel } from './presentation/components/EmptyFoldersPanel';
 import { AutostartPanel } from './presentation/components/AutostartPanel';
@@ -115,12 +113,11 @@ function App(): JSX.Element {
     { id: 0, label: 'Главная', icon: <RocketIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
     { id: 1, label: 'Очистка', icon: <SpeedIcon sx={{ fontSize: 18 }} />, accent: '#3b82f6' },
     { id: 2, label: 'Система', icon: <StorageIcon sx={{ fontSize: 18 }} />, accent: '#06b6d4' },
-    { id: 3, label: 'Остатки', icon: <FolderDeleteIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
-    { id: 4, label: 'Программы', icon: <OrphanIcon sx={{ fontSize: 18 }} />, accent: '#ec4899' },
-    { id: 5, label: 'Дубликаты', icon: <DupIcon sx={{ fontSize: 18 }} />, accent: '#f59e0b' },
-    { id: 6, label: 'Пустые папки', icon: <EmptyFolderIcon sx={{ fontSize: 18 }} />, accent: '#ef4444' },
-    { id: 7, label: 'Автозагрузка', icon: <AutostartIcon sx={{ fontSize: 18 }} />, accent: '#a855f7' },
-    { id: 8, label: 'О приложении', icon: <InfoIcon sx={{ fontSize: 18 }} />, accent: '#10b981' },
+    { id: 3, label: 'Остатки и программы', icon: <FolderDeleteIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
+    { id: 4, label: 'Дубликаты', icon: <DupIcon sx={{ fontSize: 18 }} />, accent: '#f59e0b' },
+    { id: 5, label: 'Пустые папки', icon: <EmptyFolderIcon sx={{ fontSize: 18 }} />, accent: '#ef4444' },
+    { id: 6, label: 'Автозагрузка', icon: <AutostartIcon sx={{ fontSize: 18 }} />, accent: '#a855f7' },
+    { id: 7, label: 'О приложении', icon: <InfoIcon sx={{ fontSize: 18 }} />, accent: '#10b981' },
   ];
 
   const activeAccent = navItems[activeTab]?.accent || '#3b82f6';
@@ -352,21 +349,18 @@ function App(): JSX.Element {
               <SystemInfoPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={3}>
-              <LeftoversPanel onError={setError} />
+              <ResidualsPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={4}>
-              <OrphanPanel onError={setError} />
-            </TabPanel>
-            <TabPanel value={activeTab} index={5}>
               <DuplicatesPanel onError={setError} />
             </TabPanel>
-            <TabPanel value={activeTab} index={6}>
+            <TabPanel value={activeTab} index={5}>
               <EmptyFoldersPanel onError={setError} />
             </TabPanel>
-            <TabPanel value={activeTab} index={7}>
+            <TabPanel value={activeTab} index={6}>
               <AutostartPanel onError={setError} />
             </TabPanel>
-            <TabPanel value={activeTab} index={8}>
+            <TabPanel value={activeTab} index={7}>
               <AboutPanel />
             </TabPanel>
           </Box>

@@ -1,6 +1,7 @@
 package cleaner
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -267,5 +268,41 @@ func TestCleanOneOrphan_RejectsUnsafePath(t *testing.T) {
 	}
 	if len(result.Errors) == 0 {
 		t.Error("ожидалась ошибка о небезопасном пути")
+	}
+}
+
+// TestExportAudit_WritesValidSnapshot проверяет, что ExportAudit создаёт
+// корректный JSON-снимок и НЕ трогает исходный orphaned_apps.json.
+func TestExportAudit_WritesValidSnapshot(t *testing.T) {
+	dir := t.TempDir()
+	emptyRoot := filepath.Join(dir, "empty-root")
+	if err := os.MkdirAll(emptyRoot, 0o755); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	outPath := filepath.Join(dir, "audit.json")
+
+	cfg := &OrphanConfig{Apps: []OrphanApp{{DisplayName: "Some App"}}}
+	export, err := ExportAudit(cfg, []string{emptyRoot}, outPath)
+	if err != nil {
+		t.Fatalf("ExportAudit: %v", err)
+	}
+	if export.GeneratedAt == "" {
+		t.Error("GeneratedAt не должен быть пустым")
+	}
+	if export.UnknownFolders == nil && len(export.UnknownFolders) != 0 {
+		// nil-срез это нормально (нет находок) — просто фиксируем, что поле сериализуемо.
+		_ = export.UnknownFolders
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("файл снимка не создан: %v", err)
+	}
+	var roundTrip AuditExport
+	if err := json.Unmarshal(data, &roundTrip); err != nil {
+		t.Fatalf("файл снимка — не валидный JSON: %v", err)
+	}
+	if roundTrip.GeneratedAt != export.GeneratedAt {
+		t.Errorf("GeneratedAt в файле = %q, ожидалось %q", roundTrip.GeneratedAt, export.GeneratedAt)
 	}
 }

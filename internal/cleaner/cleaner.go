@@ -52,6 +52,8 @@ func Process(t Target, opts Options) Report {
 		return processThumbnailCache(t, opts)
 	case SpecialEventLogs:
 		return processEventLogs(t, opts)
+	case SpecialComponentCleanup:
+		return processComponentCleanup(t, opts)
 	}
 
 	for _, raw := range t.Paths {
@@ -379,6 +381,25 @@ func processEventLogs(t Target, opts Options) Report {
 			continue
 		}
 		r.Files++
+	}
+	return r
+}
+
+// processComponentCleanup запускает официальную очистку хранилища компонентов
+// (WinSxS) через DISM. Без /ResetBase — убираются только замещённые версии
+// компонентов, откат последнего обновления остаётся возможным. Размер
+// заранее не оценивается: DISM сам решает, что можно безопасно убрать.
+func processComponentCleanup(t Target, opts Options) Report {
+	r := Report{Target: t}
+	if opts.DryRun {
+		r.Skipped = true
+		r.SkippedReason = "очистка WinSxS через DISM — размер заранее неизвестен, оценивает сам DISM"
+		return r
+	}
+	cmd := exec.Command("Dism.exe", "/Online", "/Cleanup-Image", "/StartComponentCleanup", "/Quiet", "/NoRestart")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		r.Errors = append(r.Errors, fmt.Sprintf("Dism /StartComponentCleanup: %v: %s", err, strings.TrimSpace(string(out))))
 	}
 	return r
 }

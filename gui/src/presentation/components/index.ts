@@ -8,5 +8,7 @@ export { LeftoversPanel } from './LeftoversPanel';
 export { EmptyFoldersPanel } from './EmptyFoldersPanel';
 export { DuplicatesPanel } from './DuplicatesPanel';
 export { OrphanPanel } from './OrphanPanel';
+export { ShortcutsPanel } from './ShortcutsPanel';
+export { ResidualsPanel } from './ResidualsPanel';
 export { HeroPanel } from './HeroPanel';
 export { AboutPanel } from './AboutPanel';

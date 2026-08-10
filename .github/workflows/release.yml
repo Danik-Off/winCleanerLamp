@@ -111,6 +111,8 @@ jobs:
           files: |
             win-cleaner-lamp.exe
             gui/dist-release/*.exe
+            gui/dist-release/*.yml
+            gui/dist-release/*.blockmap
 
       - name: Сводка релиза
         if: success()

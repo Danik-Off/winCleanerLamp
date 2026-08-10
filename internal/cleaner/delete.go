@@ -1,6 +1,7 @@
 package cleaner
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
@@ -129,17 +130,39 @@ func moveToRecycleBin(path string, isDir bool) error {
 // (в отличие от -Command, где путь со спецсимволами мог ломать разбор
 // аргументов ещё до исполнения самого скрипта).
 func runPowerShellEncoded(script string) error {
+	_, err := runPowerShellEncodedOutput(script)
+	return err
+}
+
+// runPowerShellEncodedOutput — то же самое, но возвращает stdout скрипта
+// (для случаев, когда нужен результат, а не только факт успеха — например
+// ConvertTo-Json из разрешения ярлыков). stdout и stderr разделены, чтобы
+// диагностические сообщения PowerShell не попадали в разбираемый JSON.
+//
+// Windows PowerShell 5.1 при перенаправлении stdout в pipe (а не в реальную
+// консоль) по умолчанию кодирует вывод в кодовую страницу консоли (напр.
+// cp866 для RU-локали), а не в UTF-8 — кириллица в путях превращалась бы в
+// "битые" символы при разборе JSON. Принудительно переключаем
+// [Console]::OutputEncoding на UTF-8 перед выполнением скрипта.
+func runPowerShellEncodedOutput(script string) (string, error) {
+	script = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n" + script
+	encoded := encodePowerShellCommand(script)
+	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand", encoded)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	return stdout.String(), nil
+}
+
+// encodePowerShellCommand кодирует скрипт в UTF-16LE + Base64 для -EncodedCommand.
+func encodePowerShellCommand(script string) string {
 	u16 := utf16.Encode([]rune(script))
 	buf := make([]byte, len(u16)*2)
 	for i, v := range u16 {
 		binary.LittleEndian.PutUint16(buf[i*2:], v)
 	}
-	encoded := base64.StdEncoding.EncodeToString(buf)
-
-	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand", encoded)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
+	return base64.StdEncoding.EncodeToString(buf)
 }

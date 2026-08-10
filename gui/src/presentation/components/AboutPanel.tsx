@@ -107,7 +107,7 @@ export function AboutPanel(): JSX.Element {
     available: `Доступна версия ${newVersion}`,
     downloading: `Скачивание... ${downloadPercent}%`,
     downloaded: 'Установка и перезапуск...',
-    error: updateError || 'Ошибка проверки обновлений',
+    error: 'Ошибка проверки обновлений',
   };
 
   return (

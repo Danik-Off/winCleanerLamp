@@ -113,18 +113,7 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem' }}>
-            Остатки удалённых программ
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.5 }}>
-            Поиск и очистка файлов от программ, описанных в orphaned_apps.json
-          </Typography>
-        </Box>
-      </Box>
-
+      {/* Общий заголовок секции — в ResidualsPanel. Здесь только вложенные вкладки. */}
       {error && (
         <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => onError('')}>
           {error}
@@ -150,8 +139,8 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
             '& .MuiTab-root': { minHeight: 40, fontSize: '0.8rem', fontWeight: 600, textTransform: 'none' },
           }}
         >
-          <Tab icon={<SearchIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Scan (по JSON)" />
-          <Tab icon={<DiscoverIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Discover" />
+          <Tab icon={<SearchIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Проверить базу" />
+          <Tab icon={<DiscoverIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Найти новые" />
         </Tabs>
       </Paper>
 

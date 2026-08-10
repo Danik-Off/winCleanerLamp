@@ -28,11 +28,12 @@ type Target struct {
 type SpecialAction string
 
 const (
-	SpecialNone           SpecialAction = ""
-	SpecialRecycleBin     SpecialAction = "recycle_bin"
-	SpecialDNSCache       SpecialAction = "dns_cache"
-	SpecialThumbnailCache SpecialAction = "thumbnail_cache"
-	SpecialEventLogs      SpecialAction = "event_logs"
+	SpecialNone             SpecialAction = ""
+	SpecialRecycleBin       SpecialAction = "recycle_bin"
+	SpecialDNSCache         SpecialAction = "dns_cache"
+	SpecialThumbnailCache   SpecialAction = "thumbnail_cache"
+	SpecialEventLogs        SpecialAction = "event_logs"
+	SpecialComponentCleanup SpecialAction = "component_cleanup"
 )
 
 // AllTargets — перечень безопасных к очистке категорий для Windows.
@@ -720,6 +721,13 @@ func AllTargets() []Target {
 			Description: "C:\\Windows\\System32\\winevt\\Logs. Очищаются через wevtutil cl. Потеряете историю системных событий.",
 			Special:     SpecialEventLogs,
 			Aggressive:  true,
+		},
+		{
+			ID:          "component-store-cleanup",
+			Name:        "Очистка хранилища компонентов WinSxS (DISM)",
+			Description: "Официальный способ Microsoft — DISM /StartComponentCleanup убирает только замещённые (superseded) версии обновлённых компонентов. WinSxS НЕ удаляется вручную (это ломает Windows Update) — используется только поддерживаемый API, без /ResetBase (чтобы сохранить возможность отката последнего обновления). Требует прав администратора, может занять несколько минут, размер заранее не оценивается.",
+			Special:      SpecialComponentCleanup,
+			Aggressive:   true,
 		},
 		{
 			ID:          "iis-logs",

@@ -93,6 +93,26 @@ interface UpdateInfoDto {
   releaseNotes?: string;
 }
 
+interface BrokenShortcutDto {
+  path: string;
+  targetPath?: string;
+  reason: string;
+}
+interface ShortcutsResultDto {
+  broken: BrokenShortcutDto[];
+  scanned: number;
+  error?: string;
+}
+
+interface AuditExportResultDto {
+  success: boolean;
+  canceled?: boolean;
+  path?: string;
+  unknownCount?: number;
+  installedCount?: number;
+  error?: string;
+}
+
 interface ElectronAPI {
   getCategories: () => Promise<CategoriesResponseDto>;
   scan: (options: ScanOptionsDto) => Promise<ScanResultDto>;
@@ -117,6 +137,8 @@ interface ElectronAPI {
   orphanTrack: (options: { path: string; name?: string; asCache?: boolean }) => Promise<{ success: boolean; error?: string }>;
   autostartList: () => Promise<{ entries: AutostartEntryDto[]; error: string }>;
   autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
+  getBrokenShortcuts: () => Promise<ShortcutsResultDto>;
+  exportAudit: () => Promise<AuditExportResultDto>;
   checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
   onUpdateAvailable: (callback: (info: UpdateInfoDto) => void) => void;

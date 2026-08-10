@@ -404,6 +404,43 @@ func OrphanDiscover(opts DiscoverOptions) ([]DiscoverResult, error) {
 	return results, nil
 }
 
+// AuditExport — комбинированный отчёт для ручного анализа: неизвестные папки
+// (не привязанные ни к одной программе из orphaned_apps.json и не совпавшие
+// ни с одной установленной программой) + полный список установленных
+// программ из реестра. Файл предназначен для просмотра человеком и ручного
+// дополнения orphaned_apps.json — сам orphaned_apps.json НЕ изменяется.
+type AuditExport struct {
+	GeneratedAt       string             `json:"generatedAt"`
+	UnknownFolders    []DiscoverResult   `json:"unknownFolders"`
+	InstalledPrograms []InstalledProgram `json:"installedPrograms"`
+}
+
+// ExportAudit сканирует неизвестные папки и установленные программы и
+// сохраняет их одним JSON-файлом по outputPath — снимок системы для
+// последующего офлайн-анализа (в т.ч. вручную или сторонним инструментом) и
+// ручного дополнения базы известных программ.
+func ExportAudit(cfg *OrphanConfig, roots []string, outputPath string) (*AuditExport, error) {
+	unknown, err := OrphanDiscover(DiscoverOptions{Roots: roots, OrphanCfg: cfg})
+	if err != nil {
+		return nil, fmt.Errorf("поиск неизвестных папок: %w", err)
+	}
+
+	export := &AuditExport{
+		GeneratedAt:       time.Now().Format(time.RFC3339),
+		UnknownFolders:    unknown,
+		InstalledPrograms: GetInstalledPrograms(cfg),
+	}
+
+	data, err := json.MarshalIndent(export, "", "  ")
+	if err != nil {
+		return export, fmt.Errorf("сериализация JSON: %w", err)
+	}
+	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
+		return export, fmt.Errorf("запись в %s: %w", outputPath, err)
+	}
+	return export, nil
+}
+
 func buildKnownPaths(cfg *OrphanConfig) map[string]bool {
 	known := make(map[string]bool)
 	if cfg != nil {

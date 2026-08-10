@@ -77,6 +77,15 @@ func main() {
 		orphanTrackPath  = flag.String("orphan-track", "", "путь из --orphan-discover, который нужно добавить в orphaned_apps.json")
 		orphanTrackName  = flag.String("orphan-track-name", "", "отображаемое имя для --orphan-track (по умолчанию — имя папки)")
 		orphanTrackCache = flag.Bool("orphan-track-cache", false, "добавить путь как безопасный кеш (cachePaths) вместо обычного пути на проверку (additionalPaths)")
+
+		// Flags для поиска битых ярлыков
+		shortcutsScan  = flag.Bool("shortcuts-scan", false, "найти битые ярлыки (.lnk с несуществующей целью) на рабочем столе и в меню Пуск")
+		shortcutsRoots = flag.String("shortcuts-roots", "", "корневые папки для --shortcuts-scan (через ;), по умолчанию — рабочий стол и меню Пуск")
+
+		// Flag для экспорта снимка-аудита (неизвестные папки + список установленных
+		// программ) в один JSON-файл — для последующего ручного анализа/дополнения
+		// orphaned_apps.json. Сам orphaned_apps.json не изменяется.
+		auditExportPath = flag.String("audit-export", "", "сохранить снимок для анализа (неизвестные папки + установленные программы) в JSON-файл")
 	)
 	flag.Usage = usage
 	flag.Parse()
@@ -106,6 +115,31 @@ func main() {
 		printDeleteResult(result, *jsonFlag)
 		if !result.Success {
 			os.Exit(1)
+		}
+		return
+	}
+
+	// Поиск битых ярлыков — самостоятельная команда, не требует orphaned_apps.json.
+	if *shortcutsScan {
+		var roots []string
+		if *shortcutsRoots != "" {
+			roots = strings.Split(*shortcutsRoots, ";")
+		}
+		result, err := cleaner.ScanBrokenShortcuts(roots)
+		if err != nil {
+			if *jsonFlag {
+				printJSON(struct {
+					Error string `json:"error"`
+				}{Error: err.Error()})
+			} else {
+				fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+			}
+			os.Exit(1)
+		}
+		if *jsonFlag {
+			printJSON(result)
+		} else {
+			printShortcutScanResult(result)
 		}
 		return
 	}
@@ -197,6 +231,35 @@ func main() {
 			printListJSON(all)
 		} else {
 			printList(all)
+		}
+		return
+	}
+
+	// Экспорт снимка для ручного анализа: неизвестные папки + установленные
+	// программы одним JSON-файлом. orphaned_apps.json не переписывается.
+	if *auditExportPath != "" {
+		var roots []string
+		if *orphanRoots != "" {
+			roots = strings.Split(*orphanRoots, ";")
+		}
+		export, err := cleaner.ExportAudit(orphCfg, roots, *auditExportPath)
+		result := struct {
+			Success bool   `json:"success"`
+			Path    string `json:"path,omitempty"`
+			Error   string `json:"error,omitempty"`
+		}{Path: *auditExportPath, Success: err == nil}
+		if err != nil {
+			result.Error = err.Error()
+		}
+		if *jsonFlag {
+			printJSON(result)
+		} else if err != nil {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		} else {
+			fmt.Printf("Сохранено: %s (неизвестных папок: %d, установленных программ: %d)\n", *auditExportPath, len(export.UnknownFolders), len(export.InstalledPrograms))
+		}
+		if err != nil {
+			os.Exit(1)
 		}
 		return
 	}
@@ -497,6 +560,11 @@ func usage() {
   Win Cleaner Lamp --orphan-clean "Имя"  (пути с пользовательскими данными пропускаются;
                                           --orphan-include-user-data — включить и их)
 
+  # Битые ярлыки и снимок для анализа
+  Win Cleaner Lamp --shortcuts-scan            найти .lnk с несуществующей целью
+  Win Cleaner Lamp --audit-export snapshot.json  сохранить неизвестные папки + список
+                                                  установленных программ для ручного анализа
+
   # Безопасное удаление одного файла/папки (используется GUI)
   Win Cleaner Lamp --delete-path "C:\путь\файл"   удалить файл (в Корзину)
   Win Cleaner Lamp --delete-dir "C:\путь\папка"    удалить папку (в Корзину)
@@ -644,6 +712,22 @@ func printDeleteResult(r cleaner.DeleteResult, jsonOut bool) {
 		fmt.Printf("Перемещено в Корзину: %s\n", r.Path)
 	} else {
 		fmt.Printf("Удалено безвозвратно: %s\n", r.Path)
+	}
+}
+
+func printShortcutScanResult(r *cleaner.ShortcutScanResult) {
+	fmt.Printf("Проверено ярлыков: %d\n", r.Scanned)
+	if len(r.Broken) == 0 {
+		fmt.Println("Битых ярлыков не найдено.")
+		return
+	}
+	fmt.Printf("Найдено битых ярлыков: %d\n", len(r.Broken))
+	for _, b := range r.Broken {
+		if b.TargetPath != "" {
+			fmt.Printf("  %s -> %s (%s)\n", b.Path, b.TargetPath, b.Reason)
+		} else {
+			fmt.Printf("  %s (%s)\n", b.Path, b.Reason)
+		}
 	}
 }
 

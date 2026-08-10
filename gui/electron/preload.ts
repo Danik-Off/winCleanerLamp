@@ -40,6 +40,26 @@ interface UpdateInfoDto {
   releaseNotes?: string;
 }
 
+interface BrokenShortcutDto {
+  path: string;
+  targetPath?: string;
+  reason: string;
+}
+interface ShortcutsResultDto {
+  broken: BrokenShortcutDto[];
+  scanned: number;
+  error?: string;
+}
+
+interface AuditExportResultDto {
+  success: boolean;
+  canceled?: boolean;
+  path?: string;
+  unknownCount?: number;
+  installedCount?: number;
+  error?: string;
+}
+
 /**
  * ElectronAPI type (mirrored from src/shared/types/electron.d.ts)
  * Keep in sync with the shared type definition.
@@ -68,6 +88,8 @@ interface ElectronAPI {
   orphanTrack: (options: { path: string; name?: string; asCache?: boolean }) => Promise<{ success: boolean; error?: string }>;
   autostartList: () => Promise<{ entries: AutostartEntryDto[]; error: string }>;
   autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
+  getBrokenShortcuts: () => Promise<ShortcutsResultDto>;
+  exportAudit: () => Promise<AuditExportResultDto>;
   checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
   onUpdateAvailable: (callback: (info: UpdateInfoDto) => void) => void;
@@ -130,6 +152,9 @@ const api: ElectronAPI = {
 
   autostartList: () => ipcRenderer.invoke('autostart-list'),
   autostartToggle: (options: { id: string; enable: boolean }) => ipcRenderer.invoke('autostart-toggle', options),
+
+  getBrokenShortcuts: () => ipcRenderer.invoke('get-broken-shortcuts'),
+  exportAudit: () => ipcRenderer.invoke('export-audit'),
 
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   installUpdate: () => ipcRenderer.invoke('install-update'),

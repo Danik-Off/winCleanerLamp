@@ -31,7 +31,6 @@ import {
   Tab,
 } from '@mui/material';
 import {
-  FolderDelete as FolderDeleteIcon,
   Refresh as RefreshIcon,
   Warning as WarningIcon,
   Search as SearchIcon,
@@ -160,39 +159,25 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
   return (
     <Box>
-      {/* Header */}
-      <Paper
-        elevation={2}
-        sx={{
-          p: 3,
-          mb: 2,
-          background: (theme) =>
-            theme.palette.mode === 'dark'
-              ? 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)'
-              : 'linear-gradient(135deg, #e3f2fd 0%, #ede7f6 100%)',
-          borderRadius: 3,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <FolderDeleteIcon sx={{ mr: 1.5, fontSize: 28 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Остатки удалённых программ
-          </Typography>
-        </Box>
-        <Alert severity="info" icon={<WarningIcon />} sx={{ mb: 2, borderRadius: 1.5 }}>
-          Поиск остатков + кеш из orphan DB. Сканируются AppData, ProgramData, Program Files, реестр.
-        </Alert>
+      {/* Компактная панель управления — общий заголовок секции теперь в ResidualsPanel,
+          здесь только действие и краткая подсказка, без дублирующего заголовка. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
         <Button
           variant="contained"
           onClick={handleScan}
           disabled={scanning}
-          startIcon={scanning ? <CircularProgress size={20} /> : <RefreshIcon />}
-          size="large"
-          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+          startIcon={scanning ? <CircularProgress size={18} color="inherit" /> : <RefreshIcon />}
+          sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
         >
           {scanning ? 'Сканирование...' : 'Сканировать остатки'}
         </Button>
-      </Paper>
+        {result && totalItems > 0 && (
+          <Chip label={`${totalItems} найдено`} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600 }} />
+        )}
+        <Tooltip title="Эвристический поиск по AppData, ProgramData, Program Files и реестру — сопоставляет находки со списком установленных программ. Может быть менее точным, чем проверка по базе известных программ.">
+          <WarningIcon sx={{ fontSize: 18, opacity: 0.4, cursor: 'help' }} />
+        </Tooltip>
+      </Box>
 
       <ScanningIndicator active={scanning} />
 
