@@ -8,8 +8,8 @@ import (
 
 // EmptyDirCandidate — пустая или почти пустая папка.
 type EmptyDirCandidate struct {
-	Path  string
-	Depth int // глубина от корня сканирования
+	Path  string `json:"path"`
+	Depth int    `json:"depth"` // глубина от корня сканирования
 }
 
 // EmptyDirScanOptions — параметры сканирования пустых папок.
@@ -21,8 +21,8 @@ type EmptyDirScanOptions struct {
 
 // EmptyDirResult — результат сканирования.
 type EmptyDirResult struct {
-	Dirs  []EmptyDirCandidate
-	Total int
+	Dirs  []EmptyDirCandidate `json:"dirs"`
+	Total int                 `json:"total"`
 }
 
 // Результат удаления — см. DeleteResult в delete.go (единый для файлов и папок).

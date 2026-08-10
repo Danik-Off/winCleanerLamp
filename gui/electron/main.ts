@@ -6,6 +6,7 @@ import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
+import { autoUpdater } from 'electron-updater';
 
 // Constants
 const EXE_NAME = 'win-cleaner-lamp.exe';
@@ -95,6 +96,17 @@ try {
         createWindow();
       }
     });
+
+    // Тихая фоновая проверка обновлений вскоре после старта — но даже она
+    // не скачивает и не ставит ничего без явного согласия пользователя
+    // (см. setupAutoUpdater ниже: autoDownload=false, диалог с Установить/Отмена).
+    if (app.isPackaged) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+          console.error('Background update check failed:', err);
+        });
+      }, 5000);
+    }
   });
 
   app.on('window-all-closed', () => {
@@ -110,9 +122,15 @@ try {
 // IPC Handlers
 
 /**
- * Execute CLI command and return output
+ * Execute CLI command and return output.
+ *
+ * onProgress (опционально) получает живые статусные строки из stderr вида
+ * "PROGRESS i/N Имя категории" — CLI пишет их даже в --json режиме именно
+ * для того, чтобы GUI мог показывать реальный прогресс long-running
+ * сканирований, не дожидаясь завершения процесса. Такие строки не попадают
+ * в возвращаемый stderr (иначе замусорили бы диагностику ошибок).
  */
-function executeCli(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+function executeCli(args: string[], onProgress?: (line: string) => void): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve, reject) => {
     const exePath = getExePath();
 
@@ -127,20 +145,29 @@ function executeCli(args: string[]): Promise<{ stdout: string; stderr: string; c
 
     const child = spawn(exePath, args, options);
     let stdout = '';
-    let stderr = '';
+    const stderrLines: string[] = [];
 
     child.stdout?.on('data', (data: Buffer) => {
       stdout += data.toString();
     });
 
     child.stderr?.on('data', (data: Buffer) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      for (const line of chunk.split(/\r?\n/)) {
+        if (!line) continue;
+        const m = line.match(/^PROGRESS\s+(\d+)\/(\d+)\s+(.*)$/);
+        if (m && onProgress) {
+          onProgress(`[${m[1]}/${m[2]}] ${m[3]}`);
+          continue;
+        }
+        stderrLines.push(line);
+      }
     });
 
     child.on('close', (code: number | null) => {
       resolve({
         stdout,
-        stderr,
+        stderr: stderrLines.join('\n'),
         code: code ?? -1,
       });
     });
@@ -167,7 +194,7 @@ ipcMain.handle('scan', async (_event: IpcMainInvokeEvent, options: { aggressive:
   if (options.aggressive) args.push('--aggressive');
   if (options.categories?.length) args.push('--categories', options.categories.join(','));
 
-  const { stdout } = await executeCli(args);
+  const { stdout } = await executeCli(args, (line) => mainWindow?.webContents.send('scan-progress', line));
   const parsed: JsonScanResult = JSON.parse(stdout);
 
   return {
@@ -194,7 +221,7 @@ ipcMain.handle('clean', async (_event: IpcMainInvokeEvent, options: { aggressive
   if (options.yes) args.push('--yes');
   if (options.categories?.length) args.push('--categories', options.categories.join(','));
 
-  const { stdout, stderr, code } = await executeCli(args);
+  const { stdout, stderr, code } = await executeCli(args, (line) => mainWindow?.webContents.send('clean-progress', line));
   if (code !== 0 || !stdout.trim()) {
     // Отменено пользователем (нет --yes) или ошибка запуска — нет JSON на stdout.
     return { output: stdout || stderr, error: stderr, code, bytesCleaned: 0, filesCleaned: 0, errorCount: 0 };
@@ -216,30 +243,63 @@ ipcMain.handle('get-sysinfo', async () => {
   return stdout;
 });
 
-// Leftovers IPC Handler (enhanced with orphan DB)
+// Leftovers IPC Handler — структурированный JSON вместо парсинга текстовых таблиц.
 ipcMain.handle('get-leftovers', async () => {
-  const { stdout } = await executeCli(['--leftovers']);
+  const { stdout } = await executeCli(['--leftovers', '--json'], (line) => mainWindow?.webContents.send('scan-progress', line));
   return stdout;
 });
 
-// Leftovers Extended: includes orphan DB cross-referencing + installed programs
-ipcMain.handle('get-leftovers-ex', async (_event: IpcMainInvokeEvent, options?: { logFile?: string }) => {
-  const args = ['--leftovers'];
-  if (options?.logFile) args.push('--leftovers-log', options.logFile);
-  const { stdout, stderr, code } = await executeCli(args);
-  return { output: stdout, error: stderr, code };
-});
+// Duplicates IPC Handler — структурированный JSON вместо парсинга текста регэкспами.
+interface JsonDuplicateGroup {
+  hash: string;
+  size: number;
+  paths: string[];
+  wasteSize: number;
+  riskFlag?: string;
+}
+interface JsonDuplicatesResult {
+  groups: JsonDuplicateGroup[] | null;
+  totalWaste: number;
+  totalFiles: number;
+  scannedFiles: number;
+  durationSeconds: number;
+  skippedRoots?: string[];
+  error?: string;
+}
 
-// Duplicates IPC Handler
 ipcMain.handle('get-duplicates', async (_event: IpcMainInvokeEvent, rootPaths: string) => {
-  const { stdout } = await executeCli(['--duplicates', rootPaths]);
-  return stdout;
+  const { stdout } = await executeCli(['--duplicates', rootPaths, '--json'], (line) => mainWindow?.webContents.send('scan-progress', line));
+  const parsed: JsonDuplicatesResult = JSON.parse(stdout);
+  return {
+    groups: (parsed.groups || []).map((g) => ({
+      size: g.size,
+      sizeFormatted: formatBytes(g.size),
+      waste: g.wasteSize,
+      wasteFormatted: formatBytes(g.wasteSize),
+      paths: g.paths,
+      riskFlag: g.riskFlag,
+    })),
+    scannedFiles: parsed.scannedFiles,
+    totalWaste: parsed.totalWaste,
+    skippedRoots: parsed.skippedRoots || [],
+    error: parsed.error,
+  };
 });
 
 // Empty Dirs IPC Handler
+interface JsonEmptyDirResult {
+  dirs: { path: string; depth: number }[] | null;
+  total: number;
+  error?: string;
+}
+
 ipcMain.handle('get-empty-dirs', async (_event: IpcMainInvokeEvent, rootPaths: string) => {
-  const { stdout } = await executeCli(['--empty-dirs', rootPaths]);
-  return stdout;
+  const { stdout } = await executeCli(['--empty-dirs', rootPaths, '--json'], (line) => mainWindow?.webContents.send('scan-progress', line));
+  const parsed: JsonEmptyDirResult = JSON.parse(stdout);
+  return {
+    dirs: (parsed.dirs || []).map((d) => d.path),
+    error: parsed.error,
+  };
 });
 
 // ─── Безопасное удаление ───
@@ -327,11 +387,11 @@ ipcMain.handle('autostart-toggle', async (_event: IpcMainInvokeEvent, options: {
 
 // ─── OrphanCleaner IPC Handlers ───
 
-// Orphan Scan: check orphaned_apps.json entries
+// Orphan Scan: check orphaned_apps.json entries — структурированный JSON.
 ipcMain.handle('orphan-scan', async (_event: IpcMainInvokeEvent, configPath?: string) => {
-  const args = ['--orphan-scan'];
+  const args = ['--orphan-scan', '--json'];
   if (configPath) args.push('--orphan-config', configPath);
-  const { stdout, stderr, code } = await executeCli(args);
+  const { stdout, stderr, code } = await executeCli(args, (line) => mainWindow?.webContents.send('scan-progress', line));
   return { output: stdout, error: stderr, code };
 });
 
@@ -367,6 +427,77 @@ ipcMain.handle('orphan-list', async (_event: IpcMainInvokeEvent, configPath?: st
   if (configPath) args.push('--orphan-config', configPath);
   const { stdout, stderr, code } = await executeCli(args);
   return { output: stdout, error: stderr, code };
+});
+
+// Orphan Track: add a discovered folder into orphaned_apps.json (explicit user action only).
+ipcMain.handle('orphan-track', async (_event: IpcMainInvokeEvent, options: { path: string; name?: string; asCache?: boolean }) => {
+  const args = ['--orphan-track', options.path, '--json'];
+  if (options.name) args.push('--orphan-track-name', options.name);
+  if (options.asCache) args.push('--orphan-track-cache');
+  const { stdout, stderr } = await executeCli(args);
+  try {
+    return JSON.parse(stdout.trim()) as { success: boolean; error?: string };
+  } catch {
+    return { success: false, error: stderr || stdout };
+  }
+});
+
+// ─── Автообновление (electron-updater + GitHub Releases) ───
+//
+// Поток: checkForUpdates() → событие 'update-available' с версией/описанием
+// уходит в рендерер, который показывает диалог с кнопками Установить/Отмена
+// (см. AboutPanel.tsx). Ничего не скачивается автоматически — autoDownload
+// выключен намеренно, скачивание стартует только по нажатию «Установить»
+// (install-update). После скачивания — автоматический перезапуск с установкой.
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+
+autoUpdater.on('update-available', (info) => {
+  mainWindow?.webContents.send('update-available', {
+    version: info.version,
+    releaseDate: info.releaseDate,
+    releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : '',
+  });
+});
+
+autoUpdater.on('update-not-available', () => {
+  mainWindow?.webContents.send('update-not-available');
+});
+
+autoUpdater.on('error', (err) => {
+  mainWindow?.webContents.send('update-error', err.message || String(err));
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  mainWindow?.webContents.send('update-download-progress', Math.round(progress.percent));
+});
+
+autoUpdater.on('update-downloaded', () => {
+  mainWindow?.webContents.send('update-downloaded');
+  // Небольшая пауза, чтобы рендерер успел показать "перезапуск..." перед тем,
+  // как окно закроется.
+  setTimeout(() => autoUpdater.quitAndInstall(), 1500);
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  if (!app.isPackaged) {
+    return { success: false, error: 'Проверка обновлений доступна только в собранном приложении.' };
+  }
+  try {
+    await autoUpdater.checkForUpdates();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('install-update', async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
 });
 
 // Window Control IPC Handlers

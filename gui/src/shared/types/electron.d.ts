@@ -67,6 +67,32 @@ interface AutostartEntryDto {
   canToggle: boolean;
 }
 
+interface DuplicateGroupDto {
+  size: number;
+  sizeFormatted: string;
+  waste: number;
+  wasteFormatted: string;
+  paths: string[];
+  riskFlag?: string;
+}
+interface DuplicatesResultDto {
+  groups: DuplicateGroupDto[];
+  scannedFiles: number;
+  totalWaste: number;
+  skippedRoots: string[];
+  error?: string;
+}
+interface EmptyDirsResultDto {
+  dirs: string[];
+  error?: string;
+}
+
+interface UpdateInfoDto {
+  version: string;
+  releaseDate?: string;
+  releaseNotes?: string;
+}
+
 interface ElectronAPI {
   getCategories: () => Promise<CategoriesResponseDto>;
   scan: (options: ScanOptionsDto) => Promise<ScanResultDto>;
@@ -74,8 +100,8 @@ interface ElectronAPI {
   getSysInfo: () => Promise<string>;
   getLeftovers: () => Promise<string>;
   deleteLeftover: (folderPath: string) => Promise<DeleteResultDto>;
-  getDuplicates: (rootPaths: string) => Promise<string>;
-  getEmptyDirs: (rootPaths: string) => Promise<string>;
+  getDuplicates: (rootPaths: string) => Promise<DuplicatesResultDto>;
+  getEmptyDirs: (rootPaths: string) => Promise<EmptyDirsResultDto>;
   deleteEmptyDir: (dirPath: string) => Promise<DeleteResultDto>;
   deleteFile: (filePath: string) => Promise<DeleteResultDto>;
   /** Открывает локальный путь в системном обработчике (Проводник/приложение по умолчанию). Не для http(s)-ссылок. */
@@ -88,8 +114,16 @@ interface ElectronAPI {
   orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean; includeUserData?: boolean }) => Promise<{ output: string; error: string; code: number }>;
   orphanInfo: (displayName: string) => Promise<{ output: string; error: string; code: number }>;
   orphanList: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
+  orphanTrack: (options: { path: string; name?: string; asCache?: boolean }) => Promise<{ success: boolean; error?: string }>;
   autostartList: () => Promise<{ entries: AutostartEntryDto[]; error: string }>;
   autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
+  checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
+  installUpdate: () => Promise<{ success: boolean; error?: string }>;
+  onUpdateAvailable: (callback: (info: UpdateInfoDto) => void) => void;
+  onUpdateNotAvailable: (callback: () => void) => void;
+  onUpdateError: (callback: (message: string) => void) => void;
+  onUpdateDownloadProgress: (callback: (percent: number) => void) => void;
+  onUpdateDownloaded: (callback: () => void) => void;
   windowMinimize: () => void;
   windowMaximize: () => void;
   windowClose: () => void;

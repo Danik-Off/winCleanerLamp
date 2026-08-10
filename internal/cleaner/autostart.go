@@ -107,7 +107,7 @@ func ToggleAutostart(id string, enable bool) error {
 
 func parseAutostartID(id string) (AutostartSource, string, error) {
 	parts := strings.SplitN(id, "|", 2)
-	if len(parts) != 2 || parts[1] == "" {
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", "", fmt.Errorf("некорректный id записи автозагрузки: %q", id)
 	}
 	return AutostartSource(parts[0]), parts[1], nil

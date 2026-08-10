@@ -2,7 +2,7 @@
  * Cleanup Panel Component
  * Main cleaning interface with category selection - Material Design
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -16,7 +16,6 @@ import {
   ListItemButton,
   ListItemText,
   ListItemIcon,
-  LinearProgress,
   Switch,
   Chip,
   TextField,
@@ -47,6 +46,7 @@ import {
   KeyboardArrowUp as ArrowUpIcon,
 } from '@mui/icons-material';
 import { useCategories, useScan, useClean } from '../hooks';
+import { ScanningIndicator } from './ScanningIndicator';
 
 interface CleanupPanelProps {
   onError: (error: string) => void;
@@ -93,6 +93,24 @@ export function CleanupPanel({ onError }: CleanupPanelProps): JSX.Element {
   } = useClean();
 
   const [cleanDone, setCleanDone] = useState(false);
+  const [liveMessage, setLiveMessage] = useState<string | null>(null);
+
+  // Живой прогресс от CLI (см. gui/electron/main.ts: PROGRESS-строки на stderr
+  // пробрасываются как scan-progress/clean-progress) — иначе долгое
+  // сканирование (десятки тысяч файлов в %TEMP%) выглядит как зависший процесс.
+  useEffect(() => {
+    if (!scanning && !cleaning) {
+      setLiveMessage(null);
+      return;
+    }
+    const handler = (msg: string) => setLiveMessage(msg);
+    if (scanning) window.electronAPI.onScanProgress(handler);
+    if (cleaning) window.electronAPI.onCleanProgress(handler);
+    return () => {
+      window.electronAPI.removeAllListeners('scan-progress');
+      window.electronAPI.removeAllListeners('clean-progress');
+    };
+  }, [scanning, cleaning]);
 
   const handleScan = useCallback(async () => {
     clearScan();
@@ -340,21 +358,12 @@ export function CleanupPanel({ onError }: CleanupPanelProps): JSX.Element {
         </Grid>
       </Grid>
 
-      {/* ── Progress bar ── */}
-      {(scanning || cleaning) && (
-        <LinearProgress
-          sx={{
-            mb: 2,
-            borderRadius: 2,
-            height: 5,
-            bgcolor: (t) => t.palette.mode === 'dark' ? '#1e293b' : '#e2e8f0',
-            '& .MuiLinearProgress-bar': {
-              borderRadius: 2,
-              background: 'linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%)',
-            },
-          }}
-        />
-      )}
+      {/* ── Progress ── */}
+      <ScanningIndicator
+        active={scanning || cleaning}
+        liveMessage={liveMessage}
+        label={cleaning ? 'Очистка' : 'Сканирование'}
+      />
 
       {/* ── Post-clean result banner ── */}
       {cleanDone && !cleaning && (

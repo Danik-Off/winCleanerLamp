@@ -23,14 +23,20 @@ const (
 
 // LeftoverCandidate — папка/ключ, похожие на остаток от удалённой программы.
 type LeftoverCandidate struct {
-	Path           string
-	Size           int64
-	Files          int
-	Reason         string       // почему помечена (например, "нет в Uninstall registry")
-	Type           LeftoverType // тип остатка
-	OrphanMatch    string       // имя программы из orphaned_apps.json (если совпало)
-	CacheHit       bool         // это кеш из orphan DB (cachePaths)
-	InstalledMatch bool         // программа установлена в системе
+	Path        string       `json:"path"`
+	Size        int64        `json:"size"`
+	Files       int          `json:"files"`
+	Reason      string       `json:"reason"` // почему помечена (например, "нет в Uninstall registry")
+	Type        LeftoverType `json:"type"`
+	OrphanMatch string       `json:"orphanMatch,omitempty"` // имя программы из orphaned_apps.json (если совпало)
+	CacheHit    bool         `json:"cacheHit"`              // это кеш из orphan DB (cachePaths)
+	// InstalledMatch — программа, которой принадлежит запись, СЕЙЧАС установлена
+	// в системе. false = программа удалена — приоритетный кандидат на очистку.
+	// Значимо только когда OrphanMatch непусто.
+	InstalledMatch bool `json:"installedMatch"`
+	// LikelyUserData — путь похож на пользовательские данные (см. isLikelyUserDataPath
+	// в orphan.go) — предупреждение для UI, не блокирует показ/выбор.
+	LikelyUserData bool `json:"likelyUserData"`
 }
 
 // InstalledProgram — запись об установленной программе.
@@ -43,8 +49,8 @@ type InstalledProgram struct {
 
 // LeftoversResult — полный результат сканирования остатков.
 type LeftoversResult struct {
-	Candidates []LeftoverCandidate
-	Installed  []InstalledProgram
+	Candidates []LeftoverCandidate `json:"candidates"`
+	Installed  []InstalledProgram  `json:"installed"`
 }
 
 // LeftoverScanOptions — параметры сканирования.
@@ -154,9 +160,18 @@ func ScanLeftoversEx(opts LeftoverScanOptions) (*LeftoversResult, error) {
 	// известным приложением (OrphanMatch) — установлена ли программа СЕЙЧАС.
 	// Это позволяет в первую очередь показывать/предлагать к удалению именно
 	// остатки уже УДАЛЁННЫХ программ, а не просто делить на "известно/неизвестно".
+	//
+	// LikelyUserData — та же эвристика, что и в OrphanCleaner (orphan.go),
+	// но здесь применяется КО ВСЕМ кандидатам, включая unknownFolders —
+	// у "неизвестных" папок нет привязки к программе, но их последний
+	// сегмент пути всё равно может выглядеть как сохранения/проекты/фото,
+	// и на это стоит явно указать пользователю перед удалением.
 	for i := range out {
 		if out[i].OrphanMatch != "" {
 			out[i].InstalledMatch = matchesInstalled(out[i].OrphanMatch, installed)
+		}
+		if out[i].Type == LeftoverFolder {
+			out[i].LikelyUserData = isLikelyUserDataPath(out[i].Path)
 		}
 	}
 

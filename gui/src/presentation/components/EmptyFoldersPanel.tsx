@@ -39,6 +39,7 @@ import {
   FolderOpen as FolderOpenIcon,
   RestoreFromTrash as RestoreIcon,
 } from '@mui/icons-material';
+import { ScanningIndicator } from './ScanningIndicator';
 
 interface EmptyFoldersPanelProps {
   onError: (error: string) => void;
@@ -74,9 +75,11 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
     setHasScanResult(false);
     setDeletedPaths(new Set());
     try {
-      const output = await window.electronAPI.getEmptyDirs(paths);
-      const parsed = parseEmptyDirsOutput(output);
-      setDirs(parsed);
+      const result = await window.electronAPI.getEmptyDirs(paths);
+      if (result.error) {
+        onError(result.error);
+      }
+      setDirs(result.dirs);
       setHasScanResult(true);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Ошибка сканирования');
@@ -189,7 +192,7 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
         </Box>
       </Paper>
 
-      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 2, height: 6 }} />}
+      <ScanningIndicator active={scanning} />
 
       {/* Stats */}
       {hasScanResult && (
@@ -407,14 +410,3 @@ export function EmptyFoldersPanel({ onError }: EmptyFoldersPanelProps): JSX.Elem
   );
 }
 
-/** Parse CLI output from --empty-dirs */
-function parseEmptyDirsOutput(output: string): string[] {
-  const dirs: string[] = [];
-  for (const line of output.split('\n')) {
-    const match = line.match(/\[пусто\]\s+(.+)/);
-    if (match) {
-      dirs.push(match[1].trim());
-    }
-  }
-  return dirs;
-}

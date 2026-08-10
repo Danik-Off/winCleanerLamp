@@ -1,6 +1,12 @@
 /**
- * Hero Panel Component - Clean & Minimal
- * Professional one-button interface
+ * Hero Panel Component — главный экран
+ * Один большой круг запускает "скан → авточистка безопасных категорий".
+ *
+ * Намеренно минималистично: никаких зацикленных фоновых анимаций (пульс,
+ * плавающие пятна) — они не несли информации и только отвлекали. Внутри
+ * круга во время работы — ровно два элемента (процент + короткая строка
+ * статуса), а не три вперемешку с крупной подписью фазы, которая физически
+ * не помещалась в круг на словах вроде "ЧИСТКА".
  */
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
@@ -16,12 +22,16 @@ import {
   Stack,
   useTheme,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   CheckCircle as CheckIcon,
   DeleteSweep as CleanIcon,
   Search as SearchIcon,
   AutoFixHigh as MagicIcon,
   Refresh as RefreshIcon,
+  Shield as ShieldIcon,
+  Bolt as BoltIcon,
+  PowerSettingsNew as AutostartIcon,
 } from '@mui/icons-material';
 import { useCategories, useScan, useClean } from '../hooks';
 import { CategorySelection } from '../../domain/entities/Category';
@@ -38,8 +48,9 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
   const [shouldClean, setShouldClean] = useState(false);
   const animationRef = useRef<number | null>(null);
   const theme = useTheme();
+  const dark = theme.palette.mode === 'dark';
   const { categories } = useCategories();
-  
+
   const { scanning, error: scanError, scan, clear: clearScan, result: scanResult } = useScan();
   const { bytesCleaned, filesCleaned, error: cleanError, clean, clear: clearClean } = useClean();
 
@@ -59,33 +70,46 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
     }
   }, [shouldClean, phase]);
 
-  // Update progress during scanning/cleaning
+  // Живой прогресс от CLI (см. gui/electron/main.ts: PROGRESS-строки на stderr).
+  // Пока не пришло ни одного реального события — процент плавно (но без
+  // остановки) подкрадывается к мягкому потолку фазы; как только событие
+  // пришло — считаем реальную долю "[i/N]" внутри диапазона фазы.
+  const [liveText, setLiveText] = useState<string | null>(null);
+  const liveFracRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (phase === 'scanning') {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 45) {
-            clearInterval(interval);
-            return 45;
-          }
-          return prev + 5;
-        });
-      }, 200);
-      return () => clearInterval(interval);
+    if (phase !== 'scanning' && phase !== 'cleaning') {
+      setLiveText(null);
+      liveFracRef.current = null;
+      return;
     }
-    
-    if (phase === 'cleaning') {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) {
-            clearInterval(interval);
-            return 95;
-          }
-          return prev + 3;
-        });
-      }, 200);
-      return () => clearInterval(interval);
-    }
+    const handler = (msg: string) => {
+      setLiveText(msg);
+      const m = msg.match(/^\[(\d+)\/(\d+)\]/);
+      liveFracRef.current = m ? Math.min(1, parseInt(m[1], 10) / Math.max(1, parseInt(m[2], 10))) : null;
+    };
+    if (phase === 'scanning') window.electronAPI.onScanProgress(handler);
+    if (phase === 'cleaning') window.electronAPI.onCleanProgress(handler);
+    return () => {
+      window.electronAPI.removeAllListeners('scan-progress');
+      window.electronAPI.removeAllListeners('clean-progress');
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'scanning' && phase !== 'cleaning') return;
+    const [base, softCap] = phase === 'scanning' ? [10, 49] : [50, 99];
+    const range = phase === 'scanning' ? 40 : 49;
+
+    const tick = setInterval(() => {
+      setProgress((prev) => {
+        if (liveFracRef.current !== null) {
+          return base + liveFracRef.current * range;
+        }
+        return prev + (softCap - prev) * 0.12;
+      });
+    }, 200);
+    return () => clearInterval(tick);
   }, [phase]);
 
   const handleAutoClean = useCallback(async () => {
@@ -108,7 +132,7 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
     setPhase('scanning');
     setProgress(10);
     setShouldClean(false);
-    
+
     try {
       let sel = CategorySelection.empty();
       categories.safe.forEach(c => { sel = sel.select(c.id); });
@@ -147,35 +171,21 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
   const getStatus = () => {
     switch (phase) {
       case 'idle':
-        return { 
-          icon: <MagicIcon />,
-          color: '#6366f1',
-          bgColor: theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.08)',
-        };
+        return { icon: <MagicIcon />, color: '#8b5cf6', label: 'Начать', sublabel: 'Проверка и очистка' };
       case 'scanning':
-        return { 
-          icon: <SearchIcon />,
-          color: '#3b82f6',
-          bgColor: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.08)',
-        };
+        return { icon: <SearchIcon />, color: '#3b82f6', label: 'Сканирование', sublabel: '' };
       case 'cleaning':
-        return { 
-          icon: <CleanIcon />,
-          color: '#f59e0b',
-          bgColor: theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.08)',
-        };
+        return { icon: <CleanIcon />, color: '#f59e0b', label: 'Очистка', sublabel: '' };
       case 'completed':
-        return { 
-          icon: <CheckIcon />,
-          color: '#10b981',
-          bgColor: theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.08)',
-        };
+        return { icon: <CheckIcon />, color: '#10b981', label: 'Готово', sublabel: '' };
       default:
-        return { icon: <MagicIcon />, color: '#6366f1', bgColor: 'transparent' };
+        return { icon: <MagicIcon />, color: '#8b5cf6', label: '', sublabel: '' };
     }
   };
 
   const status = getStatus();
+  const isIdle = phase === 'idle';
+  const isBusy = phase === 'scanning' || phase === 'cleaning';
 
   if (scanError || cleanError) {
     return (
@@ -192,118 +202,136 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 200px)', p: 3 }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 600 }}>
-        
-        {/* Main Button */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 640 }}>
+
+        {/* Заголовок — только в состоянии покоя, одна строка */}
+        {isIdle && (
+          <Typography variant="body2" sx={{ opacity: 0.55, mb: 4 }}>
+            Одно нажатие — сканирование и безопасная очистка
+          </Typography>
+        )}
+
+        {/* Кнопка */}
         <Box sx={{ position: 'relative', mb: 4 }}>
-          {/* Progress ring - centered */}
-          {(phase === 'scanning' || phase === 'cleaning') && (
-            <Box sx={{ 
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 0,
-            }}>
+          {isBusy && (
+            <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+              <CircularProgress
+                variant="determinate"
+                value={100}
+                size={220}
+                thickness={3}
+                sx={{ color: dark ? alpha('#ffffff', 0.06) : alpha('#000000', 0.06), position: 'absolute' }}
+              />
               <CircularProgress
                 variant="determinate"
                 value={progress}
                 size={220}
-                thickness={4}
-                sx={{ color: status.color }}
+                thickness={3}
+                sx={{
+                  color: status.color,
+                  '& .MuiCircularProgress-circle': { strokeLinecap: 'round', transition: 'stroke-dashoffset 0.3s ease' },
+                }}
               />
             </Box>
           )}
-          
+
           <Button
             variant="contained"
-            onClick={phase === 'idle' ? handleScan : undefined}
-            disabled={phase !== 'idle'}
+            onClick={isIdle ? handleScan : undefined}
+            disabled={!isIdle}
+            disableRipple={!isIdle}
             sx={{
               width: 200,
               height: 200,
               borderRadius: '50%',
               bgcolor: status.color,
-              border: `4px solid ${status.bgColor}`,
-              boxShadow: phase === 'idle' 
-                ? `0 8px 30px ${status.color}44`
-                : 'none',
-              transition: 'all 0.3s ease',
+              minWidth: 0,
+              boxShadow: isIdle ? `0 8px 28px ${alpha(status.color, 0.35)}` : 'none',
+              transition: 'box-shadow 0.25s ease, transform 0.25s ease, background-color 0.25s ease',
               position: 'relative',
-              zIndex: 1,
               '&:hover': {
                 bgcolor: status.color,
-                boxShadow: `0 12px 40px ${status.color}66`,
-                transform: phase === 'idle' ? 'scale(1.05)' : 'none',
+                boxShadow: isIdle ? `0 10px 32px ${alpha(status.color, 0.45)}` : 'none',
+                transform: isIdle ? 'scale(1.03)' : 'none',
               },
               '&:disabled': {
-                bgcolor: theme.palette.mode === 'dark' ? '#1e293b' : '#f1f5f9',
-                color: status.color,
-                boxShadow: 'none',
+                bgcolor: status.color,
+                opacity: isBusy ? 1 : 0.55,
               },
             }}
           >
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <Box sx={{ mb: 1, color: phase === 'idle' ? 'white' : status.color }}>
-                {React.cloneElement(status.icon as React.ReactElement, { sx: { fontSize: 64 } })}
-              </Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: phase === 'idle' ? 'white' : status.color, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {phase === 'idle' && 'Старт'}
-                {phase === 'scanning' && 'Скан'}
-                {phase === 'cleaning' && 'Чистка'}
-                {phase === 'completed' && 'Готово'}
-              </Typography>
-              {phase === 'idle' && (
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', mt: 0.5 }}>
-                  Очистка
-                </Typography>
-              )}
-              {(phase === 'scanning' || phase === 'cleaning') && (
-                <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.mode === 'dark' ? 'white' : '#1e293b', mt: 1 }}>
+            {isBusy ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography sx={{ fontWeight: 700, color: 'white', fontSize: '2.5rem', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                   {Math.round(progress)}%
                 </Typography>
-              )}
-            </Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: 1,
+                    maxWidth: 148,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    opacity: 0.85,
+                    color: 'white',
+                  }}
+                >
+                  {liveText || status.label}
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ color: 'white', mb: 1 }}>
+                  {React.cloneElement(status.icon as React.ReactElement, { sx: { fontSize: 52 } })}
+                </Box>
+                <Typography sx={{ fontWeight: 700, color: 'white', fontSize: '1.1rem' }}>
+                  {status.label}
+                </Typography>
+                {status.sublabel && (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                    {status.sublabel}
+                  </Typography>
+                )}
+              </Box>
+            )}
           </Button>
         </Box>
 
-        {/* Steps */}
+        {/* Шаги */}
         <Stack direction="row" spacing={3} sx={{ mb: 4, alignItems: 'center' }}>
           {[
             { label: 'Сканирование', phase: 'scanning' },
             { label: 'Очистка', phase: 'cleaning' },
             { label: 'Готово', phase: 'completed' },
           ].map((step, idx) => {
-            const isActive = phase === step.phase || 
-                            (idx === 0 && phase === 'cleaning') || 
+            const isActive = phase === step.phase ||
+                            (idx === 0 && phase === 'cleaning') ||
                             (idx <= 1 && phase === 'completed');
-            
+
             return (
               <Box key={idx} sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{
-                  width: 12,
-                  height: 12,
+                  width: 10,
+                  height: 10,
                   borderRadius: '50%',
-                  bgcolor: isActive ? status.color : theme.palette.mode === 'dark' ? '#374151' : '#d1d5db',
-                  transition: 'all 0.3s',
+                  bgcolor: isActive ? status.color : dark ? '#374151' : '#d1d5db',
+                  transition: 'background-color 0.25s',
                 }} />
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    ml: 0.75, 
-                    fontWeight: isActive ? 600 : 400,
-                    opacity: isActive ? 1 : 0.4,
-                  }}
+                <Typography
+                  variant="caption"
+                  sx={{ ml: 0.75, fontWeight: isActive ? 700 : 400, opacity: isActive ? 1 : 0.4 }}
                 >
                   {step.label}
                 </Typography>
                 {idx < 2 && (
-                  <Box sx={{ 
-                    width: 40, 
-                    height: 2, 
-                    mx: 1.5, 
-                    bgcolor: isActive ? status.color : theme.palette.mode === 'dark' ? '#374151' : '#d1d5db',
-                    transition: 'all 0.3s',
+                  <Box sx={{
+                    width: 36,
+                    height: 2,
+                    mx: 1.5,
+                    bgcolor: isActive ? status.color : dark ? '#374151' : '#d1d5db',
+                    transition: 'background-color 0.25s',
                   }} />
                 )}
               </Box>
@@ -311,17 +339,18 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
           })}
         </Stack>
 
-        {/* Result */}
+        {/* Результат */}
         {phase === 'completed' && (
-          <Paper sx={{ 
+          <Paper sx={{
             p: 3,
-            borderRadius: 3,
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)'}`,
+            width: '100%',
+            borderRadius: 4,
+            bgcolor: dark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)',
+            border: `1px solid ${dark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)'}`,
           }}>
             <Grid container spacing={3}>
               <Grid item xs={6}>
-                <Card sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.05)', border: 'none' }}>
+                <Card sx={{ bgcolor: dark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.05)', border: 'none' }}>
                   <CardContent sx={{ textAlign: 'center', py: 2 }}>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#10b981' }}>
                       {formatBytes(bytesCleaned)}
@@ -331,9 +360,9 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
                 </Card>
               </Grid>
               <Grid item xs={6}>
-                <Card sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)', border: 'none' }}>
+                <Card sx={{ bgcolor: dark ? 'rgba(139, 92, 246, 0.1)' : 'rgba(139, 92, 246, 0.05)', border: 'none' }}>
                   <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#6366f1' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#8b5cf6' }}>
                       {filesCleaned}
                     </Typography>
                     <Typography variant="caption" sx={{ opacity: 0.7 }}>Файлов</Typography>
@@ -346,7 +375,7 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
                   onClick={handleReset}
                   startIcon={<RefreshIcon />}
                   fullWidth
-                  sx={{ py: 1.5, fontWeight: 600 }}
+                  sx={{ py: 1.5, fontWeight: 700, borderRadius: 2.5 }}
                 >
                   Ещё раз
                 </Button>
@@ -355,11 +384,35 @@ export function HeroPanel({ onError }: HeroPanelProps): JSX.Element {
           </Paper>
         )}
 
-        {/* Info */}
-        {phase === 'idle' && (
-          <Typography variant="caption" sx={{ opacity: 0.5, mt: 3, textAlign: 'center', display: 'block' }}>
-            Безопасная очистка временных файлов, кеша и мусора
-          </Typography>
+        {/* Возможности — только в состоянии покоя */}
+        {isIdle && (
+          <Grid container spacing={1.5} sx={{ mt: 1 }}>
+            {[
+              { icon: <ShieldIcon sx={{ fontSize: 18 }} />, label: 'Безопасно', desc: 'системные файлы защищены', color: '#10b981' },
+              { icon: <BoltIcon sx={{ fontSize: 18 }} />, label: 'Быстро', desc: 'параллельное сканирование', color: '#3b82f6' },
+              { icon: <AutostartIcon sx={{ fontSize: 18 }} />, label: 'Автозагрузка', desc: 'обратимое управление', color: '#a855f7' },
+            ].map((f) => (
+              <Grid item xs={12} sm={4} key={f.label}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.75,
+                    borderRadius: 3,
+                    textAlign: 'center',
+                    border: '1px solid',
+                    borderColor: dark ? '#1f2937' : '#e2e8f0',
+                    bgcolor: 'background.paper',
+                    transition: 'border-color 0.2s ease',
+                    '&:hover': { borderColor: alpha(f.color, 0.4) },
+                  }}
+                >
+                  <Box sx={{ color: f.color, mb: 0.5 }}>{f.icon}</Box>
+                  <Typography variant="caption" sx={{ display: 'block', fontWeight: 700 }}>{f.label}</Typography>
+                  <Typography variant="caption" sx={{ display: 'block', opacity: 0.5, fontSize: '0.68rem' }}>{f.desc}</Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
         )}
       </Box>
     </Box>

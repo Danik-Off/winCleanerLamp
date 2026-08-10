@@ -14,8 +14,6 @@ export interface OrphanScanItem {
   programInstalled: boolean;
 }
 
-const USER_DATA_MARKER = '⚠ [ПОЛЬЗОВАТЕЛЬСКИЕ ДАННЫЕ] ';
-
 export interface DiscoverItem {
   path: string;
   size_mb: number;
@@ -35,71 +33,55 @@ interface UseOrphanReturn {
   orphanScan: () => Promise<void>;
   orphanDiscover: (roots?: string) => Promise<void>;
   orphanClean: (names: string, recycle?: boolean, cacheOnly?: boolean, includeUserData?: boolean) => Promise<string>;
+  orphanTrack: (path: string, name?: string, asCache?: boolean) => Promise<{ success: boolean; error?: string }>;
   clear: () => void;
 }
 
+interface JsonOrphanFoundPath {
+  path: string;
+  size: number;
+  files: number;
+  exists: boolean;
+  isUserData: boolean;
+  likelyUserData: boolean;
+}
+interface JsonOrphanScanResult {
+  app: { displayName: string };
+  foundPaths: JsonOrphanFoundPath[] | null;
+  foundRegKeys: string[] | null;
+  totalSize: number;
+  totalFiles: number;
+  programInstalled: boolean;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === -1) return '~большой';
+  if (bytes <= 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 function parseScanResults(output: string): OrphanScanItem[] {
-  const items: OrphanScanItem[] = [];
-  const lines = output.split('\n');
-  let current: OrphanScanItem | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      if (current) {
-        items.push(current);
-        current = null;
-      }
-      continue;
-    }
-
-    // Program header line: "  DisplayName  (SIZE, N файлов)  [★ программа удалена|программа установлена]"
-    const headerMatch = trimmed.match(/^(.+?)\s{2,}\((.+?),\s*(\d+)\s*файлов?\)/);
-    if (headerMatch && !trimmed.startsWith('[')) {
-      if (current) items.push(current);
-      current = {
-        displayName: headerMatch[1].trim(),
-        totalSize: headerMatch[2].trim(),
-        totalFiles: parseInt(headerMatch[3], 10),
-        paths: [],
-        regKeys: [],
-        programInstalled: trimmed.includes('[программа установлена]'),
-      };
-      continue;
-    }
-
-    // Path line: "    [  SIZE] PATH" (путь может начинаться с маркера пользовательских данных)
-    const pathMatch = trimmed.match(/^\[\s*([\d.]+\s*[KMGT]?B|~большой)\s*\]\s+(.+)$/);
-    if (pathMatch && current) {
-      let rawPath = pathMatch[2].trim();
-      const isUserData = rawPath.startsWith(USER_DATA_MARKER);
-      if (isUserData) rawPath = rawPath.slice(USER_DATA_MARKER.length);
-      current.paths.push({ size: pathMatch[1].trim(), path: rawPath, isUserData });
-      continue;
-    }
-
-    // Registry line: "    [реестр]   KEY"
-    const regMatch = trimmed.match(/^\[реестр\]\s+(.+)$/);
-    if (regMatch && current) {
-      current.regKeys.push(regMatch[1].trim());
-      continue;
-    }
-
-    // Standalone name line (no size info — no results yet)
-    if (!trimmed.startsWith('[') && !trimmed.startsWith('-') && !trimmed.startsWith('ИТОГО') && !trimmed.startsWith('Для удаления') && !trimmed.startsWith('Сканирование') && !trimmed.startsWith('Найдены') && !trimmed.startsWith('Подтверждённых')) {
-      if (current) items.push(current);
-      current = {
-        displayName: trimmed,
-        totalSize: '0 B',
-        totalFiles: 0,
-        paths: [],
-        regKeys: [],
-        programInstalled: false,
-      };
-    }
+  let raw: JsonOrphanScanResult[];
+  try {
+    raw = JSON.parse(output) || [];
+  } catch {
+    return [];
   }
-  if (current) items.push(current);
-  return items;
+  return raw.map((r) => ({
+    displayName: r.app.displayName,
+    totalSize: formatBytes(r.totalSize),
+    totalFiles: r.totalFiles,
+    paths: (r.foundPaths || []).map((p) => ({
+      size: formatBytes(p.size),
+      path: p.path,
+      isUserData: p.isUserData || p.likelyUserData,
+    })),
+    regKeys: r.foundRegKeys || [],
+    programInstalled: r.programInstalled,
+  }));
 }
 
 function parseDiscoverResults(output: string): DiscoverItem[] {
@@ -172,6 +154,14 @@ export function useOrphan(): UseOrphanReturn {
     }
   }, []);
 
+  const orphanTrack = useCallback(async (path: string, name?: string, asCache?: boolean) => {
+    try {
+      return await window.electronAPI.orphanTrack({ path, name, asCache });
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Track failed' };
+    }
+  }, []);
+
   const clear = useCallback(() => {
     setScanResults([]);
     setDiscoverResults([]);
@@ -184,6 +174,6 @@ export function useOrphan(): UseOrphanReturn {
     scanning, discovering, cleaning,
     scanResults, discoverResults,
     error, scanOutput, discoverOutput,
-    orphanScan, orphanDiscover, orphanClean, clear,
+    orphanScan, orphanDiscover, orphanClean, orphanTrack, clear,
   };
 }

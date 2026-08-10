@@ -3,6 +3,7 @@ package cleaner
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,15 +15,15 @@ import (
 
 // DuplicateGroup — группа файлов-дубликатов с одинаковым содержимым.
 type DuplicateGroup struct {
-	Hash      string   // SHA-256 полного файла
-	Size      int64    // размер каждого файла
-	Paths     []string // пути к дубликатам (≥2)
-	WasteSize int64    // Size * (len(Paths)-1) — экономия при удалении лишних
+	Hash      string   `json:"hash"`      // SHA-256 полного файла
+	Size      int64    `json:"size"`      // размер каждого файла
+	Paths     []string `json:"paths"`     // пути к дубликатам (≥2)
+	WasteSize int64    `json:"wasteSize"` // Size * (len(Paths)-1) — экономия при удалении лишних
 	// RiskFlag непусто, если группа содержит файлы вне пользовательских папок
 	// (Program Files, Windows) и/или исполняемые/библиотечные файлы —
 	// совпадение содержимого НЕ означает, что файл можно безопасно удалить:
 	// это может быть общий рантайм/DLL, используемый несколькими программами.
-	RiskFlag string
+	RiskFlag string `json:"riskFlag,omitempty"`
 }
 
 // DuplicateScanOptions — параметры сканирования дубликатов.
@@ -41,13 +42,13 @@ type DuplicateScanOptions struct {
 
 // DuplicateScanResult — результат сканирования дубликатов.
 type DuplicateScanResult struct {
-	Groups       []DuplicateGroup
-	TotalWaste   int64
-	TotalFiles   int
-	ScannedFiles int
-	Duration     time.Duration
+	Groups          []DuplicateGroup `json:"groups"`
+	TotalWaste      int64            `json:"totalWaste"`
+	TotalFiles      int              `json:"totalFiles"`
+	ScannedFiles    int              `json:"scannedFiles"`
+	DurationSeconds float64          `json:"durationSeconds"`
 	// SkippedRoots — корни, пропущенные как системные (см. AllowSystemDirs).
-	SkippedRoots []string
+	SkippedRoots []string `json:"skippedRoots,omitempty"`
 }
 
 // ScanDuplicates ищет дубликаты файлов по алгоритму:
@@ -155,6 +156,13 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 	var groups []DuplicateGroup
 	sem := make(chan struct{}, 4) // ограничиваем параллелизм IO
 
+	// Инкрементальный кэш хэшей — на повторном скане того же диска не
+	// перечитываем и не хэшируем файлы, которые не изменились (совпадают
+	// размер и время модификации). На больших деревьях (десятки/сотни ГБ)
+	// это превращает "минуты" в "секунды" при повторных запусках.
+	hashCache := loadDupHashCache()
+	var cacheMu sync.Mutex
+
 	for _, cand := range candidates {
 		wg.Add(1)
 		go func(c hashGroup) {
@@ -164,7 +172,7 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 
 			fullGroups := make(map[string][]string)
 			for _, p := range c.paths {
-				h := fullHash(p)
+				h := fullHashCached(p, c.size, hashCache, &cacheMu)
 				if h != "" {
 					fullGroups[h] = append(fullGroups[h], p)
 				}
@@ -186,6 +194,7 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 		}(cand)
 	}
 	wg.Wait()
+	saveDupHashCache(hashCache)
 
 	// Сортировка по WasteSize (убывание)
 	sort.Slice(groups, func(i, j int) bool {
@@ -200,12 +209,12 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 	}
 
 	return &DuplicateScanResult{
-		Groups:       groups,
-		TotalWaste:   totalWaste,
-		TotalFiles:   totalFiles,
-		ScannedFiles: scanned,
-		Duration:     time.Since(start),
-		SkippedRoots: skippedRoots,
+		Groups:          groups,
+		TotalWaste:      totalWaste,
+		TotalFiles:      totalFiles,
+		ScannedFiles:    scanned,
+		DurationSeconds: time.Since(start).Seconds(),
+		SkippedRoots:    skippedRoots,
 	}, nil
 }
 
@@ -288,6 +297,104 @@ func fullHash(path string) string {
 		return ""
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// ─── Инкрементальный кэш хэшей (path → {size, modTime, hash}) ───
+
+type dupHashCacheEntry struct {
+	Size     int64     `json:"size"`
+	ModTime  time.Time `json:"modTime"`
+	Hash     string    `json:"hash"`
+	LastSeen time.Time `json:"lastSeen"`
+}
+
+type dupHashCache struct {
+	Entries map[string]dupHashCacheEntry `json:"entries"`
+}
+
+// maxDupHashCacheEntries — верхняя граница размера кэша; при превышении
+// вытесняются самые давно не встречавшиеся записи (простой LRU по LastSeen).
+const maxDupHashCacheEntries = 150000
+
+func dupHashCachePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "dup-hash-cache.json"
+	}
+	dir := filepath.Join(home, "AppData", "Local", "winCleanerLamp")
+	_ = os.MkdirAll(dir, 0o755)
+	return filepath.Join(dir, "dup-hash-cache.json")
+}
+
+func loadDupHashCache() *dupHashCache {
+	c := &dupHashCache{Entries: map[string]dupHashCacheEntry{}}
+	data, err := os.ReadFile(dupHashCachePath())
+	if err != nil {
+		return c
+	}
+	_ = json.Unmarshal(data, c)
+	if c.Entries == nil {
+		c.Entries = map[string]dupHashCacheEntry{}
+	}
+	return c
+}
+
+func saveDupHashCache(c *dupHashCache) {
+	if len(c.Entries) > maxDupHashCacheEntries {
+		type kv struct {
+			key string
+			t   time.Time
+		}
+		list := make([]kv, 0, len(c.Entries))
+		for k, v := range c.Entries {
+			list = append(list, kv{k, v.LastSeen})
+		}
+		sort.Slice(list, func(i, j int) bool { return list[i].t.Before(list[j].t) })
+		drop := len(list) - maxDupHashCacheEntries
+		for i := 0; i < drop; i++ {
+			delete(c.Entries, list[i].key)
+		}
+	}
+	data, err := json.Marshal(c)
+	if err != nil {
+		return
+	}
+	path := dupHashCachePath()
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return
+	}
+	_ = os.Rename(tmp, path)
+}
+
+// fullHashCached возвращает SHA-256 файла, используя кэш при совпадении
+// размера и времени модификации — иначе считает заново и обновляет кэш.
+func fullHashCached(path string, size int64, cache *dupHashCache, mu *sync.Mutex) string {
+	info, err := os.Stat(path)
+	if err != nil {
+		return ""
+	}
+	key := strings.ToLower(path)
+
+	mu.Lock()
+	entry, ok := cache.Entries[key]
+	mu.Unlock()
+	if ok && entry.Size == size && entry.ModTime.Equal(info.ModTime()) {
+		mu.Lock()
+		entry.LastSeen = time.Now()
+		cache.Entries[key] = entry
+		mu.Unlock()
+		return entry.Hash
+	}
+
+	h := fullHash(path)
+	if h == "" {
+		return ""
+	}
+	mu.Lock()
+	cache.Entries[key] = dupHashCacheEntry{Size: size, ModTime: info.ModTime(), Hash: h, LastSeen: time.Now()}
+	mu.Unlock()
+	return h
 }
 
 // skipDir — папки, которые не нужно обходить при поиске дубликатов.

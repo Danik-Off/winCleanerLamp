@@ -14,7 +14,9 @@ export class LeftoverItem {
     public readonly orphanMatch: string = '',
     public readonly cacheHit: boolean = false,
     /** true = программа, которой принадлежит запись, всё ещё установлена. */
-    public readonly installedMatch: boolean = false
+    public readonly installedMatch: boolean = false,
+    /** true = путь похож на пользовательские данные (сохранения, проекты, фото и т.п.). */
+    public readonly likelyUserData: boolean = false
   ) {}
 
   get sizeFormatted(): string {
@@ -73,9 +75,10 @@ export class LeftoverItem {
     itemType: LeftoverType = 'folder',
     orphanMatch: string = '',
     cacheHit: boolean = false,
-    installedMatch: boolean = false
+    installedMatch: boolean = false,
+    likelyUserData: boolean = false
   ): LeftoverItem {
-    return new LeftoverItem(path, sizeBytes, fileCount, reason, itemType, orphanMatch, cacheHit, installedMatch);
+    return new LeftoverItem(path, sizeBytes, fileCount, reason, itemType, orphanMatch, cacheHit, installedMatch, likelyUserData);
   }
 }
 

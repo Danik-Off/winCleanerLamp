@@ -1,6 +1,7 @@
 /**
  * About Panel Component - Clean & Minimal
  */
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -8,6 +9,15 @@ import {
   CardContent,
   Grid,
   Paper,
+  Button,
+  Chip,
+  CircularProgress,
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
   useTheme,
 } from '@mui/material';
 import {
@@ -15,7 +25,11 @@ import {
   Info as InfoIcon,
   Code as CodeIcon,
   Security as SecurityIcon,
+  SystemUpdateAlt as UpdateIcon,
+  CheckCircle as CheckIcon,
 } from '@mui/icons-material';
+
+type UpdateState = 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'downloaded' | 'error';
 
 export function AboutPanel(): JSX.Element {
   const theme = useTheme();
@@ -28,17 +42,85 @@ export function AboutPanel(): JSX.Element {
   const currentYear = new Date().getFullYear();
   const author = 'Danik Off';
 
+  const [updateState, setUpdateState] = useState<UpdateState>('idle');
+  const [newVersion, setNewVersion] = useState('');
+  const [releaseNotes, setReleaseNotes] = useState('');
+  const [downloadPercent, setDownloadPercent] = useState(0);
+  const [updateError, setUpdateError] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    window.electronAPI.onUpdateAvailable((info) => {
+      setNewVersion(info.version);
+      setReleaseNotes(info.releaseNotes || '');
+      setUpdateState('available');
+      setDialogOpen(true);
+    });
+    window.electronAPI.onUpdateNotAvailable(() => {
+      setUpdateState('up-to-date');
+    });
+    window.electronAPI.onUpdateError((message) => {
+      setUpdateError(message);
+      setUpdateState('error');
+    });
+    window.electronAPI.onUpdateDownloadProgress((percent) => {
+      setDownloadPercent(percent);
+      setUpdateState('downloading');
+    });
+    window.electronAPI.onUpdateDownloaded(() => {
+      setUpdateState('downloaded');
+    });
+    return () => {
+      window.electronAPI.removeAllListeners('update-available');
+      window.electronAPI.removeAllListeners('update-not-available');
+      window.electronAPI.removeAllListeners('update-error');
+      window.electronAPI.removeAllListeners('update-download-progress');
+      window.electronAPI.removeAllListeners('update-downloaded');
+    };
+  }, []);
+
+  const handleCheck = useCallback(async () => {
+    setUpdateState('checking');
+    setUpdateError('');
+    const res = await window.electronAPI.checkForUpdates();
+    if (!res.success) {
+      setUpdateError(res.error || 'Не удалось проверить обновления');
+      setUpdateState('error');
+    }
+    // При успехе состояние обновится через события update-available/update-not-available.
+  }, []);
+
+  const handleInstall = useCallback(async () => {
+    const res = await window.electronAPI.installUpdate();
+    if (!res.success) {
+      setUpdateError(res.error || 'Не удалось скачать обновление');
+      setUpdateState('error');
+      setDialogOpen(false);
+    }
+    // Успех -> события update-download-progress / update-downloaded.
+  }, []);
+
+  const updateStatusLabel: Record<UpdateState, string> = {
+    idle: '',
+    checking: 'Проверка...',
+    'up-to-date': 'Установлена последняя версия',
+    available: `Доступна версия ${newVersion}`,
+    downloading: `Скачивание... ${downloadPercent}%`,
+    downloaded: 'Установка и перезапуск...',
+    error: updateError || 'Ошибка проверки обновлений',
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3, maxWidth: 700, mx: 'auto' }}>
-      
+
       {/* Header */}
       <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Box sx={{ 
-          display: 'inline-flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
           justifyContent: 'center',
-          width: 80, 
-          height: 80, 
+          width: 80,
+          height: 80,
           borderRadius: 3,
           background: `linear-gradient(135deg, #6366f1, #8b5cf6)`,
           mb: 2,
@@ -68,7 +150,7 @@ export function AboutPanel(): JSX.Element {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6}>
           <Card sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(139, 92, 246, 0.08)' : 'rgba(139, 92, 246, 0.05)', border: 'none' }}>
             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -84,8 +166,47 @@ export function AboutPanel(): JSX.Element {
         </Grid>
       </Grid>
 
+      {/* Updates */}
+      <Paper sx={{
+        p: 3,
+        width: '100%',
+        borderRadius: 3,
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.03)',
+        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(59, 130, 246, 0.08)'}`,
+        mb: 3,
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <UpdateIcon sx={{ fontSize: 20, color: '#3b82f6' }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Обновления</Typography>
+            {updateState !== 'idle' && (
+              <Chip
+                size="small"
+                label={updateStatusLabel[updateState]}
+                color={updateState === 'up-to-date' ? 'success' : updateState === 'error' ? 'error' : 'default'}
+                icon={updateState === 'up-to-date' ? <CheckIcon sx={{ fontSize: 14 }} /> : undefined}
+                sx={{ fontWeight: 600 }}
+              />
+            )}
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleCheck}
+            disabled={updateState === 'checking' || updateState === 'downloading' || updateState === 'downloaded'}
+            startIcon={updateState === 'checking' ? <CircularProgress size={14} /> : <UpdateIcon sx={{ fontSize: 16 }} />}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+          >
+            Проверить обновления
+          </Button>
+        </Box>
+        {updateState === 'error' && (
+          <Alert severity="warning" sx={{ mt: 2, borderRadius: 1.5 }}>{updateError}</Alert>
+        )}
+      </Paper>
+
       {/* Features */}
-      <Paper sx={{ 
+      <Paper sx={{
         p: 3,
         borderRadius: 3,
         bgcolor: theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.03)',
@@ -97,7 +218,7 @@ export function AboutPanel(): JSX.Element {
           Безопасность
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.8, lineHeight: 1.7 }}>
-          Все операции очистки выполняются безопасно. Временные файлы удаляются в Корзину, 
+          Все операции очистки выполняются безопасно. Временные файлы удаляются в Корзину,
           а не навсегда. Критические системные файлы защищены от удаления.
         </Typography>
       </Paper>
@@ -111,6 +232,49 @@ export function AboutPanel(): JSX.Element {
           Clean Architecture • Material Design
         </Typography>
       </Box>
+
+      {/* Update dialog: info + Install/Cancel, затем прогресс скачивания */}
+      <Dialog open={dialogOpen && (updateState === 'available' || updateState === 'downloading' || updateState === 'downloaded')} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
+          <UpdateIcon color="primary" />
+          Доступно обновление {newVersion}
+        </DialogTitle>
+        <DialogContent>
+          {updateState === 'available' && (
+            <>
+              <Typography variant="body2" sx={{ mb: releaseNotes ? 1.5 : 0, opacity: 0.8 }}>
+                Текущая версия: {appVersion} → {newVersion}
+              </Typography>
+              {releaseNotes && (
+                <Paper variant="outlined" sx={{ p: 1.5, maxHeight: 180, overflow: 'auto', borderRadius: 1.5 }}>
+                  <Typography variant="caption" sx={{ whiteSpace: 'pre-wrap' }}>{releaseNotes}</Typography>
+                </Paper>
+              )}
+            </>
+          )}
+          {updateState === 'downloading' && (
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1 }}>Скачивание обновления...</Typography>
+              <LinearProgress variant="determinate" value={downloadPercent} sx={{ borderRadius: 2, height: 6, mb: 0.5 }} />
+              <Typography variant="caption" sx={{ opacity: 0.6 }}>{downloadPercent}%</Typography>
+            </Box>
+          )}
+          {updateState === 'downloaded' && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2">Готово. Приложение перезапустится для установки...</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        {updateState === 'available' && (
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={() => setDialogOpen(false)} sx={{ borderRadius: 1.5 }}>Отмена</Button>
+            <Button variant="contained" onClick={handleInstall} sx={{ borderRadius: 1.5, fontWeight: 700 }}>
+              Установить
+            </Button>
+          </DialogActions>
+        )}
+      </Dialog>
     </Box>
   );
 }

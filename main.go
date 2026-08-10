@@ -74,6 +74,9 @@ func main() {
 		orphanExportReg  = flag.String("orphan-export-reg", "", "экспортировать ключи реестра перед удалением (папка)")
 		orphanCacheOnly  = flag.Bool("orphan-cache-only", false, "удалять только кеш программ (безопасно, не трогает настройки)")
 		orphanIncludeUD  = flag.Bool("orphan-include-user-data", false, "разрешить удаление путей, похожих на пользовательские данные (сохранения, проекты и т.п.) — по умолчанию они пропускаются")
+		orphanTrackPath  = flag.String("orphan-track", "", "путь из --orphan-discover, который нужно добавить в orphaned_apps.json")
+		orphanTrackName  = flag.String("orphan-track-name", "", "отображаемое имя для --orphan-track (по умолчанию — имя папки)")
+		orphanTrackCache = flag.Bool("orphan-track-cache", false, "добавить путь как безопасный кеш (cachePaths) вместо обычного пути на проверку (additionalPaths)")
 	)
 	flag.Usage = usage
 	flag.Parse()
@@ -143,6 +146,34 @@ func main() {
 		return
 	}
 
+	// Полуавтоматическое добавление найденной --orphan-discover папки в
+	// orphaned_apps.json — только по явному запросу, ничего не переписывает.
+	if *orphanTrackPath != "" {
+		name := *orphanTrackName
+		if name == "" {
+			name = filepath.Base(*orphanTrackPath)
+		}
+		err := cleaner.AddDiscoveredApp(*orphanConfig, name, *orphanTrackPath, *orphanTrackCache)
+		result := struct {
+			Success bool   `json:"success"`
+			Error   string `json:"error,omitempty"`
+		}{Success: err == nil}
+		if err != nil {
+			result.Error = err.Error()
+		}
+		if *jsonFlag {
+			printJSON(result)
+		} else if err != nil {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		} else {
+			fmt.Printf("Добавлено в orphaned_apps.json: %s (%s)\n", name, *orphanTrackPath)
+		}
+		if err != nil {
+			os.Exit(1)
+		}
+		return
+	}
+
 	all := cleaner.AllTargets()
 
 	// Загружаем orphaned_apps.json и добавляем кеш-таргеты в обычный scan/clean
@@ -201,7 +232,7 @@ func main() {
 	}
 
 	if *orphanScan {
-		runOrphanScan(*orphanConfig, *verboseFlag)
+		runOrphanScan(*orphanConfig, *verboseFlag, *jsonFlag)
 		if !*orphanDiscover && *orphanCleanNames == "" && !*scanFlag && !*cleanFlag {
 			return
 		}
@@ -234,21 +265,21 @@ func main() {
 	}
 
 	if *leftovers {
-		runLeftovers(*orphanConfig, *leftoversLog)
+		runLeftovers(*orphanConfig, *leftoversLog, *jsonFlag)
 		if !*scanFlag && !*cleanFlag && !*recordFlag && *duplicates == "" && *emptyDirs == "" {
 			return
 		}
 	}
 
 	if *duplicates != "" {
-		runDuplicates(*duplicates, *duplicatesSystem)
+		runDuplicates(*duplicates, *duplicatesSystem, *jsonFlag)
 		if !*scanFlag && !*cleanFlag && !*recordFlag && *emptyDirs == "" {
 			return
 		}
 	}
 
 	if *emptyDirs != "" {
-		runEmptyDirs(*emptyDirs)
+		runEmptyDirs(*emptyDirs, *jsonFlag)
 		if !*scanFlag && !*cleanFlag {
 			return
 		}
@@ -362,11 +393,21 @@ func main() {
 			nonEmpty[r.Target.ID] = true
 		}
 	}
+	cleanTotal := 0
+	for _, ok := range nonEmpty {
+		if ok {
+			cleanTotal++
+		}
+	}
+	cleanDone := 0
 	for i, t := range selected {
 		if !nonEmpty[t.ID] {
 			continue
 		}
-		if !*jsonFlag {
+		cleanDone++
+		if *jsonFlag {
+			fmt.Fprintf(os.Stderr, "PROGRESS %d/%d %s\n", cleanDone, cleanTotal, t.Name)
+		} else {
 			fmt.Printf("[%d/%d] → %s\n", i+1, len(selected), t.Name)
 		}
 		r := cleaner.Process(t, opts)
@@ -678,28 +719,44 @@ func filterTargets(all []cleaner.Target, include, exclude string, aggressive boo
 	return out
 }
 
-func runLeftovers(orphanCfgPath string, logFile string) {
-	fmt.Println("Поиск возможных остатков удалённых программ...")
-	fmt.Println("Сканирование: AppData, ProgramData, Program Files, реестр HKCU\\Software")
+func runLeftovers(orphanCfgPath string, logFile string, jsonOut bool) {
+	if !jsonOut {
+		fmt.Println("Поиск возможных остатков удалённых программ...")
+		fmt.Println("Сканирование: AppData, ProgramData, Program Files, реестр HKCU\\Software")
+	}
 
 	// Загружаем orphan DB если доступна
 	var orphanCfg *cleaner.OrphanConfig
 	if cfg, err := cleaner.LoadOrphanConfig(orphanCfgPath); err == nil {
 		orphanCfg = cfg
-		fmt.Printf("Orphan DB: %d записей загружено из %s\n", len(cfg.Apps), orphanCfgPath)
+		if !jsonOut {
+			fmt.Printf("Orphan DB: %d записей загружено из %s\n", len(cfg.Apps), orphanCfgPath)
+		}
 	}
 
-	fmt.Println("(это эвристика — перед удалением проверьте каждый элемент вручную)")
-	fmt.Println()
+	if !jsonOut {
+		fmt.Println("(это эвристика — перед удалением проверьте каждый элемент вручную)")
+		fmt.Println()
+	}
 
 	result, err := cleaner.ScanLeftoversEx(cleaner.LeftoverScanOptions{
 		OrphanCfg: orphanCfg,
 		LogFile:   logFile,
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		if jsonOut {
+			printJSON(map[string]any{"error": err.Error()})
+		} else {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		}
 		return
 	}
+
+	if jsonOut {
+		printJSON(result)
+		return
+	}
+
 	cands := result.Candidates
 	if len(cands) == 0 {
 		fmt.Println("Подозрительных остатков не найдено.")
@@ -819,15 +876,17 @@ func runLeftovers(orphanCfgPath string, logFile string) {
 	fmt.Println("  Для реестра: regedit или reg delete <ключ>.")
 }
 
-func runDuplicates(pathsCSV string, allowSystemDirs bool) {
+func runDuplicates(pathsCSV string, allowSystemDirs bool, jsonOut bool) {
 	roots := splitCSV(pathsCSV)
 	if len(roots) == 0 {
 		fmt.Fprintln(os.Stderr, "Укажите папки для поиска дубликатов через запятую.")
 		return
 	}
-	fmt.Printf("Поиск дубликатов файлов в: %s\n", strings.Join(roots, ", "))
-	fmt.Println("(это может занять несколько минут для больших дисков)")
-	fmt.Println()
+	if !jsonOut {
+		fmt.Printf("Поиск дубликатов файлов в: %s\n", strings.Join(roots, ", "))
+		fmt.Println("(это может занять несколько минут для больших дисков)")
+		fmt.Println()
+	}
 
 	result, err := cleaner.ScanDuplicates(cleaner.DuplicateScanOptions{
 		Roots:           roots,
@@ -835,7 +894,16 @@ func runDuplicates(pathsCSV string, allowSystemDirs bool) {
 		AllowSystemDirs: allowSystemDirs,
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		if jsonOut {
+			printJSON(map[string]any{"error": err.Error()})
+		} else {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		}
+		return
+	}
+
+	if jsonOut {
+		printJSON(result)
 		return
 	}
 
@@ -846,11 +914,11 @@ func runDuplicates(pathsCSV string, allowSystemDirs bool) {
 
 	if len(result.Groups) == 0 {
 		fmt.Printf("Дубликатов не найдено (просканировано %d файлов за %.1f сек.)\n",
-			result.ScannedFiles, result.Duration.Seconds())
+			result.ScannedFiles, result.DurationSeconds)
 		return
 	}
 
-	fmt.Printf("Просканировано %d файлов за %.1f сек.\n\n", result.ScannedFiles, result.Duration.Seconds())
+	fmt.Printf("Просканировано %d файлов за %.1f сек.\n\n", result.ScannedFiles, result.DurationSeconds)
 
 	limit := 50
 	if len(result.Groups) < limit {
@@ -876,23 +944,34 @@ func runDuplicates(pathsCSV string, allowSystemDirs bool) {
 	}
 }
 
-func runEmptyDirs(pathsCSV string) {
+func runEmptyDirs(pathsCSV string, jsonOut bool) {
 	roots := splitCSV(pathsCSV)
 	if len(roots) == 0 {
 		fmt.Fprintln(os.Stderr, "Укажите папки для поиска пустых директорий через запятую.")
 		return
 	}
-	fmt.Printf("Поиск пустых папок в: %s\n", strings.Join(roots, ", "))
-	fmt.Println("Правила: • Игнорируются Thumbs.db, desktop.ini и подобные")
-	fmt.Println("         • Системные папки (Windows, Program Files) пропускаются")
-	fmt.Println()
+	if !jsonOut {
+		fmt.Printf("Поиск пустых папок в: %s\n", strings.Join(roots, ", "))
+		fmt.Println("Правила: • Игнорируются Thumbs.db, desktop.ini и подобные")
+		fmt.Println("         • Системные папки (Windows, Program Files) пропускаются")
+		fmt.Println()
+	}
 
 	result, err := cleaner.ScanEmptyDirs(cleaner.EmptyDirScanOptions{
 		Roots:      roots,
 		IgnoreJunk: true,
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		if jsonOut {
+			printJSON(map[string]any{"error": err.Error()})
+		} else {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		}
+		return
+	}
+
+	if jsonOut {
+		printJSON(result)
 		return
 	}
 
@@ -1004,13 +1083,17 @@ func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int, j
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	total := len(targets)
-	// quiet=true (--json) отключает прогресс-бар: он пишет "\r"-строки в
-	// stdout, что при перенаправлении в файл/пайп (не TTY) ломает JSON —
-	// carriage return не стирает предыдущий текст, а остаётся как есть.
+	// quiet=true (--json) отключает текстовый прогресс-бар на stdout: "\r"-строки
+	// там при перенаправлении в файл/пайп (не TTY) ломают JSON — carriage return
+	// не стирает предыдущий текст, а остаётся как есть. Вместо этого пишем
+	// структурированный прогресс на stderr (не мешает stdout-JSON) — GUI слушает
+	// его в реальном времени и показывает живой статус вместо "зависшего" индикатора.
 	progress := func(name string) {
 		mu.Lock()
 		done++
-		if !quiet {
+		if quiet {
+			fmt.Fprintf(os.Stderr, "PROGRESS %d/%d %s\n", done, total, name)
+		} else {
 			fmt.Printf("\r  [%d/%d] %-60s", done, total, truncateRunes(name, 58))
 		}
 		mu.Unlock()
@@ -1203,15 +1286,27 @@ func runOrphanList(cfgPath string) {
 	}
 }
 
-func runOrphanScan(cfgPath string, verbose bool) {
+func runOrphanScan(cfgPath string, verbose bool, jsonOut bool) {
 	cfg, err := cleaner.LoadOrphanConfig(cfgPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		if jsonOut {
+			printJSON(map[string]any{"error": err.Error()})
+		} else {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		}
 		return
 	}
-	fmt.Printf("Сканирование %d записей из %s...\n", len(cfg.Apps), cfgPath)
+	if !jsonOut {
+		fmt.Printf("Сканирование %d записей из %s...\n", len(cfg.Apps), cfgPath)
+	}
 
 	results := cleaner.OrphanScan(cfg, verbose)
+
+	if jsonOut {
+		printJSON(results)
+		return
+	}
+
 	if len(results) == 0 {
 		fmt.Println("Подтверждённых остатков не найдено.")
 		return

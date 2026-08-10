@@ -45,6 +45,7 @@ import {
   HelpOutline as UnknownIcon,
 } from '@mui/icons-material';
 import { useLeftovers } from '../hooks';
+import { ScanningIndicator } from './ScanningIndicator';
 import type { LeftoverItem } from '@domain/index';
 
 interface LeftoversPanelProps {
@@ -193,7 +194,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </Button>
       </Paper>
 
-      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 2, height: 6 }} />}
+      <ScanningIndicator active={scanning} />
 
       {/* Stat Cards */}
       {result && totalItems > 0 && (
@@ -445,7 +446,16 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     <UnknownIcon sx={{ fontSize: 18, opacity: 0.6 }} />
                   </Box>
                   <ListItemText
-                    primary={item.directoryName}
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {item.directoryName}
+                        {item.likelyUserData && (
+                          <Tooltip title="Похоже на пользовательские данные (сохранения, проекты, фото и т.п.) — проверьте особенно внимательно">
+                            <WarningIcon sx={{ fontSize: 14, color: 'warning.main' }} />
+                          </Tooltip>
+                        )}
+                      </Box>
+                    }
                     secondary={item.path}
                     primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
                     secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
@@ -578,6 +588,11 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                   </Typography>
                 )}
               </Paper>
+              {deleteTarget.likelyUserData && (
+                <Alert severity="warning" sx={{ borderRadius: 1.5, mb: 1 }}>
+                  ⚠ Похоже на пользовательские данные (сохранения, проекты, фото и т.п.) — проверьте содержимое перед удалением.
+                </Alert>
+              )}
               <Alert severity="success" sx={{ borderRadius: 1.5 }}>
                 Папка будет перемещена в Корзину (можно восстановить).
               </Alert>

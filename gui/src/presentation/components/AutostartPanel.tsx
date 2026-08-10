@@ -31,6 +31,7 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
 } from '@mui/icons-material';
+import { ScanningIndicator } from './ScanningIndicator';
 
 interface AutostartEntryDto {
   id: string;
@@ -60,12 +61,24 @@ const SOURCE_ORDER = [
   'startup-folder-user', 'startup-folder-common', 'scheduled-task',
 ];
 
+interface HistoryAction {
+  id: string;
+  name: string;
+  /** Состояние ДО этого действия — на него откатывает Undo. */
+  previousEnabled: boolean;
+}
+
 export function AutostartPanel({ onError }: AutostartPanelProps): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [entries, setEntries] = useState<AutostartEntryDto[]>([]);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState('');
   const [loaded, setLoaded] = useState(false);
+  // Последнее действие для баннера "Undo" — обратимость и так гарантирована
+  // на уровне реестра (StartupApproved никогда не удаляет команду), но
+  // пользователю удобнее одной кнопкой отменить случайный клик, не вспоминая
+  // какое было состояние до этого.
+  const [lastAction, setLastAction] = useState<HistoryAction | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,7 +101,7 @@ export function AutostartPanel({ onError }: AutostartPanelProps): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleToggle = useCallback(async (entry: AutostartEntryDto) => {
+  const handleToggle = useCallback(async (entry: AutostartEntryDto, recordHistory = true) => {
     const nextEnabled = !entry.enabled;
     setPendingIds((prev) => new Set(prev).add(entry.id));
     // Оптимистичное обновление — переключатель отзывчив, откатываем при ошибке.
@@ -98,6 +111,8 @@ export function AutostartPanel({ onError }: AutostartPanelProps): JSX.Element {
       if (!res.success) {
         setEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, enabled: entry.enabled } : e)));
         onError(res.error || 'Не удалось изменить состояние автозагрузки');
+      } else if (recordHistory) {
+        setLastAction({ id: entry.id, name: entry.name, previousEnabled: entry.enabled });
       }
     } catch (err) {
       setEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, enabled: entry.enabled } : e)));
@@ -110,6 +125,20 @@ export function AutostartPanel({ onError }: AutostartPanelProps): JSX.Element {
       });
     }
   }, [onError]);
+
+  const handleUndo = useCallback(async () => {
+    if (!lastAction) return;
+    const current = entries.find((e) => e.id === lastAction.id);
+    if (!current) {
+      setLastAction(null);
+      return;
+    }
+    setLastAction(null);
+    // current.enabled сейчас равно !previousEnabled — handleToggle снова
+    // инвертирует и вернёт к previousEnabled. recordHistory=false, чтобы
+    // "отменить" не порождало собственную запись для повторной отмены.
+    await handleToggle(current, false);
+  }, [lastAction, entries, handleToggle]);
 
   const filtered = useMemo(() => {
     const lf = filter.trim().toLowerCase();
@@ -165,6 +194,23 @@ export function AutostartPanel({ onError }: AutostartPanelProps): JSX.Element {
           />
         )}
       </Paper>
+
+      <ScanningIndicator active={loading} />
+
+      {lastAction && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2, borderRadius: 2 }}
+          onClose={() => setLastAction(null)}
+          action={
+            <Button color="inherit" size="small" onClick={handleUndo} sx={{ fontWeight: 700 }}>
+              Отменить
+            </Button>
+          }
+        >
+          «{lastAction.name}»: {lastAction.previousEnabled ? 'выключено' : 'включено'}
+        </Alert>
+      )}
 
       {loaded && entries.length > 0 && (
         <TextField

@@ -38,8 +38,11 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   DeleteSweep as CleanIcon,
+  BookmarkAdd as TrackIcon,
+  BookmarkAdded as TrackedIcon,
 } from '@mui/icons-material';
 import { useOrphan } from '../hooks';
+import { ScanningIndicator } from './ScanningIndicator';
 
 interface OrphanPanelProps {
   onError: (error: string) => void;
@@ -49,7 +52,7 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
   const {
     scanning, discovering, cleaning,
     scanResults, discoverResults,
-    error, orphanScan, orphanDiscover, orphanClean,
+    error, orphanScan, orphanDiscover, orphanClean, orphanTrack,
   } = useOrphan();
 
   const [activeTab, setActiveTab] = useState(0);
@@ -57,6 +60,22 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
   const [cleanDialog, setCleanDialog] = useState<{ name: string; recycle: boolean; cacheOnly: boolean } | null>(null);
   const [cleanOutput, setCleanOutput] = useState<string | null>(null);
   const [confirmText, setConfirmText] = useState('');
+  const [trackedPaths, setTrackedPaths] = useState<Set<string>>(new Set());
+  const [trackingPath, setTrackingPath] = useState<string | null>(null);
+
+  const handleTrack = async (path: string) => {
+    setTrackingPath(path);
+    try {
+      const res = await orphanTrack(path);
+      if (res.success) {
+        setTrackedPaths((prev) => new Set(prev).add(path));
+      } else {
+        onError(res.error || 'Не удалось добавить в orphaned_apps.json');
+      }
+    } finally {
+      setTrackingPath(null);
+    }
+  };
 
   const toggleExpand = (name: string) => {
     setExpandedItems((prev) => {
@@ -159,6 +178,8 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
               />
             )}
           </Box>
+
+          <ScanningIndicator active={scanning} />
 
           {scanResults.length === 0 && !scanning && (
             <Paper
@@ -301,6 +322,8 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
             )}
           </Box>
 
+          <ScanningIndicator active={discovering} />
+
           {discoverResults.length === 0 && !discovering && (
             <Paper
               elevation={0}
@@ -336,13 +359,35 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
                   borderColor: (t) => t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0',
                 }}
               >
-                <ListItem sx={{ py: 0.75 }}>
+                <ListItem
+                  sx={{ py: 0.75 }}
+                  secondaryAction={
+                    <Tooltip title={trackedPaths.has(item.path) ? 'Уже добавлено в orphaned_apps.json' : 'Добавить в отслеживание (orphaned_apps.json)'}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          color={trackedPaths.has(item.path) ? 'success' : 'default'}
+                          disabled={trackedPaths.has(item.path) || trackingPath === item.path}
+                          onClick={() => handleTrack(item.path)}
+                        >
+                          {trackingPath === item.path ? (
+                            <CircularProgress size={16} />
+                          ) : trackedPaths.has(item.path) ? (
+                            <TrackedIcon sx={{ fontSize: 18 }} />
+                          ) : (
+                            <TrackIcon sx={{ fontSize: 18 }} />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  }
+                >
                   <ListItemIcon sx={{ minWidth: 36 }}>
                     <FolderIcon sx={{ fontSize: 18, color: item.has_executable ? '#f59e0b' : '#64748b' }} />
                   </ListItemIcon>
                   <ListItemText
                     primary={
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', pr: 4 }}>
                         {item.path}
                       </Typography>
                     }
@@ -366,6 +411,12 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
               </Paper>
             ))}
           </List>
+          {discoverResults.length > 0 && (
+            <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.5 }}>
+              Значок закладки добавляет папку в orphaned_apps.json как «путь на проверку» — она НЕ становится автоматически удаляемой,
+              просто попадает в список отслеживаемых (см. вкладку Scan).
+            </Typography>
+          )}
         </Box>
       )}
 

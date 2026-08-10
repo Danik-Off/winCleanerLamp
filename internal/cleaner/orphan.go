@@ -2,7 +2,9 @@ package cleaner
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -140,36 +142,70 @@ func SaveOrphanConfig(cfg *OrphanConfig, path string) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
+// AddDiscoveredApp дописывает новую запись в orphaned_apps.json для пути,
+// найденного --orphan-discover. В отличие от остальной работы с этим файлом
+// (только чтение — это данные пользователя), это единственное место, где
+// код добавляет запись, и только по явному запросу пользователя (кнопка
+// «Добавить в отслеживание» в Discover-вкладке GUI/аналогичный флаг CLI) —
+// не автоматически и не переписывая существующие записи.
+//
+// Если файл ещё не существует — создаётся новый. Если существует, но не
+// читается/не парсится — операция отменяется с ошибкой (не рискуем
+// перезаписать чужие данные пустым конфигом).
+func AddDiscoveredApp(cfgPath, displayName, path string, asCache bool) error {
+	cfg, err := LoadOrphanConfig(cfgPath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			cfg = &OrphanConfig{}
+		} else {
+			return fmt.Errorf("не удалось прочитать существующий %s, добавление отменено: %w", cfgPath, err)
+		}
+	}
+
+	app := OrphanApp{
+		DisplayName: displayName,
+		Notes:       "Добавлено вручную из --orphan-discover.",
+	}
+	if asCache {
+		app.CachePaths = []string{path}
+	} else {
+		app.AdditionalPaths = []string{path}
+	}
+	cfg.Apps = append(cfg.Apps, app)
+
+	return SaveOrphanConfig(cfg, cfgPath)
+}
+
 // ─── Scan: проверка записей из JSON ───
 
 // OrphanScanResult — результат сканирования одной записи.
 type OrphanScanResult struct {
-	App          OrphanApp
-	FoundPaths   []OrphanFoundPath // подтверждённые пути на диске
-	FoundRegKeys []string          // подтверждённые ключи реестра
-	TotalSize    int64
-	TotalFiles   int
+	App          OrphanApp         `json:"app"`
+	FoundPaths   []OrphanFoundPath `json:"foundPaths"`   // подтверждённые пути на диске
+	FoundRegKeys []string          `json:"foundRegKeys"` // подтверждённые ключи реестра
+	TotalSize    int64             `json:"totalSize"`
+	TotalFiles   int               `json:"totalFiles"`
 	// ProgramInstalled — true, если программа СЕЙЧАС установлена в системе
 	// (найдена среди установленных программ). Остатки уже удалённых программ
 	// (false) — приоритетные кандидаты на очистку; для ещё установленных
 	// программ найденные пути обычно являются действующими данными/кешем,
 	// а не «мусором» в строгом смысле.
-	ProgramInstalled bool
+	ProgramInstalled bool `json:"programInstalled"`
 }
 
 // OrphanFoundPath — найденный путь с его размером.
 type OrphanFoundPath struct {
-	Path   string
-	Size   int64
-	Files  int
-	Exists bool
+	Path   string `json:"path"`
+	Size   int64  `json:"size"`
+	Files  int    `json:"files"`
+	Exists bool   `json:"exists"`
 	// IsUserData — путь явно указан в userDataPaths записи в orphaned_apps.json.
-	IsUserData bool
+	IsUserData bool `json:"isUserData"`
 	// LikelyUserData — путь не помечен в JSON явно, но его последний сегмент
 	// похож на пользовательские данные (saves, screenshots, projects и т.п.).
 	// Эвристика нужна именно потому, что сам JSON мы не переписываем, а
 	// разметить его вручную пользователь мог не успеть — см. safety.go/orphan.go.
-	LikelyUserData bool
+	LikelyUserData bool `json:"likelyUserData"`
 }
 
 // commonUserDataDirNames — типичные имена папок с пользовательскими данными

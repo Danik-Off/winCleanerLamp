@@ -40,6 +40,7 @@ import {
   FileCopy as FileIcon,
   Folder as FolderIcon,
 } from '@mui/icons-material';
+import { ScanningIndicator } from './ScanningIndicator';
 
 interface DupGroup {
   size: number;
@@ -70,6 +71,7 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
   const [scannedFiles, setScannedFiles] = useState(0);
   const [totalWaste, setTotalWaste] = useState(0);
   const [hasScanResult, setHasScanResult] = useState(false);
+  const [skippedRoots, setSkippedRoots] = useState<string[]>([]);
   const [filter, setFilter] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<{ group: DupGroup; path: string } | null>(null);
@@ -91,12 +93,16 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
     setHasScanResult(false);
     setDeletedPaths(new Set());
     setKeepSelection({});
+    setSkippedRoots([]);
     try {
-      const output = await window.electronAPI.getDuplicates(paths);
-      const parsed = parseDuplicatesOutput(output);
-      setGroups(parsed.groups);
-      setScannedFiles(parsed.scannedFiles);
-      setTotalWaste(parsed.totalWaste);
+      const result = await window.electronAPI.getDuplicates(paths);
+      if (result.error) {
+        onError(result.error);
+      }
+      setGroups(result.groups);
+      setScannedFiles(result.scannedFiles);
+      setTotalWaste(result.totalWaste);
+      setSkippedRoots(result.skippedRoots || []);
       setHasScanResult(true);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Ошибка сканирования');
@@ -170,7 +176,13 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
         </Box>
       </Paper>
 
-      {scanning && <LinearProgress sx={{ mb: 2, borderRadius: 2, height: 6 }} />}
+      <ScanningIndicator active={scanning} />
+
+      {skippedRoots.length > 0 && (
+        <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+          Пропущены системные папки (используйте --duplicates-system в CLI, если это осознанный выбор): {skippedRoots.join(', ')}
+        </Alert>
+      )}
 
       {/* Stats */}
       {hasScanResult && (
@@ -331,63 +343,3 @@ export function DuplicatesPanel({ onError }: DuplicatesPanelProps): JSX.Element 
   );
 }
 
-/** Parse CLI output from --duplicates */
-function parseDuplicatesOutput(output: string): { groups: DupGroup[]; scannedFiles: number; totalWaste: number } {
-  const lines = output.split('\n');
-  const groups: DupGroup[] = [];
-  let current: DupGroup | null = null;
-  let scannedFiles = 0;
-  let totalWaste = 0;
-
-  for (const line of lines) {
-    // "Просканировано 12345 файлов за 3.2 сек."
-    const scannedMatch = line.match(/Просканировано\s+(\d+)\s+файлов/);
-    if (scannedMatch) {
-      scannedFiles = parseInt(scannedMatch[1], 10);
-      continue;
-    }
-
-    // "  === Группа 1: 1.23 MB (x3 файлов) ===" (опционально + " ⚠ РИСК: причина")
-    const groupMatch = line.match(/===\s+Группа\s+\d+:\s+(.+?)\s+\(x(\d+)\s+файлов\)\s+===(?:\s+⚠\s+РИСК:\s+(.+))?$/);
-    if (groupMatch) {
-      if (current) groups.push(current);
-      current = { size: 0, sizeFormatted: groupMatch[1], waste: 0, wasteFormatted: '', paths: [], riskFlag: groupMatch[3] };
-      continue;
-    }
-
-    // "    C:\path\to\file"
-    if (current && line.match(/^\s{4}\S/) && !line.includes('Экономия')) {
-      current.paths.push(line.trim());
-      continue;
-    }
-
-    // "    Экономия при удалении лишних: 2.46 MB"
-    const wasteMatch = line.match(/Экономия при удалении лишних:\s+(.+)/);
-    if (wasteMatch && current) {
-      current.wasteFormatted = wasteMatch[1].trim();
-      current.waste = parseSizeStr(current.wasteFormatted);
-      continue;
-    }
-
-    // "  ИТОГО: 5 групп дубликатов, 15 файлов, ~12.3 MB можно освободить"
-    const totalMatch = line.match(/~([\d.]+\s*\w+)\s+можно освободить/);
-    if (totalMatch) {
-      totalWaste = parseSizeStr(totalMatch[1]);
-    }
-  }
-  if (current && current.paths.length >= 2) groups.push(current);
-
-  // Parse size for each group
-  for (const g of groups) {
-    g.size = parseSizeStr(g.sizeFormatted);
-  }
-
-  return { groups, scannedFiles, totalWaste };
-}
-
-function parseSizeStr(s: string): number {
-  const units: Record<string, number> = { 'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3, 'TB': 1024 ** 4 };
-  const m = s.match(/^([\d.]+)\s*(\w+)$/);
-  if (!m) return 0;
-  return parseFloat(m[1]) * (units[m[2].toUpperCase()] || 1);
-}
