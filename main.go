@@ -35,6 +35,11 @@ func main() {
 		duplicates       = flag.String("duplicates", "", "найти дубликаты файлов в указанных папках (через запятую, например C:\\Users\\Me)")
 		duplicatesSystem = flag.Bool("duplicates-system", false, "разрешить поиск дубликатов внутри системных папок (Program Files, Windows, ProgramData) — по умолчанию они пропускаются")
 		emptyDirs        = flag.String("empty-dirs", "", "найти пустые папки в указанных папках (через запятую)")
+		largeFilesFlag   = flag.Bool("large-files", false, "найти самые крупные файлы (по умолчанию — весь профиль пользователя)")
+		largeFilesRoots  = flag.String("large-files-roots", "", "корневые папки для --large-files (через запятую), по умолчанию — профиль пользователя")
+		largeFilesMinMB  = flag.Int64("large-files-min-mb", 100, "минимальный размер файла в МБ для --large-files")
+		largeFilesTop    = flag.Int("large-files-top", 200, "сколько самых крупных файлов вернуть для --large-files")
+		uninstallLaunch  = flag.String("uninstall-launch", "", "запустить официальный деинсталлятор указанной программы (по displayName из реестра Uninstall)")
 		showEmpty        = flag.Bool("show-empty", false, "показывать в таблице категории с нулевым размером")
 		parallelN        = flag.Int("parallel", 8, "число параллельных сканеров (1 = последовательно)")
 		showVer          = flag.Bool("version", false, "показать версию")
@@ -140,6 +145,31 @@ func main() {
 			printJSON(result)
 		} else {
 			printShortcutScanResult(result)
+		}
+		return
+	}
+
+	// Запуск официального деинсталлятора программы — блокирующая команда
+	// (ждёт закрытия деинсталлятора пользователем), самостоятельна, не
+	// требует загрузки категорий.
+	if *uninstallLaunch != "" {
+		err := cleaner.LaunchUninstaller(*uninstallLaunch)
+		result := struct {
+			Success bool   `json:"success"`
+			Error   string `json:"error,omitempty"`
+		}{Success: err == nil}
+		if err != nil {
+			result.Error = err.Error()
+		}
+		if *jsonFlag {
+			printJSON(result)
+		} else if err != nil {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		} else {
+			fmt.Println("Деинсталлятор завершён.")
+		}
+		if err != nil {
+			os.Exit(1)
 		}
 		return
 	}
@@ -348,6 +378,13 @@ func main() {
 		}
 	}
 
+	if *largeFilesFlag {
+		runLargeFiles(*largeFilesRoots, *largeFilesMinMB, *largeFilesTop, *jsonFlag)
+		if !*scanFlag && !*cleanFlag {
+			return
+		}
+	}
+
 	if !*scanFlag && !*cleanFlag {
 		usage()
 		os.Exit(2)
@@ -447,6 +484,7 @@ func main() {
 	cleanStart := time.Now()
 	var cleanedBytes int64
 	var cleanedFiles int
+	var rebootPendingFiles int
 	var allErrors []string
 	cleanedByCategory := make(map[string]cleaner.Report, len(rows))
 	// Очищаем только непустые (те что нашли мусор при скане) — экономия времени.
@@ -477,6 +515,7 @@ func main() {
 		cleanedByCategory[t.ID] = r
 		cleanedBytes += r.Bytes
 		cleanedFiles += r.Files
+		rebootPendingFiles += r.RebootPending
 		if len(r.Errors) > 0 {
 			allErrors = append(allErrors, r.Errors...)
 			if *verboseFlag && !*jsonFlag {
@@ -492,6 +531,9 @@ func main() {
 
 	if !*jsonFlag {
 		fmt.Printf("\nГотово. Освобождено: %s в %d файлах.\n", cleaner.Human(cleanedBytes), cleanedFiles)
+		if rebootPendingFiles > 0 {
+			fmt.Printf("Из них %d файл%s было занято другим процессом — удалятся автоматически при следующей перезагрузке.\n", rebootPendingFiles, pluralFilesRu(rebootPendingFiles))
+		}
 		if len(allErrors) > 0 {
 			fmt.Printf("Ошибок/пропусков: %d (часть файлов могла быть занята или требует прав администратора).\n", len(allErrors))
 			if !*verboseFlag {
@@ -517,17 +559,19 @@ func main() {
 			if r, ok := cleanedByCategory[c.ID]; ok {
 				categories[i].Bytes = r.Bytes
 				categories[i].Files = r.Files
+				categories[i].RebootPending = r.RebootPending
 				categories[i].Errors = r.Errors
 			}
 		}
 		printJSON(jsonCleanResult{
-			Categories:      categories,
-			ScannedBytes:    totalBytes,
-			ScannedFiles:    totalFiles,
-			CleanedBytes:    cleanedBytes,
-			CleanedFiles:    cleanedFiles,
-			Errors:          allErrors,
-			DurationSeconds: time.Since(cleanStart).Seconds(),
+			Categories:         categories,
+			ScannedBytes:       totalBytes,
+			ScannedFiles:       totalFiles,
+			CleanedBytes:       cleanedBytes,
+			CleanedFiles:       cleanedFiles,
+			RebootPendingFiles: rebootPendingFiles,
+			Errors:             allErrors,
+			DurationSeconds:    time.Since(cleanStart).Seconds(),
 		})
 	}
 }
@@ -559,6 +603,9 @@ func usage() {
   Win Cleaner Lamp --orphan-clean "Имя" --orphan-recycle  удалить в корзину
   Win Cleaner Lamp --orphan-clean "Имя"  (пути с пользовательскими данными пропускаются;
                                           --orphan-include-user-data — включить и их)
+
+  # Деинсталляция программы (запускает официальный деинсталлятор)
+  Win Cleaner Lamp --uninstall-launch "Имя программы"
 
   # Битые ярлыки и снимок для анализа
   Win Cleaner Lamp --shortcuts-scan            найти .lnk с несуществующей целью
@@ -635,6 +682,7 @@ type jsonCategoryResult struct {
 	Name          string   `json:"name"`
 	Bytes         int64    `json:"bytes"`
 	Files         int      `json:"files"`
+	RebootPending int      `json:"rebootPending,omitempty"`
 	Skipped       bool     `json:"skipped,omitempty"`
 	SkippedReason string   `json:"skippedReason,omitempty"`
 	Errors        []string `json:"errors,omitempty"`
@@ -648,13 +696,14 @@ type jsonScanResult struct {
 }
 
 type jsonCleanResult struct {
-	Categories      []jsonCategoryResult `json:"categories"`
-	ScannedBytes    int64                `json:"scannedBytes"`
-	ScannedFiles    int                  `json:"scannedFiles"`
-	CleanedBytes    int64                `json:"cleanedBytes"`
-	CleanedFiles    int                  `json:"cleanedFiles"`
-	Errors          []string             `json:"errors,omitempty"`
-	DurationSeconds float64              `json:"durationSeconds"`
+	Categories         []jsonCategoryResult `json:"categories"`
+	ScannedBytes       int64                `json:"scannedBytes"`
+	ScannedFiles       int                  `json:"scannedFiles"`
+	CleanedBytes       int64                `json:"cleanedBytes"`
+	CleanedFiles       int                  `json:"cleanedFiles"`
+	RebootPendingFiles int                  `json:"rebootPendingFiles,omitempty"`
+	Errors             []string             `json:"errors,omitempty"`
+	DurationSeconds    float64              `json:"durationSeconds"`
 }
 
 // printJSON сериализует v в JSON и печатает его в stdout одной строкой.
@@ -689,6 +738,7 @@ func rowsToJSON(rows []cleaner.Report) []jsonCategoryResult {
 			Name:          r.Target.Name,
 			Bytes:         r.Bytes,
 			Files:         r.Files,
+			RebootPending: r.RebootPending,
 			Skipped:       r.Skipped,
 			SkippedReason: r.SkippedReason,
 			Errors:        r.Errors,
@@ -1073,6 +1123,52 @@ func runEmptyDirs(pathsCSV string, jsonOut bool) {
 	fmt.Printf("ИТОГО: %d пустых папок найдено\n", result.Total)
 	fmt.Println("Для удаления используйте GUI (перемещение в Корзину) или команду:")
 	fmt.Println("  Win Cleaner Lamp --empty-dirs \"путь\" --clean")
+}
+
+func runLargeFiles(rootsCSV string, minMB int64, topN int, jsonOut bool) {
+	roots := splitCSV(rootsCSV)
+	if len(roots) == 0 {
+		roots = cleaner.DefaultLargeFileRoots()
+	}
+	if !jsonOut {
+		fmt.Printf("Поиск крупных файлов (от %d МБ) в: %s\n\n", minMB, strings.Join(roots, ", "))
+	}
+
+	result, err := cleaner.ScanLargeFiles(cleaner.LargeFilesOptions{
+		Roots:        roots,
+		TopN:         topN,
+		MinSizeBytes: minMB * 1024 * 1024,
+	})
+	if err != nil {
+		if jsonOut {
+			printJSON(map[string]any{"error": err.Error()})
+		} else {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		}
+		return
+	}
+
+	if jsonOut {
+		printJSON(result)
+		return
+	}
+
+	if len(result.Files) == 0 {
+		fmt.Println("Крупных файлов не найдено.")
+		return
+	}
+	fmt.Printf("=== Крупные файлы (%d, проверено файлов: %d) ===\n\n", len(result.Files), result.ScannedFiles)
+	for _, f := range result.Files {
+		marker := ""
+		if f.InSystemDir {
+			marker = " [системная папка]"
+		}
+		fmt.Printf("%10s  %s%s\n", f.SizeFormatted, f.Path, marker)
+	}
+	fmt.Printf("\nИТОГО: %s в %d файлах\n", cleaner.Human(result.TotalBytes), len(result.Files))
+	if len(result.SkippedRoots) > 0 {
+		fmt.Printf("Пропущено системных корней: %s\n", strings.Join(result.SkippedRoots, ", "))
+	}
 }
 
 func splitCSV(s string) []string {

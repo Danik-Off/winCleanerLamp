@@ -576,8 +576,8 @@ func discoverWhitelist() map[string]bool {
 		"virtualstore", "programs", "application data", "history",
 		"desktop", "downloads", "diagnosis", "publishers",
 		".default", "default", "default user", "public",
-		"ssh", "regid.1991-06.com.microsoft", "usoshared",
-		"windowsholographicdevices",
+		"ssh", "regid.1991-06.com.microsoft", "usoshared", "usoprivate",
+		"windowsholographicdevices", "placeholdertilelogofolder",
 		"local", "locallow", "roaming",
 	}
 	out := make(map[string]bool, len(list))

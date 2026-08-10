@@ -1,0 +1,81 @@
+name: CI
+
+# Проверка на каждый push и PR — раньше проверки (go vet/test, tsc) были
+# только внутри release.yml, то есть проблема обнаруживалась лишь в момент
+# релиза. Здесь та же проверка запускается на каждое изменение, до релиза.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    # .golangci.yml существовал в репозитории, но раньше не был подключён
+    # ни к одному workflow — golangci-lint запускался только вручную (make lint),
+    # если разработчик о нём вспоминал.
+    name: 'Go — golangci-lint'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Go — установка
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  verify:
+    name: 'Проверка: Go + GUI'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Go — установка
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Node.js — установка
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
+
+      - name: Go — vet
+        run: go vet ./...
+
+      - name: Go — тесты (internal/cleaner)
+        run: go test ./internal/cleaner/... -short
+
+      - name: Go — сборка CLI
+        run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
+
+      - name: GUI — npm ci
+        working-directory: gui
+        run: npm ci
+
+      - name: GUI — проверка типов (renderer)
+        working-directory: gui
+        run: npx tsc --noEmit
+
+      - name: GUI — проверка типов (electron)
+        working-directory: gui
+        run: npx tsc -p tsconfig.electron.json --noEmit
+
+      - name: GUI — сборка (tsc + Vite + Electron main)
+        working-directory: gui
+        run: npm run build

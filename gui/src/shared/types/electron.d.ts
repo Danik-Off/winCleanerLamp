@@ -104,6 +104,21 @@ interface ShortcutsResultDto {
   error?: string;
 }
 
+interface LargeFileDto {
+  path: string;
+  sizeBytes: number;
+  sizeFormatted: string;
+  modTime: string;
+  inSystemDir: boolean;
+}
+interface LargeFilesResultDto {
+  files: LargeFileDto[];
+  scannedFiles: number;
+  totalBytes: number;
+  skippedRoots: string[];
+  error?: string;
+}
+
 interface AuditExportResultDto {
   success: boolean;
   canceled?: boolean;
@@ -145,6 +160,8 @@ interface ElectronAPI {
   autostartList: () => Promise<{ entries: AutostartEntryDto[]; error: string }>;
   autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
   getBrokenShortcuts: () => Promise<ShortcutsResultDto>;
+  getLargeFiles: (options?: { roots?: string; minSizeMB?: number }) => Promise<LargeFilesResultDto>;
+  launchUninstaller: (displayName: string) => Promise<{ success: boolean; error?: string }>;
   exportAudit: () => Promise<AuditExportResultDto>;
   exportJson: (options: { suggestedName?: string; data: unknown }) => Promise<ExportJsonResultDto>;
   checkForUpdates: () => Promise<{ success: boolean; error?: string }>;

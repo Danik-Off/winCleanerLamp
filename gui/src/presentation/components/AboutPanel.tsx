@@ -145,7 +145,7 @@ export function AboutPanel(): JSX.Element {
           <Icon sx={{ color: 'white', fontSize: 40 }} />
         </Box>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
-          WinCleaner Pro
+          WinCleaner Lamp
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.6 }}>
           Профессиональная очистка системы
@@ -243,7 +243,7 @@ export function AboutPanel(): JSX.Element {
       {/* Footer */}
       <Box sx={{ textAlign: 'center', mt: 2 }}>
         <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mb: 0.5 }}>
-          © {currentYear} {author} • WinCleaner Pro
+          © {currentYear} {author} • WinCleaner Lamp
         </Typography>
         <Typography variant="caption" sx={{ opacity: 0.4, display: 'block' }}>
           Clean Architecture • Material Design

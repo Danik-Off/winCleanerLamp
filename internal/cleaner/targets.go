@@ -726,8 +726,8 @@ func AllTargets() []Target {
 			ID:          "component-store-cleanup",
 			Name:        "Очистка хранилища компонентов WinSxS (DISM)",
 			Description: "Официальный способ Microsoft — DISM /StartComponentCleanup убирает только замещённые (superseded) версии обновлённых компонентов. WinSxS НЕ удаляется вручную (это ломает Windows Update) — используется только поддерживаемый API, без /ResetBase (чтобы сохранить возможность отката последнего обновления). Требует прав администратора, может занять несколько минут, размер заранее не оценивается.",
-			Special:      SpecialComponentCleanup,
-			Aggressive:   true,
+			Special:     SpecialComponentCleanup,
+			Aggressive:  true,
 		},
 		{
 			ID:          "iis-logs",

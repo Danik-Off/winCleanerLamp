@@ -2,7 +2,7 @@
  * Electron Main Process
  * TypeScript implementation of main process
  */
-import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
 import path from 'path';
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
@@ -61,6 +61,7 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.js'),
     },
     title: 'WinCleanerLamp GUI',
@@ -75,6 +76,28 @@ function createWindow(): void {
     const indexPath = getIndexHtmlPath();
     mainWindow.loadFile(indexPath);
   }
+
+  // Приложение не открывает внешние ссылки/новые окна изнутри себя —
+  // window.open() и клики по <a target="_blank"> (если когда-нибудь
+  // появятся) должны уходить в системный браузер, а не создавать новое
+  // Electron-окно с теми же правами. shell.openPath уже используется для
+  // локальных путей через отдельный IPC (openPath), это не задевает.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  // Запрещаем навигацию за пределы собственного контента приложения
+  // (dev-сервер Vite или упакованный index.html) — защита на случай, если
+  // куда-то просочится некорректно обработанная ссылка.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowedOrigin = shouldLoadDevServer() ? `http://localhost:${DEV_PORT}` : 'file://';
+    if (!url.startsWith(allowedOrigin)) {
+      event.preventDefault();
+    }
+  });
 
   // Show when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
@@ -302,6 +325,50 @@ ipcMain.handle('get-empty-dirs', async (_event: IpcMainInvokeEvent, rootPaths: s
   };
 });
 
+// Large Files IPC Handler — аналог анализатора диска (WizTree/TreeSize):
+// самые крупные файлы в указанных папках (по умолчанию — весь профиль).
+interface JsonLargeFile {
+  path: string;
+  sizeBytes: number;
+  modTime: string;
+  inSystemDir?: boolean;
+}
+interface JsonLargeFilesResult {
+  files: JsonLargeFile[] | null;
+  scannedFiles: number;
+  totalBytes: number;
+  skippedRoots?: string[];
+  error?: string;
+}
+
+ipcMain.handle('get-large-files', async (_event: IpcMainInvokeEvent, options?: { roots?: string; minSizeMB?: number }) => {
+  const args = ['--large-files', '--json'];
+  if (options?.roots) args.push('--large-files-roots', options.roots);
+  if (options?.minSizeMB) args.push('--large-files-min-mb', String(options.minSizeMB));
+  const { stdout, stderr, code } = await executeCli(args, (line) => mainWindow?.webContents.send('scan-progress', line));
+  if (code !== 0 || !stdout.trim()) {
+    return { files: [], scannedFiles: 0, totalBytes: 0, error: stderr || 'CLI не вернул результат' };
+  }
+  try {
+    const parsed: JsonLargeFilesResult = JSON.parse(stdout);
+    return {
+      files: (parsed.files || []).map((f) => ({
+        path: f.path,
+        sizeBytes: f.sizeBytes,
+        sizeFormatted: formatBytes(f.sizeBytes),
+        modTime: f.modTime,
+        inSystemDir: !!f.inSystemDir,
+      })),
+      scannedFiles: parsed.scannedFiles,
+      totalBytes: parsed.totalBytes,
+      skippedRoots: parsed.skippedRoots || [],
+      error: parsed.error,
+    };
+  } catch {
+    return { files: [], scannedFiles: 0, totalBytes: 0, error: stdout || stderr };
+  }
+});
+
 // ─── Безопасное удаление ───
 //
 // Раньше эти три хендлера делали fs.unlinkSync/fs.rmSync/собственный
@@ -406,6 +473,18 @@ ipcMain.handle('export-json', async (_event: IpcMainInvokeEvent, options: { sugg
     return { success: true, path: filePath };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+// Launch Uninstaller IPC Handler — запускает официальный деинсталлятор
+// программы и ждёт его закрытия (может занять сколько угодно времени, пока
+// пользователь проходит мастер удаления — таймаута намеренно нет).
+ipcMain.handle('launch-uninstaller', async (_event: IpcMainInvokeEvent, displayName: string) => {
+  const { stdout, stderr } = await executeCli(['--uninstall-launch', displayName, '--json']);
+  try {
+    return JSON.parse(stdout.trim()) as { success: boolean; error?: string };
+  } catch {
+    return { success: false, error: stderr || stdout };
   }
 });
 

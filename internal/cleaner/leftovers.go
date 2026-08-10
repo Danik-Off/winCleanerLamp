@@ -45,6 +45,11 @@ type InstalledProgram struct {
 	Publisher       string `json:"publisher,omitempty"`
 	InstallLocation string `json:"installLocation,omitempty"`
 	InOrphanDB      bool   `json:"inOrphanDB"`
+	// UninstallString — команда деинсталляции из реестра Uninstall (та же,
+	// что использует "Программы и компоненты"). Пусто, если у записи нет
+	// UninstallString (бывает у некоторых компонентов без собственного
+	// деинсталлятора).
+	UninstallString string `json:"uninstallString,omitempty"`
 }
 
 // LeftoversResult — полный результат сканирования остатков.
@@ -294,20 +299,24 @@ func GetInstalledPrograms(orphanCfg *OrphanConfig) []InstalledProgram {
 		if err != nil {
 			continue
 		}
-		var curName, curPublisher, curLocation string
+		var curName, curPublisher, curLocation, curUninstall string
+		flush := func() {
+			if curName != "" && !seen[strings.ToLower(curName)] {
+				seen[strings.ToLower(curName)] = true
+				programs = append(programs, InstalledProgram{
+					DisplayName:     curName,
+					Publisher:       curPublisher,
+					InstallLocation: curLocation,
+					InOrphanDB:      orphanNames[strings.ToLower(curName)],
+					UninstallString: curUninstall,
+				})
+			}
+		}
 		for _, line := range strings.Split(string(out), "\n") {
 			line = strings.TrimSpace(line)
 			if line == "" {
-				if curName != "" && !seen[strings.ToLower(curName)] {
-					seen[strings.ToLower(curName)] = true
-					programs = append(programs, InstalledProgram{
-						DisplayName:     curName,
-						Publisher:       curPublisher,
-						InstallLocation: curLocation,
-						InOrphanDB:      orphanNames[strings.ToLower(curName)],
-					})
-				}
-				curName, curPublisher, curLocation = "", "", ""
+				flush()
+				curName, curPublisher, curLocation, curUninstall = "", "", "", ""
 				continue
 			}
 			if strings.HasPrefix(line, "DisplayName") {
@@ -325,17 +334,16 @@ func GetInstalledPrograms(orphanCfg *OrphanConfig) []InstalledProgram {
 					curLocation = strings.TrimSpace(line[idx+len("REG_SZ"):])
 				}
 			}
+			// UninstallString предпочтительнее QuietUninstallString: показывает
+			// пользователю интерфейс деинсталлятора производителя вместо
+			// молчаливого удаления без подтверждения.
+			if strings.HasPrefix(line, "UninstallString") {
+				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
+					curUninstall = strings.TrimSpace(line[idx+len("REG_SZ"):])
+				}
+			}
 		}
-		// flush last entry
-		if curName != "" && !seen[strings.ToLower(curName)] {
-			seen[strings.ToLower(curName)] = true
-			programs = append(programs, InstalledProgram{
-				DisplayName:     curName,
-				Publisher:       curPublisher,
-				InstallLocation: curLocation,
-				InOrphanDB:      orphanNames[strings.ToLower(curName)],
-			})
-		}
+		flush() // последняя запись в выводе reg query не завершается пустой строкой
 	}
 	sort.Slice(programs, func(i, j int) bool {
 		return strings.ToLower(programs[i].DisplayName) < strings.ToLower(programs[j].DisplayName)
@@ -717,7 +725,8 @@ func knownSystemFolders() map[string]bool {
 		"downloaded installations", "downloads", "diagnosis", "publishers",
 		".default", "default", "default user", "public",
 		// ProgramData системные
-		"ssh", "regid.1991-06.com.microsoft", "usoshared",
+		"ssh", "regid.1991-06.com.microsoft", "usoshared", "usoprivate",
+		"placeholdertilelogofolder",
 		"package cache", "softwaredistrribution", "windows defender",
 		"windows security health", "windowsholographicdevices",
 		// популярные вендоры, у которых AppData-папка остаётся навсегда

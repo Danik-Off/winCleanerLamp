@@ -1488,6 +1488,81 @@
         "%APPDATA%\\KeePassXC\\Cache"
       ],
       "notes": "KeePassXC – кэш паролей."
+    },
+    {
+      "displayName": "Playwright (Microsoft)",
+      "publisher": "Microsoft",
+      "installPaths": [],
+      "additionalPaths": [],
+      "registryKeys": [],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\ms-playwright"
+      ],
+      "notes": "Кэш скачанных браузерных движков Playwright (используется Node.js/Python тестами). Пересоздаётся при следующем запуске тестов через npx playwright install."
+    },
+    {
+      "displayName": "Yandex (общий)",
+      "publisher": "Yandex LLC",
+      "installPaths": [],
+      "additionalPaths": [
+        "%LOCALAPPDATA%\\Yandex",
+        "%APPDATA%\\Yandex"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Общая папка для продуктов Yandex (Браузер, Music, Disk и т.п.) — определить конкретный продукт по подпапкам перед полным удалением."
+    },
+    {
+      "displayName": "Yandex Music",
+      "publisher": "Yandex LLC",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Programs\\YandexMusic"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\YandexMusic"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\YandexMusic\\Cache"
+      ],
+      "notes": "Yandex Music – десктопное приложение."
+    },
+    {
+      "displayName": "Piriform (CCleaner / Defraggler / Speccy)",
+      "publisher": "Piriform Software Ltd",
+      "installPaths": [],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\Piriform"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Piriform"
+      ],
+      "cachePaths": [],
+      "notes": "Общие данные приложений Piriform (CCleaner, Defraggler, Speccy, Recuva) в ProgramData."
+    },
+    {
+      "displayName": "Go — инструменты (goimports/gopls)",
+      "publisher": "Google / Go команда",
+      "installPaths": [],
+      "additionalPaths": [],
+      "registryKeys": [],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\goimports",
+        "%LOCALAPPDATA%\\gopls",
+        "%APPDATA%\\gopls"
+      ],
+      "notes": "Кэш инструментов Go (goimports, gopls — языковой сервер), устанавливаемых через `go install`. Безопасно удалять — переустановятся автоматически расширением Go для VS Code/GoLand при следующем использовании."
+    },
+    {
+      "displayName": "DS4Windows",
+      "publisher": "Boundless Dynamics, LLC",
+      "installPaths": [],
+      "additionalPaths": [
+        "%APPDATA%\\Boundless Dynamics, LLC"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Настройки DS4Windows (эмуляция геймпада Xbox для DualShock 4). Издатель в реестре указан как \"Boundless Dynamics, LLC\"."
     }
   ]
 }

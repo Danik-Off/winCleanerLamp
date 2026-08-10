@@ -20,7 +20,11 @@ type DeleteResult struct {
 	Path              string `json:"path"`
 	Success           bool   `json:"success"`
 	MovedToRecycleBin bool   `json:"movedToRecycleBin"`
-	Error             string `json:"error,omitempty"`
+	// ScheduledForReboot — файл занят другим процессом прямо сейчас, обычное
+	// удаление и перемещение в Корзину не удались, но удаление запланировано
+	// на следующую перезагрузку (см. scheduleDeleteOnReboot).
+	ScheduledForReboot bool   `json:"scheduledForReboot,omitempty"`
+	Error              string `json:"error,omitempty"`
 }
 
 // DeleteFile безопасно удаляет один файл (не папку).
@@ -46,6 +50,11 @@ func DeleteFile(path string, permanent bool) DeleteResult {
 
 	if permanent {
 		if err := os.Remove(path); err != nil {
+			if rebootErr := scheduleDeleteOnReboot(path); rebootErr == nil {
+				r.Success = true
+				r.ScheduledForReboot = true
+				return r
+			}
 			r.Error = err.Error()
 			return r
 		}
@@ -54,6 +63,14 @@ func DeleteFile(path string, permanent bool) DeleteResult {
 	}
 
 	if err := moveToRecycleBin(path, false); err != nil {
+		// Файл, скорее всего, занят другим процессом — вместо того чтобы
+		// просто вернуть ошибку, планируем удаление на следующую
+		// перезагрузку (тот же приём, что используют установщики Windows).
+		if rebootErr := scheduleDeleteOnReboot(path); rebootErr == nil {
+			r.Success = true
+			r.ScheduledForReboot = true
+			return r
+		}
 		r.Error = err.Error()
 		return r
 	}

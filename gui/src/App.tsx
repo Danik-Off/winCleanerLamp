@@ -20,6 +20,7 @@ import {
   Storage as StorageIcon,
   FolderDelete as FolderDeleteIcon,
   ContentCopy as DupIcon,
+  DonutLarge as LargeFilesIcon,
   FolderOff as EmptyFolderIcon,
   PowerSettingsNew as AutostartIcon,
   Info as InfoIcon,
@@ -38,6 +39,7 @@ import { CleanupPanel } from './presentation/components/CleanupPanel';
 import { SystemInfoPanel } from './presentation/components/SystemInfoPanel';
 import { LeftoversPanel } from './presentation/components/LeftoversPanel';
 import { DuplicatesPanel } from './presentation/components/DuplicatesPanel';
+import { LargeFilesPanel } from './presentation/components/LargeFilesPanel';
 import { EmptyFoldersPanel } from './presentation/components/EmptyFoldersPanel';
 import { AutostartPanel } from './presentation/components/AutostartPanel';
 import { HeroPanel } from './presentation/components/HeroPanel';
@@ -115,9 +117,10 @@ function App(): JSX.Element {
     { id: 2, label: 'Система', icon: <StorageIcon sx={{ fontSize: 18 }} />, accent: '#06b6d4' },
     { id: 3, label: 'Остатки', icon: <FolderDeleteIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
     { id: 4, label: 'Дубликаты', icon: <DupIcon sx={{ fontSize: 18 }} />, accent: '#f59e0b' },
-    { id: 5, label: 'Пустые папки', icon: <EmptyFolderIcon sx={{ fontSize: 18 }} />, accent: '#ef4444' },
-    { id: 6, label: 'Автозагрузка', icon: <AutostartIcon sx={{ fontSize: 18 }} />, accent: '#a855f7' },
-    { id: 7, label: 'О приложении', icon: <InfoIcon sx={{ fontSize: 18 }} />, accent: '#10b981' },
+    { id: 5, label: 'Большие файлы', icon: <LargeFilesIcon sx={{ fontSize: 18 }} />, accent: '#0ea5e9' },
+    { id: 6, label: 'Пустые папки', icon: <EmptyFolderIcon sx={{ fontSize: 18 }} />, accent: '#ef4444' },
+    { id: 7, label: 'Автозагрузка', icon: <AutostartIcon sx={{ fontSize: 18 }} />, accent: '#a855f7' },
+    { id: 8, label: 'О приложении', icon: <InfoIcon sx={{ fontSize: 18 }} />, accent: '#10b981' },
   ];
 
   const activeAccent = navItems[activeTab]?.accent || '#3b82f6';
@@ -166,7 +169,7 @@ function App(): JSX.Element {
                 fontSize: '0.72rem',
               }}
             >
-              WinCleaner Pro
+              WinCleaner Lamp
             </Typography>
           </Box>
 
@@ -355,12 +358,15 @@ function App(): JSX.Element {
               <DuplicatesPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={5}>
-              <EmptyFoldersPanel onError={setError} />
+              <LargeFilesPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={6}>
-              <AutostartPanel onError={setError} />
+              <EmptyFoldersPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={7}>
+              <AutostartPanel onError={setError} />
+            </TabPanel>
+            <TabPanel value={activeTab} index={8}>
               <AboutPanel />
             </TabPanel>
           </Box>

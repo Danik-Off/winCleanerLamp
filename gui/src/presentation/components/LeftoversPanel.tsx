@@ -27,6 +27,7 @@ import {
   Tabs,
   Tab,
   Stack,
+  Checkbox,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -43,6 +44,7 @@ import {
   BookmarkAdd as TrackIcon,
   BookmarkAdded as TrackedIcon,
   FileDownload as ExportIcon,
+  RemoveCircleOutline as UninstallIcon,
 } from '@mui/icons-material';
 import { useLeftovers } from '../hooks';
 import { ScanningIndicator } from './ScanningIndicator';
@@ -91,6 +93,22 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   const [shortcutDeleteError, setShortcutDeleteError] = useState<string | null>(null);
 
   const [exporting, setExporting] = useState(false);
+
+  // Множественный выбор — область видимости привязана к активной вкладке
+  // (сбрасывается при переключении вкладки/скана), чтобы не путать пользователя
+  // "выбранными, но невидимыми" элементами с другой вкладки.
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [selectedShortcuts, setSelectedShortcuts] = useState<Set<string>>(new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // Запуск официального деинсталлятора программы (для записей, у которых
+  // программа ещё установлена) — после завершения пересканируем остатки:
+  // если запись известна (orphanMatch), она автоматически переедет в
+  // приоритетную группу "Программа удалена".
+  const [uninstallingFor, setUninstallingFor] = useState<string | null>(null);
+  const [uninstallInfo, setUninstallInfo] = useState<string | null>(null);
+  const [uninstallConfirm, setUninstallConfirm] = useState<string | null>(null);
 
   if (error) {
     onError(error);
@@ -166,8 +184,33 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
     setDeletedPaths(new Set());
     setFilter('');
     setActiveTab(0);
+    setSelectedPaths(new Set());
     scan();
   }, [scan]);
+
+  const handleTabChange = useCallback((v: number) => {
+    setActiveTab(v);
+    setSelectedPaths(new Set());
+    setSelectedShortcuts(new Set());
+  }, []);
+
+  const toggleSelect = useCallback((path: string) => {
+    setSelectedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectShortcut = useCallback((path: string) => {
+    setSelectedShortcuts((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
 
   const handleTrack = useCallback(async (path: string) => {
     setTrackingPath(path);
@@ -183,8 +226,28 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
     }
   }, [onError]);
 
+  const handleUninstall = useCallback(async (displayName: string) => {
+    setUninstallConfirm(null);
+    setUninstallingFor(displayName);
+    setUninstallInfo(null);
+    try {
+      const res = await window.electronAPI.launchUninstaller(displayName);
+      if (res.success) {
+        setUninstallInfo(`«${displayName}»: деинсталлятор завершён — список остатков обновляется...`);
+        handleScan();
+      } else {
+        onError(res.error || 'Не удалось запустить деинсталлятор');
+      }
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Ошибка запуска деинсталлятора');
+    } finally {
+      setUninstallingFor(null);
+    }
+  }, [onError, handleScan]);
+
   const handleShortcutsScan = useCallback(async () => {
     setShortcutsScanning(true);
+    setSelectedShortcuts(new Set());
     try {
       const res = await window.electronAPI.getBrokenShortcuts();
       if (res.error) {
@@ -240,6 +303,72 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   }, [result, shortcutsScanned, shortcutsBroken, onError]);
 
   const totalItems = folders.length + empties.length + regKeys.length + cacheItems.length;
+
+  // Элементы активной вкладки, доступные для множественного выбора
+  // (вкладка "Реестр" — только просмотр, удаление не поддерживается).
+  const currentTabItems: LeftoverItem[] =
+    activeTab === 0 ? cacheItems :
+    activeTab === 1 ? orphanKnown :
+    activeTab === 2 ? unknownFolders :
+    activeTab === 3 ? empties : [];
+
+  const isShortcutTab = activeTab === 5;
+  const selectedCount = isShortcutTab ? selectedShortcuts.size : selectedPaths.size;
+  const allSelected = isShortcutTab
+    ? shortcutsBroken.length > 0 && shortcutsBroken.every((s) => selectedShortcuts.has(s.path))
+    : currentTabItems.length > 0 && currentTabItems.every((i) => selectedPaths.has(i.path));
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  const toggleSelectAll = useCallback(() => {
+    if (isShortcutTab) {
+      setSelectedShortcuts((prev) => (prev.size === shortcutsBroken.length ? new Set() : new Set(shortcutsBroken.map((s) => s.path))));
+    } else {
+      setSelectedPaths((prev) => (prev.size === currentTabItems.length ? new Set() : new Set(currentTabItems.map((i) => i.path))));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isShortcutTab, shortcutsBroken, currentTabItems]);
+
+  const selectedBytes = isShortcutTab
+    ? 0
+    : currentTabItems.filter((i) => selectedPaths.has(i.path)).reduce((s, i) => s + Math.max(0, i.sizeBytes), 0);
+  const selectedHasUserData = !isShortcutTab && currentTabItems.some((i) => selectedPaths.has(i.path) && i.likelyUserData);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes <= 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleBulkDelete = useCallback(async () => {
+    setBulkDeleting(true);
+    const paths = Array.from(isShortcutTab ? selectedShortcuts : selectedPaths);
+    let failed = 0;
+    for (const p of paths) {
+      try {
+        const res = isShortcutTab ? await window.electronAPI.deleteFile(p) : await window.electronAPI.deleteLeftover(p);
+        if (res.success) {
+          if (isShortcutTab) {
+            setShortcutsBroken((prev) => prev.filter((s) => s.path !== p));
+          } else {
+            setDeletedPaths((prev) => new Set(prev).add(p));
+          }
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
+      }
+    }
+    if (isShortcutTab) setSelectedShortcuts(new Set());
+    else setSelectedPaths(new Set());
+    setBulkDeleting(false);
+    setBulkConfirmOpen(false);
+    if (failed > 0) {
+      onError(`Не удалось удалить ${failed} из ${paths.length} элементов`);
+    }
+  }, [isShortcutTab, selectedPaths, selectedShortcuts, onError]);
 
   return (
     <Box>
@@ -302,13 +431,19 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         {TAB_CAPTIONS[activeTab]}
       </Typography>
 
+      {uninstallInfo && (
+        <Alert severity="success" sx={{ mb: 1.5, borderRadius: 2 }} onClose={() => setUninstallInfo(null)}>
+          {uninstallInfo}
+        </Alert>
+      )}
+
       <ScanningIndicator active={activeTab === 5 ? shortcutsScanning : scanning} />
 
       {/* Tabs + Filter — вкладки всегда видны (можно сразу перейти к "Ярлыки",
           не дожидаясь скана остатков — это независимый источник данных). */}
       <Tabs
         value={activeTab}
-        onChange={(_, v) => setActiveTab(v)}
+        onChange={(_, v) => handleTabChange(v)}
         variant="scrollable"
         scrollButtons="auto"
         sx={{
@@ -344,6 +479,33 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         />
       )}
 
+      {(isShortcutTab ? shortcutsBroken.length > 0 : currentTabItems.length > 0) && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Checkbox
+            size="small"
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={toggleSelectAll}
+            sx={{ p: 0.5 }}
+          />
+          <Typography variant="caption" sx={{ opacity: 0.7 }}>
+            {selectedCount > 0 ? `Выбрано: ${selectedCount}` : 'Выбрать все'}
+          </Typography>
+          {selectedCount > 0 && (
+            <Button
+              size="small"
+              color="error"
+              variant="outlined"
+              onClick={() => setBulkConfirmOpen(true)}
+              startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
+              sx={{ ml: 'auto', borderRadius: 2, fontWeight: 600 }}
+            >
+              Удалить выбранное ({selectedCount})
+            </Button>
+          )}
+        </Box>
+      )}
+
       {!result && !scanning && activeTab !== 5 && (
         <Paper elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 2, border: '1px solid', borderColor: (t) => (t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0') }}>
           <SearchIcon sx={{ fontSize: 48, opacity: 0.2, mb: 1 }} />
@@ -370,6 +532,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     </Tooltip>
                   }
                 >
+                  <Checkbox size="small" checked={selectedPaths.has(item.path)} onChange={() => toggleSelect(item.path)} sx={{ p: 0.5, mr: 0.5 }} />
                   <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
                     <CacheIcon sx={{ fontSize: 18, opacity: 0.6 }} />
                   </Box>
@@ -410,6 +573,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                         </Tooltip>
                       }
                     >
+                      <Checkbox size="small" checked={selectedPaths.has(item.path)} onChange={() => toggleSelect(item.path)} sx={{ p: 0.5, mr: 0.5 }} />
                       <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
                         <KnownIcon sx={{ fontSize: 18, color: 'success.main' }} />
                       </Box>
@@ -439,14 +603,29 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     <ListItem
                       sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
                       secondaryAction={
-                        <Tooltip title="Удалить">
-                          <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
-                            sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Tooltip title={`Запустить деинсталлятор «${item.orphanMatch}»`}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="warning"
+                                disabled={uninstallingFor === item.orphanMatch}
+                                onClick={() => setUninstallConfirm(item.orphanMatch)}
+                              >
+                                {uninstallingFor === item.orphanMatch ? <CircularProgress size={16} /> : <UninstallIcon sx={{ fontSize: 18 }} />}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Удалить папку">
+                            <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
+                              sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       }
                     >
+                      <Checkbox size="small" checked={selectedPaths.has(item.path)} onChange={() => toggleSelect(item.path)} sx={{ p: 0.5, mr: 0.5 }} />
                       <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
                         <KnownIcon sx={{ fontSize: 18, color: 'warning.main' }} />
                       </Box>
@@ -504,6 +683,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     </Stack>
                   }
                 >
+                  <Checkbox size="small" checked={selectedPaths.has(item.path)} onChange={() => toggleSelect(item.path)} sx={{ p: 0.5, mr: 0.5 }} />
                   <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
                     <UnknownIcon sx={{ fontSize: 18, opacity: 0.6 }} />
                   </Box>
@@ -558,6 +738,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     </Tooltip>
                   }
                 >
+                  <Checkbox size="small" checked={selectedPaths.has(item.path)} onChange={() => toggleSelect(item.path)} sx={{ p: 0.5, mr: 0.5 }} />
                   <EmptyFolderIcon sx={{ mr: 1.5, fontSize: 20, opacity: 0.5 }} />
                   <ListItemText
                     primary={item.directoryName}
@@ -613,6 +794,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
                     </Tooltip>
                   }
                 >
+                  <Checkbox size="small" checked={selectedShortcuts.has(item.path)} onChange={() => toggleSelectShortcut(item.path)} sx={{ p: 0.5, mr: 0.5 }} />
                   <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
                     <ShortcutsIcon sx={{ fontSize: 18, color: '#ef4444' }} />
                   </Box>
@@ -755,6 +937,76 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
           <Button onClick={handleDeleteShortcut} variant="contained" color="warning" disabled={shortcutDeleting}
             startIcon={shortcutDeleting ? <CircularProgress size={16} /> : <DeleteIcon />} sx={{ borderRadius: 1.5 }}>
             {shortcutDeleting ? 'Удаление...' : 'В Корзину'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog
+        open={bulkConfirmOpen}
+        onClose={() => !bulkDeleting && setBulkConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          Удалить выбранное ({selectedCount})?
+        </DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Будет удалено {selectedCount} {isShortcutTab ? 'ярлыков' : 'элементов'}
+            {!isShortcutTab && selectedBytes > 0 ? ` (${formatBytes(selectedBytes)})` : ''}.
+          </Typography>
+          {selectedHasUserData && (
+            <Alert severity="warning" sx={{ borderRadius: 1.5, mb: 1 }}>
+              ⚠ Среди выбранного есть папки, похожие на пользовательские данные (сохранения, проекты, фото и т.п.) — проверьте список перед удалением.
+            </Alert>
+          )}
+          <Alert severity="success" sx={{ borderRadius: 1.5 }}>
+            Всё будет перемещено в Корзину (можно восстановить).
+          </Alert>
+          {bulkDeleting && <LinearProgress sx={{ mt: 2 }} />}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setBulkConfirmOpen(false)} disabled={bulkDeleting} sx={{ borderRadius: 1.5 }}>Отмена</Button>
+          <Button onClick={handleBulkDelete} variant="contained" color="warning" disabled={bulkDeleting}
+            startIcon={bulkDeleting ? <CircularProgress size={16} /> : <DeleteIcon />} sx={{ borderRadius: 1.5 }}>
+            {bulkDeleting ? 'Удаление...' : 'В Корзину'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Uninstall Confirm Dialog */}
+      <Dialog
+        open={!!uninstallConfirm}
+        onClose={() => setUninstallConfirm(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <UninstallIcon color="warning" />
+          Запустить деинсталлятор?
+        </DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Будет запущен официальный деинсталлятор программы «{uninstallConfirm}» (тот же, что в «Программы и компоненты»).
+          </Typography>
+          <Alert severity="info" sx={{ borderRadius: 1.5 }}>
+            Ничего не удаляется автоматически и без вашего подтверждения — откроется мастер удаления производителя, вы сами проходите его до конца. После завершения список остатков обновится.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setUninstallConfirm(null)} sx={{ borderRadius: 1.5 }}>Отмена</Button>
+          <Button
+            onClick={() => uninstallConfirm && handleUninstall(uninstallConfirm)}
+            variant="contained"
+            color="warning"
+            startIcon={<UninstallIcon />}
+            sx={{ borderRadius: 1.5 }}
+          >
+            Запустить
           </Button>
         </DialogActions>
       </Dialog>

@@ -51,6 +51,21 @@ interface ShortcutsResultDto {
   error?: string;
 }
 
+interface LargeFileDto {
+  path: string;
+  sizeBytes: number;
+  sizeFormatted: string;
+  modTime: string;
+  inSystemDir: boolean;
+}
+interface LargeFilesResultDto {
+  files: LargeFileDto[];
+  scannedFiles: number;
+  totalBytes: number;
+  skippedRoots: string[];
+  error?: string;
+}
+
 interface AuditExportResultDto {
   success: boolean;
   canceled?: boolean;
@@ -96,6 +111,8 @@ interface ElectronAPI {
   autostartList: () => Promise<{ entries: AutostartEntryDto[]; error: string }>;
   autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
   getBrokenShortcuts: () => Promise<ShortcutsResultDto>;
+  getLargeFiles: (options?: { roots?: string; minSizeMB?: number }) => Promise<LargeFilesResultDto>;
+  launchUninstaller: (displayName: string) => Promise<{ success: boolean; error?: string }>;
   exportAudit: () => Promise<AuditExportResultDto>;
   exportJson: (options: { suggestedName?: string; data: unknown }) => Promise<ExportJsonResultDto>;
   checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
@@ -162,6 +179,8 @@ const api: ElectronAPI = {
   autostartToggle: (options: { id: string; enable: boolean }) => ipcRenderer.invoke('autostart-toggle', options),
 
   getBrokenShortcuts: () => ipcRenderer.invoke('get-broken-shortcuts'),
+  getLargeFiles: (options?: { roots?: string; minSizeMB?: number }) => ipcRenderer.invoke('get-large-files', options),
+  launchUninstaller: (displayName: string) => ipcRenderer.invoke('launch-uninstaller', displayName),
   exportAudit: () => ipcRenderer.invoke('export-audit'),
   exportJson: (options: { suggestedName?: string; data: unknown }) => ipcRenderer.invoke('export-json', options),
 

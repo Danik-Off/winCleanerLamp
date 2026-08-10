@@ -19,6 +19,12 @@ type Report struct {
 	Errors        []string
 	Skipped       bool
 	SkippedReason string
+	// RebootPending — файлы, занятые другим процессом прямо сейчас: не
+	// удалось удалить сразу, но удаление запланировано на следующую
+	// перезагрузку (MoveFileEx/MOVEFILE_DELAY_UNTIL_REBOOT). Уже учтены в
+	// Bytes/Files как "будут освобождены", но это отдельный счётчик для
+	// точного сообщения пользователю.
+	RebootPending int
 	// Записи о найденных файлах (для последующей записи в конфиг)
 	Records []JunkRecord
 }
@@ -265,16 +271,28 @@ func walkAndDelete(root string, t Target, opts Options, r *Report, keepRoot bool
 			})
 			return nil
 		}
+		scheduledReboot := false
 		if err := os.Remove(path); err != nil {
 			// пытаемся снять read-only
 			_ = os.Chmod(path, 0o666)
 			if err2 := os.Remove(path); err2 != nil {
-				r.Errors = append(r.Errors, fmt.Sprintf("remove %s: %v", path, err2))
-				return nil
+				// Файл занят другим процессом прямо сейчас (открытый лог,
+				// DLL используемой программы и т.п.) — вместо того чтобы
+				// просто пропустить его с ошибкой, планируем удаление на
+				// следующую перезагрузку тем же способом, что используют
+				// установщики Windows (MoveFileEx/MOVEFILE_DELAY_UNTIL_REBOOT).
+				if err3 := scheduleDeleteOnReboot(path); err3 != nil {
+					r.Errors = append(r.Errors, fmt.Sprintf("remove %s: %v", path, err2))
+					return nil
+				}
+				scheduledReboot = true
 			}
 		}
 		r.Bytes += sz
 		r.Files++
+		if scheduledReboot {
+			r.RebootPending++
+		}
 		// Записываем в Records
 		r.Records = append(r.Records, JunkRecord{
 			Path:       path,
@@ -282,7 +300,11 @@ func walkAndDelete(root string, t Target, opts Options, r *Report, keepRoot bool
 			Size:       sz,
 		})
 		if opts.Verbose {
-			opts.log("  [deleted] %s (%s)", path, human(sz))
+			if scheduledReboot {
+				opts.log("  [удалится при перезагрузке] %s (%s)", path, human(sz))
+			} else {
+				opts.log("  [deleted] %s (%s)", path, human(sz))
+			}
 		}
 		return nil
 	})

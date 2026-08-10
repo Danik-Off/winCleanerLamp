@@ -67,6 +67,25 @@ jobs:
         working-directory: gui
         run: npm ci
 
+      # Проверка перед сборкой релиза — раньше её не было, и в релиз дважды
+      # подряд уезжали пакеты с реальными проблемами (latest.yml не попадал
+      # в релиз, имя артефакта с пробелами не совпадало с тем, что ждёт
+      # автообновление). Любая из этих проверок падает — джоб останавливается
+      # раньше, чем будет создан тег и опубликован релиз.
+      - name: Go — vet
+        run: go vet ./...
+
+      - name: Go — тесты (internal/cleaner)
+        run: go test ./internal/cleaner/... -short
+
+      - name: GUI — проверка типов (renderer)
+        working-directory: gui
+        run: npx tsc --noEmit
+
+      - name: GUI — проверка типов (electron)
+        working-directory: gui
+        run: npx tsc -p tsconfig.electron.json --noEmit
+
       - name: CLI — сборка Go
         run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
 

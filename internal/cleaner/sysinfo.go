@@ -8,12 +8,12 @@ import (
 
 // SysInfoEntry — запись об одном системном файле или каталоге.
 type SysInfoEntry struct {
-	Name    string
-	Path    string
-	Size    int64 // -1 = не удалось вычислить (таймаут / нет доступа)
-	Hint    string
-	IsDir   bool
-	Exists  bool
+	Name   string
+	Path   string
+	Size   int64 // -1 = не удалось вычислить (таймаут / нет доступа)
+	Hint   string
+	IsDir  bool
+	Exists bool
 }
 
 // GatherSysInfo возвращает информацию о «больших» системных файлах,
@@ -42,21 +42,21 @@ func GatherSysInfo() []SysInfoEntry {
 			Hint: "    Полный дамп ОЗУ после BSOD. Безопасно удалить (чистится категорией crash-dumps).",
 		},
 		{
-			Name: "WinSxS",
-			Path: `C:\Windows\WinSxS`,
-			Hint: "    Хранилище компонентов Windows. НЕ удалять! Только через dism /Online /Cleanup-Image.",
+			Name:  "WinSxS",
+			Path:  `C:\Windows\WinSxS`,
+			Hint:  "    Хранилище компонентов Windows. НЕ удалять! Только через dism /Online /Cleanup-Image.",
 			IsDir: true,
 		},
 		{
-			Name: "System Volume Information",
-			Path: `C:\System Volume Information`,
-			Hint: "    Точки восстановления и Volume Shadow Copy. Управление: vssadmin / «Защита системы».",
+			Name:  "System Volume Information",
+			Path:  `C:\System Volume Information`,
+			Hint:  "    Точки восстановления и Volume Shadow Copy. Управление: vssadmin / «Защита системы».",
 			IsDir: true,
 		},
 		{
-			Name: "Installer",
-			Path: `C:\Windows\Installer`,
-			Hint: "    Кеш MSI-установщиков. НЕ удалять вручную — поломает обновление/удаление программ.",
+			Name:  "Installer",
+			Path:  `C:\Windows\Installer`,
+			Hint:  "    Кеш MSI-установщиков. НЕ удалять вручную — поломает обновление/удаление программ.",
 			IsDir: true,
 		},
 	}

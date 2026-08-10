@@ -9,20 +9,20 @@ import (
 
 // JunkRecord описывает записанный элемент мусора.
 type JunkRecord struct {
-	Path        string    `json:"path"`        // полный путь к файлу/папке
-	CategoryID  string    `json:"category_id"` // категория откуда найден
-	Size        int64     `json:"size"`        // размер в байтах
-	DeletedAt   time.Time `json:"deleted_at"`  // когда был удалён (пусто = ещё существует)
-	ProgramHint string    `json:"program_hint"`// подсказка от какой программы (если есть)
+	Path        string    `json:"path"`         // полный путь к файлу/папке
+	CategoryID  string    `json:"category_id"`  // категория откуда найден
+	Size        int64     `json:"size"`         // размер в байтах
+	DeletedAt   time.Time `json:"deleted_at"`   // когда был удалён (пусто = ещё существует)
+	ProgramHint string    `json:"program_hint"` // подсказка от какой программы (если есть)
 }
 
 // JunkConfig — структура конфига учёта мусора.
 type JunkConfig struct {
-	Version   string            `json:"version"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
-	Records   []JunkRecord      `json:"records"`
-	Stats     map[string]int64  `json:"stats,omitempty"` // category_id -> total_bytes
+	Version   string           `json:"version"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
+	Records   []JunkRecord     `json:"records"`
+	Stats     map[string]int64 `json:"stats,omitempty"` // category_id -> total_bytes
 }
 
 // DefaultConfigPath возвращает путь к файлу конфига.
