@@ -20,8 +20,13 @@ import {
 export function AboutPanel(): JSX.Element {
   const theme = useTheme();
 
+  // Версия берётся из package.json через VITE_APP_VERSION
+  // При сборке в CI/CD автоматически подставляется из package.json
   const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+  // Хеш коммита подставляется при сборке
   const buildHash = import.meta.env.VITE_BUILD_HASH || 'unknown';
+  const currentYear = new Date().getFullYear();
+  const author = 'Danik Off';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3, maxWidth: 700, mx: 'auto' }}>
@@ -98,9 +103,14 @@ export function AboutPanel(): JSX.Element {
       </Paper>
 
       {/* Footer */}
-      <Typography variant="caption" sx={{ opacity: 0.4, textAlign: 'center', display: 'block' }}>
-        © 2024 WinCleaner Pro • Clean Architecture • Material Design
-      </Typography>
+      <Box sx={{ textAlign: 'center', mt: 2 }}>
+        <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mb: 0.5 }}>
+          © {currentYear} {author} • WinCleaner Pro
+        </Typography>
+        <Typography variant="caption" sx={{ opacity: 0.4, display: 'block' }}>
+          Clean Architecture • Material Design
+        </Typography>
+      </Box>
     </Box>
   );
 }

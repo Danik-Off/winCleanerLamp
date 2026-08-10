@@ -8,11 +8,11 @@ import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
 
 // Constants
-const EXE_NAME = 'wincleanerlamp.exe';
+const EXE_NAME = 'win-cleaner-lamp.exe';
 const DEV_PORT = 3000;
 
 /**
- * Путь к wincleanerlamp.exe:
+ * Путь к win-cleaner-lamp.exe:
  * - dev: корень репозитория (на уровень выше gui/)
  * - production: electron-builder кладёт бинарник в extraResources → каталог process.resourcesPath
  */

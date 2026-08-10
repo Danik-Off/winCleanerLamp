@@ -1,6 +1,6 @@
 # winCleanerLamp — графический интерфейс (GUI)
 
-GUI — это **десктопное приложение** на **Electron 29**, **React 18**, **TypeScript** и **Material UI (MUI) 5**. Оно не дублирует логику очистки: внутри запускается тот же **`wincleanerlamp.exe`**, что и в CLI, через безопасный **IPC** из главного процесса Electron.
+GUI — это **десктопное приложение** на **Electron 29**, **React 18**, **TypeScript** и **Material UI (MUI) 5**. Оно не дублирует логику очистки: внутри запускается тот же **`win-cleaner-lamp.exe`**, что и в CLI, через безопасный **IPC** из главного процесса Electron.
 
 > **Некоммерческий личный проект.** Сделан в первую очередь для удобного сценария «открыл окно — отсканировал — почистил», без обязательств по поддержке. **Автор не несёт ответственности** за сбои, потерю данных или любой вред. Используйте на свой риск после **`--scan` в CLI** или сканирования в GUI.
 
@@ -36,7 +36,7 @@ gui/src/
 └── shared/types/        # Типы, в т.ч. electron.d.ts
 
 gui/electron/
-├── main.ts              # Главный процесс: окно, IPC, spawn wincleanerlamp.exe
+├── main.ts              # Главный процесс: окно, IPC, spawn win-cleaner-lamp.exe
 └── preload.ts           # Ограниченный мост contextBridge → renderer
 ```
 
@@ -53,7 +53,7 @@ flowchart LR
   end
   subgraph main [Main Electron]
     IPC[IPC handlers]
-    CLI[wincleanerlamp.exe]
+    CLI[win-cleaner-lamp.exe]
   end
   UI -->|invoke| IPC
   IPC -->|spawn stdout/stderr| CLI
@@ -67,7 +67,7 @@ flowchart LR
 
 - **Windows** (сборка и типичное использование ориентированы на Win x64).
 - **Node.js** 20+ и **npm**.
-- **Go** 1.21+ — для сборки `wincleanerlamp.exe` в корень репозитория (скрипты `pack` / `dist` делают это автоматически).
+- **Go** 1.21+ — для сборки `win-cleaner-lamp.exe` в корень репозитория (скрипты `pack` / `dist` делают это автоматически).
 
 ---
 
@@ -90,11 +90,11 @@ npm run build:electron
 npm run dev
 ```
 
-В development `wincleanerlamp.exe` ожидается в **родительской** папке относительно `gui` (корень репозитория). Соберите CLI:
+В development `win-cleaner-lamp.exe` ожидается в **родительской** папке относительно `gui` (корень репозитория). Соберите CLI:
 
 ```powershell
 cd ..
-go build -o wincleanerlamp.exe .
+go build -o win-cleaner-lamp.exe .
 cd gui
 ```
 
@@ -121,9 +121,9 @@ npm run pack
 npm run dist
 ```
 
-`pack` и `dist` сначала выполняют **`build:cli`** (`go build` в `../wincleanerlamp.exe`), затем **`verify:cli`** (проверка, что файл есть — иначе сборка падает с понятной ошибкой), затем `build`, затем **electron-builder**.
+`pack` и `dist` сначала выполняют **`build:cli`** (`go build` в `../win-cleaner-lamp.exe`), затем **`verify:cli`** (проверка, что файл есть — иначе сборка падает с понятной ошибкой), затем `build`, затем **electron-builder**.
 
-Бинарник CLI попадает в **`resources/wincleanerlamp.exe`** рядом с `app.asar` (**`extraResources`** в `package.json`), а не рядом с `WinCleanerLamp.exe`. Главный процесс ищет его в `process.resourcesPath`.
+Бинарник CLI попадает в **`resources/win-cleaner-lamp.exe`** рядом с `app.asar` (**`extraResources`** в `package.json`), а не рядом с `WinCleanerLamp.exe`. Главный процесс ищет его в `process.resourcesPath`.
 
 Если CLI уже собран в корне репозитория, достаточно **`npm run dist:electron`** (`verify:cli` + `build` + `electron-builder` без Go). Такой шаг используется в GitHub Actions после отдельного шага `go build`.
 
@@ -152,4 +152,4 @@ npm run dist
 - Агрессивные категории требуют явного включения в UI; всё равно читайте описание категорий в [docs/cli.md](cli.md).
 - Проект **не коммерческий**; претензии к «службе поддержки» не предусмотрены.
 
-Если что-то пошло не так — в первую очередь проверьте лог в окне и запуск `wincleanerlamp.exe` из той же папки вручную в консоли.
+Если что-то пошло не так — в первую очередь проверьте лог в окне и запуск `win-cleaner-lamp.exe` из той же папки вручную в консоли.

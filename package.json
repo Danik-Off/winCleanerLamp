@@ -11,7 +11,7 @@
   },
   "scripts": {
     "version": "node scripts/sync-gui-version.js",
-    "build": "go build -o wincleanerlamp.exe",
+    "build": "go build -o win-cleaner-lamp.exe",
     "release:patch": "npm version patch -m \"chore(release): %s\"",
     "release:minor": "npm version minor -m \"chore(release): %s\"",
     "release:major": "npm version major -m \"chore(release): %s\"",

@@ -68,7 +68,7 @@ jobs:
         run: npm ci
 
       - name: CLI — сборка Go
-        run: go build -ldflags "-s -w" -o wincleanerlamp.exe .
+        run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
 
       - name: GUI — сборка (tsc + Vite + Electron main)
         working-directory: gui
@@ -109,7 +109,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           files: |
-            wincleanerlamp.exe
+            win-cleaner-lamp.exe
             gui/dist-release/*.exe
 
       - name: Сводка релиза
@@ -121,7 +121,7 @@ jobs:
           $created = "${{ steps.tag_created.outputs.created }}"
           @"
           ## Релиз $tag
-          - **CLI:** `wincleanerlamp.exe` в релизе
+          - **CLI:** `win-cleaner-lamp.exe` в релизе
           - **GUI:** установщики в релизе
           - **Тег создан:** $created
           "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8

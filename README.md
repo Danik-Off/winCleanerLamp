@@ -13,7 +13,7 @@
 | Часть | Описание |
 |--------|----------|
 | **CLI** | Один исполняемый файл на Go, без внешних Go-модулей (stdlib + системные утилиты). |
-| **GUI** | Обёртка над тем же `wincleanerlamp.exe`: удобный выбор категорий, сканирование и очистка из одного окна. |
+| **GUI** | Обёртка над тем же `win-cleaner-lamp.exe`: удобный выбор категорий, сканирование и очистка из одного окна. |
 
 Подробные руководства:
 
@@ -42,8 +42,8 @@ npm run release:push
 **Только CLI** — нужен [Go 1.21+](https://go.dev/dl/):
 
 ```powershell
-go build -o wincleanerlamp.exe .
-.\wincleanerlamp.exe --scan
+go build -o win-cleaner-lamp.exe .
+.\win-cleaner-lamp.exe --scan
 ```
 
 **GUI** — нужны Go, [Node.js 20+](https://nodejs.org/) и собранный CLI; подробности в [docs/gui.md](docs/gui.md).

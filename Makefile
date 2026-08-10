@@ -14,6 +14,6 @@ lint-install:
 
 clean:
 	go clean
-	rm -f wincleanerlamp.exe
+	rm -f win-cleaner-lamp.exe
 
 install-deps: lint-install

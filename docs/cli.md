@@ -63,7 +63,7 @@ CLI — это ядро проекта: один исполняемый файл
 | `recycle-bin` | корзина (PowerShell) |
 | `dns-cache` | `ipconfig /flushdns` |
 
-Дополнительно в коде есть расширенный набор категорий (например `readyboot`, `store-cache`, кеши игровых лаунчеров и др.) — полный актуальный список: **`wincleanerlamp.exe --list`**.
+Дополнительно в коде есть расширенный набор категорий (например `readyboot`, `store-cache`, кеши игровых лаунчеров и др.) — полный актуальный список: **`win-cleaner-lamp.exe --list`**.
 
 ---
 
@@ -97,13 +97,13 @@ CLI — это ядро проекта: один исполняемый файл
 ## Сборка
 
 ```powershell
-go build -o wincleanerlamp.exe .
+go build -o win-cleaner-lamp.exe .
 ```
 
 Оптимизация размера бинарника (как в релизных скриптах):
 
 ```powershell
-go build -ldflags "-s -w" -o wincleanerlamp.exe .
+go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
 ```
 
 ---
@@ -112,40 +112,40 @@ go build -ldflags "-s -w" -o wincleanerlamp.exe .
 
 ```powershell
 # Список категорий
-.\wincleanerlamp.exe --list
+.\win-cleaner-lamp.exe --list
 
 # Оценка освобождаемого места (безопасные категории)
-.\wincleanerlamp.exe --scan
+.\win-cleaner-lamp.exe --scan
 
 # С агрессивными категориями
-.\wincleanerlamp.exe --scan --aggressive
+.\win-cleaner-lamp.exe --scan --aggressive
 
 # Очистка с подтверждением
-.\wincleanerlamp.exe --clean
+.\win-cleaner-lamp.exe --clean
 
 # Без подтверждения
-.\wincleanerlamp.exe --clean --yes
+.\win-cleaner-lamp.exe --clean --yes
 
 # Только выбранные категории
-.\wincleanerlamp.exe --clean --categories user-temp,prefetch,recycle-bin
+.\win-cleaner-lamp.exe --clean --categories user-temp,prefetch,recycle-bin
 
 # Исключения
-.\wincleanerlamp.exe --clean --exclude recycle-bin,dns-cache
+.\win-cleaner-lamp.exe --clean --exclude recycle-bin,dns-cache
 
 # Агрессивная очистка
-.\wincleanerlamp.exe --clean --aggressive --yes
+.\win-cleaner-lamp.exe --clean --aggressive --yes
 
 # Глобальный минимальный возраст файлов (часы)
-.\wincleanerlamp.exe --clean --min-age-hours 720
+.\win-cleaner-lamp.exe --clean --min-age-hours 720
 
 # Подробный лог
-.\wincleanerlamp.exe --clean --verbose
+.\win-cleaner-lamp.exe --clean --verbose
 
 # Остатки программ в AppData (только отчёт)
-.\wincleanerlamp.exe --leftovers
+.\win-cleaner-lamp.exe --leftovers
 
 # Системная информация (hiberfil, pagefile, WinSxS и т.д.)
-.\wincleanerlamp.exe --sysinfo
+.\win-cleaner-lamp.exe --sysinfo
 ```
 
 Для доступа к некоторым системным путям запускайте консоль **от имени администратора**.

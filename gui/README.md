@@ -10,7 +10,7 @@
 cd gui
 npm install
 npm run build:electron
-# в корне репозитория: go build -o wincleanerlamp.exe .
+# в корне репозитория: go build -o win-cleaner-lamp.exe .
 npm run dev
 ```
 
