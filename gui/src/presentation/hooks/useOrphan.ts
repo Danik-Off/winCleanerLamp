@@ -10,6 +10,8 @@ export interface OrphanScanItem {
   totalFiles: number;
   paths: { size: string; path: string; isUserData: boolean }[];
   regKeys: string[];
+  /** false = программа сейчас НЕ установлена — приоритетный кандидат на очистку. */
+  programInstalled: boolean;
 }
 
 const USER_DATA_MARKER = '⚠ [ПОЛЬЗОВАТЕЛЬСКИЕ ДАННЫЕ] ';
@@ -51,7 +53,7 @@ function parseScanResults(output: string): OrphanScanItem[] {
       continue;
     }
 
-    // Program header line: "  DisplayName  (SIZE, N файлов)"
+    // Program header line: "  DisplayName  (SIZE, N файлов)  [★ программа удалена|программа установлена]"
     const headerMatch = trimmed.match(/^(.+?)\s{2,}\((.+?),\s*(\d+)\s*файлов?\)/);
     if (headerMatch && !trimmed.startsWith('[')) {
       if (current) items.push(current);
@@ -61,6 +63,7 @@ function parseScanResults(output: string): OrphanScanItem[] {
         totalFiles: parseInt(headerMatch[3], 10),
         paths: [],
         regKeys: [],
+        programInstalled: trimmed.includes('[программа установлена]'),
       };
       continue;
     }
@@ -91,6 +94,7 @@ function parseScanResults(output: string): OrphanScanItem[] {
         totalFiles: 0,
         paths: [],
         regKeys: [],
+        programInstalled: false,
       };
     }
   }

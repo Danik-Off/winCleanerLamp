@@ -57,6 +57,16 @@ interface DeleteResultDto {
   movedToRecycleBin?: boolean;
 }
 
+interface AutostartEntryDto {
+  id: string;
+  source: string;
+  name: string;
+  command?: string;
+  location: string;
+  enabled: boolean;
+  canToggle: boolean;
+}
+
 interface ElectronAPI {
   getCategories: () => Promise<CategoriesResponseDto>;
   scan: (options: ScanOptionsDto) => Promise<ScanResultDto>;
@@ -78,6 +88,8 @@ interface ElectronAPI {
   orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean; includeUserData?: boolean }) => Promise<{ output: string; error: string; code: number }>;
   orphanInfo: (displayName: string) => Promise<{ output: string; error: string; code: number }>;
   orphanList: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
+  autostartList: () => Promise<{ entries: AutostartEntryDto[]; error: string }>;
+  autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
   windowMinimize: () => void;
   windowMaximize: () => void;
   windowClose: () => void;

@@ -4,6 +4,16 @@
  */
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
+interface AutostartEntryDto {
+  id: string;
+  source: string;
+  name: string;
+  command?: string;
+  location: string;
+  enabled: boolean;
+  canToggle: boolean;
+}
+
 /**
  * ElectronAPI type (mirrored from src/shared/types/electron.d.ts)
  * Keep in sync with the shared type definition.
@@ -29,6 +39,8 @@ interface ElectronAPI {
   orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean; includeUserData?: boolean }) => Promise<{ output: string; error: string; code: number }>;
   orphanInfo: (displayName: string) => Promise<{ output: string; error: string; code: number }>;
   orphanList: (configPath?: string) => Promise<{ output: string; error: string; code: number }>;
+  autostartList: () => Promise<{ entries: AutostartEntryDto[]; error: string }>;
+  autostartToggle: (options: { id: string; enable: boolean }) => Promise<{ success: boolean; error?: string }>;
   windowMinimize: () => void;
   windowMaximize: () => void;
   windowClose: () => void;
@@ -80,6 +92,9 @@ const api: ElectronAPI = {
   orphanClean: (options: { names: string; recycle?: boolean; cacheOnly?: boolean; includeUserData?: boolean }) => ipcRenderer.invoke('orphan-clean', options),
   orphanInfo: (displayName: string) => ipcRenderer.invoke('orphan-info', displayName),
   orphanList: (configPath?: string) => ipcRenderer.invoke('orphan-list', configPath),
+
+  autostartList: () => ipcRenderer.invoke('autostart-list'),
+  autostartToggle: (options: { id: string; enable: boolean }) => ipcRenderer.invoke('autostart-toggle', options),
 
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),

@@ -188,7 +188,9 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
                   mb: 1,
                   borderRadius: 2,
                   border: '1px solid',
-                  borderColor: (t) => t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0',
+                  borderColor: (t) => item.programInstalled
+                    ? (t.palette.mode === 'dark' ? '#1f2937' : '#e2e8f0')
+                    : '#10b981',
                   overflow: 'hidden',
                 }}
               >
@@ -197,6 +199,17 @@ export function OrphanPanel({ onError }: OrphanPanelProps): JSX.Element {
                   onClick={() => toggleExpand(item.displayName)}
                   secondaryAction={
                     <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Tooltip title={item.programInstalled
+                        ? 'Программа всё ещё установлена — найденные данные могут использоваться'
+                        : 'Программа не найдена среди установленных — приоритетный кандидат на очистку'}>
+                        <Chip
+                          label={item.programInstalled ? 'установлена' : '★ удалена'}
+                          size="small"
+                          color={item.programInstalled ? 'default' : 'success'}
+                          variant={item.programInstalled ? 'outlined' : 'filled'}
+                          sx={{ fontWeight: 700, fontSize: '0.65rem' }}
+                        />
+                      </Tooltip>
                       <Chip label={item.totalSize} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
                       <Tooltip title="Удалить только кеш">
                         <IconButton

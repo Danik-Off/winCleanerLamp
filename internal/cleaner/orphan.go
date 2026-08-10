@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -148,6 +149,12 @@ type OrphanScanResult struct {
 	FoundRegKeys []string          // подтверждённые ключи реестра
 	TotalSize    int64
 	TotalFiles   int
+	// ProgramInstalled — true, если программа СЕЙЧАС установлена в системе
+	// (найдена среди установленных программ). Остатки уже удалённых программ
+	// (false) — приоритетные кандидаты на очистку; для ещё установленных
+	// программ найденные пути обычно являются действующими данными/кешем,
+	// а не «мусором» в строгом смысле.
+	ProgramInstalled bool
 }
 
 // OrphanFoundPath — найденный путь с его размером.
@@ -188,6 +195,8 @@ func isLikelyUserDataPath(path string) bool {
 // OrphanScan проверяет каждую запись из orphaned_apps.json.
 // Возвращает только те, у которых найдены остатки на диске.
 func OrphanScan(cfg *OrphanConfig, verbose bool) []OrphanScanResult {
+	installed := installedProgramNames()
+
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	var results []OrphanScanResult
@@ -197,6 +206,7 @@ func OrphanScan(cfg *OrphanConfig, verbose bool) []OrphanScanResult {
 		go func(a OrphanApp) {
 			defer wg.Done()
 			r := scanOneOrphan(a)
+			r.ProgramInstalled = matchesInstalled(a.DisplayName, installed)
 			if len(r.FoundPaths) > 0 || len(r.FoundRegKeys) > 0 {
 				mu.Lock()
 				results = append(results, r)
@@ -205,6 +215,17 @@ func OrphanScan(cfg *OrphanConfig, verbose bool) []OrphanScanResult {
 		}(app)
 	}
 	wg.Wait()
+
+	// Приоритет — программы, которые уже удалены из системы (см. запрос
+	// пользователя: показывать в первую очередь остатки именно удалённых
+	// программ, а не просто известные/неизвестные записи).
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].ProgramInstalled != results[j].ProgramInstalled {
+			return !results[i].ProgramInstalled
+		}
+		return results[i].TotalSize > results[j].TotalSize
+	})
+
 	return results
 }
 

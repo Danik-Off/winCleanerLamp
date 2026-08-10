@@ -287,6 +287,44 @@ ipcMain.handle('delete-leftover', async (_event: IpcMainInvokeEvent, folderPath:
   return runDeleteCli('--delete-dir', folderPath);
 });
 
+// ─── Autostart Manager IPC Handlers ───
+// Функция в первую очередь для GUI (см. docs/research-autostart.md) — CLI-сторона
+// сознательно минимальна (--json-only, без текстового UX), обёртки здесь тонкие.
+
+interface AutostartEntryDto {
+  id: string;
+  source: string;
+  name: string;
+  command?: string;
+  location: string;
+  enabled: boolean;
+  canToggle: boolean;
+}
+
+ipcMain.handle('autostart-list', async () => {
+  const { stdout, stderr, code } = await executeCli(['--autostart-list', '--json']);
+  if (code !== 0 || !stdout.trim()) {
+    return { entries: [] as AutostartEntryDto[], error: stderr };
+  }
+  try {
+    const entries: AutostartEntryDto[] = JSON.parse(stdout);
+    return { entries, error: '' };
+  } catch {
+    return { entries: [] as AutostartEntryDto[], error: stdout || stderr };
+  }
+});
+
+ipcMain.handle('autostart-toggle', async (_event: IpcMainInvokeEvent, options: { id: string; enable: boolean }) => {
+  const args = ['--autostart-set', options.id, options.enable ? '--autostart-enable' : '--autostart-disable', '--json'];
+  const { stdout, stderr } = await executeCli(args);
+  try {
+    const parsed = JSON.parse(stdout.trim()) as { success: boolean; error?: string };
+    return parsed;
+  } catch {
+    return { success: false, error: stderr || stdout };
+  }
+});
+
 // ─── OrphanCleaner IPC Handlers ───
 
 // Orphan Scan: check orphaned_apps.json entries

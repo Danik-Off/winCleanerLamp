@@ -150,9 +150,23 @@ func ScanLeftoversEx(opts LeftoverScanOptions) (*LeftoversResult, error) {
 		}
 	}
 
+	// Ключевая проверка по запросу пользователя: для каждой записи с
+	// известным приложением (OrphanMatch) — установлена ли программа СЕЙЧАС.
+	// Это позволяет в первую очередь показывать/предлагать к удалению именно
+	// остатки уже УДАЛЁННЫХ программ, а не просто делить на "известно/неизвестно".
+	for i := range out {
+		if out[i].OrphanMatch != "" {
+			out[i].InstalledMatch = matchesInstalled(out[i].OrphanMatch, installed)
+		}
+	}
+
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Type != out[j].Type {
 			return typeOrder(out[i].Type) < typeOrder(out[j].Type)
+		}
+		// Внутри одной группы — сначала остатки уже удалённых программ.
+		if out[i].OrphanMatch != "" && out[j].OrphanMatch != "" && out[i].InstalledMatch != out[j].InstalledMatch {
+			return !out[i].InstalledMatch
 		}
 		return out[i].Size > out[j].Size
 	})

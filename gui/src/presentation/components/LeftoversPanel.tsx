@@ -82,9 +82,17 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
     () => (result ? applyFilter(result.cacheItems) : []),
     [result, applyFilter]
   );
-  const orphanKnown = useMemo(
-    () => (result ? applyFilter(result.orphanKnownItems) : []),
+  const removedProgramItems = useMemo(
+    () => (result ? applyFilter(result.removedProgramItems) : []),
     [result, applyFilter]
+  );
+  const installedProgramItems = useMemo(
+    () => (result ? applyFilter(result.installedProgramItems) : []),
+    [result, applyFilter]
+  );
+  const orphanKnown = useMemo(
+    () => [...removedProgramItems, ...installedProgramItems],
+    [removedProgramItems, installedProgramItems]
   );
   const unknownFolders = useMemo(
     () => (result ? applyFilter(result.unknownFolders) : []),
@@ -266,7 +274,7 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
             }}
           >
             <Tab label={`Кеш (${cacheItems.length})`} icon={<CacheIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
-            <Tab label={`Известные (${orphanKnown.length})`} icon={<KnownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+            <Tab label={`Удалённые программы (${removedProgramItems.length})`} icon={<KnownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
             <Tab label={`Неизвестные (${unknownFolders.length})`} icon={<UnknownIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
             <Tab label={`Пустые (${empties.length})`} icon={<EmptyFolderIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
             <Tab label={`Реестр (${regKeys.length})`} icon={<RegistryIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
@@ -328,44 +336,88 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
         </Paper>
       )}
 
-      {/* Tab 1: Known orphan items */}
+      {/* Tab 1: Known orphan items — сначала удалённые программы (приоритет), затем ещё установленные */}
       {activeTab === 1 && orphanKnown.length > 0 && (
         <Paper variant="outlined" sx={{ maxHeight: 420, overflow: 'auto', borderRadius: 3, borderColor: 'divider' }}>
-          <Alert severity="warning" sx={{ m: 1, borderRadius: 1.5 }}>
-            Эти папки известны из orphan DB. Удаление может затронуть настройки и профили.
-          </Alert>
-          <List dense disablePadding>
-            {orphanKnown.map((item, idx) => (
-              <React.Fragment key={item.path}>
-                <ListItem
-                  sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
-                  secondaryAction={
-                    <Tooltip title="Удалить">
-                      <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
-                        sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  }
-                >
-                  <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
-                    <KnownIcon sx={{ fontSize: 18, color: 'warning.main' }} />
-                  </Box>
-                  <ListItemText
-                    primary={item.directoryName}
-                    secondary={item.path}
-                    primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
-                    secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
-                  />
-                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
-                    <Chip label={item.orphanMatch || 'остаток'} color="warning" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem', maxWidth: 160 }} />
-                    <Chip label={item.sizeFormatted} color="warning" size="small" sx={{ fontWeight: 600 }} />
-                  </Box>
-                </ListItem>
-                {idx < orphanKnown.length - 1 && <Divider />}
-              </React.Fragment>
-            ))}
-          </List>
+          {removedProgramItems.length > 0 && (
+            <>
+              <Alert severity="success" icon={<KnownIcon />} sx={{ m: 1, borderRadius: 1.5 }}>
+                ★ Программа удалена из системы — приоритетный кандидат на очистку ({removedProgramItems.length}).
+              </Alert>
+              <List dense disablePadding>
+                {removedProgramItems.map((item, idx) => (
+                  <React.Fragment key={item.path}>
+                    <ListItem
+                      sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
+                      secondaryAction={
+                        <Tooltip title="Удалить">
+                          <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
+                            sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      }
+                    >
+                      <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
+                        <KnownIcon sx={{ fontSize: 18, color: 'success.main' }} />
+                      </Box>
+                      <ListItemText
+                        primary={item.directoryName}
+                        secondary={item.path}
+                        primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
+                        secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
+                      />
+                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
+                        <Chip label={item.orphanMatch || 'остаток'} color="success" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem', maxWidth: 160 }} />
+                        <Chip label={item.sizeFormatted} color="success" size="small" sx={{ fontWeight: 600 }} />
+                      </Box>
+                    </ListItem>
+                    {idx < removedProgramItems.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            </>
+          )}
+
+          {installedProgramItems.length > 0 && (
+            <>
+              <Alert severity="warning" sx={{ m: 1, borderRadius: 1.5 }}>
+                Программа всё ещё установлена — это действующие данные, а не мусор. Удаляйте осторожно ({installedProgramItems.length}).
+              </Alert>
+              <List dense disablePadding>
+                {installedProgramItems.map((item, idx) => (
+                  <React.Fragment key={item.path}>
+                    <ListItem
+                      sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: 'action.hover' } }}
+                      secondaryAction={
+                        <Tooltip title="Удалить">
+                          <IconButton edge="end" color="error" onClick={() => { setDeleteError(null); setDeleteTarget(item); }} size="small"
+                            sx={{ border: '1px solid', borderColor: 'error.main', borderRadius: 1.5, '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      }
+                    >
+                      <Box sx={{ mr: 1.5, color: 'text.secondary', minWidth: 28, textAlign: 'center' }}>
+                        <KnownIcon sx={{ fontSize: 18, color: 'warning.main' }} />
+                      </Box>
+                      <ListItemText
+                        primary={item.directoryName}
+                        secondary={item.path}
+                        primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 600 } }}
+                        secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all', opacity: 0.7 } }}
+                      />
+                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 2, flexShrink: 0 }}>
+                        <Chip label={item.orphanMatch || 'остаток'} color="warning" size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem', maxWidth: 160 }} />
+                        <Chip label={item.sizeFormatted} color="warning" size="small" sx={{ fontWeight: 600 }} />
+                      </Box>
+                    </ListItem>
+                    {idx < installedProgramItems.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            </>
+          )}
         </Paper>
       )}
 

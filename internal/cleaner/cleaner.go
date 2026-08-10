@@ -85,14 +85,18 @@ func Process(t Target, opts Options) Report {
 			if opts.DryRun {
 				r.Bytes += sz
 				r.Files++
-				opts.log("  [would delete] %s (%s)", p, human(sz))
+				if opts.Verbose {
+					opts.log("  [would delete] %s (%s)", p, human(sz))
+				}
 			} else {
 				if err := os.Remove(p); err != nil {
 					r.Errors = append(r.Errors, fmt.Sprintf("remove %s: %v", p, err))
 				} else {
 					r.Bytes += sz
 					r.Files++
-					opts.log("  [deleted] %s (%s)", p, human(sz))
+					if opts.Verbose {
+						opts.log("  [deleted] %s (%s)", p, human(sz))
+					}
 				}
 			}
 			continue

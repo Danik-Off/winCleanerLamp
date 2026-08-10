@@ -529,6 +529,99 @@ func AllTargets() []Target {
 			// спец-обработка: чистим только известные cache-подпапки
 		},
 
+		// ---- Дополнительные безопасные категории (по итогам docs/research-junk-sources.md) ----
+		{
+			ID:          "csc-cache",
+			Name:        "Кеш автономных файлов (Client-Side Caching)",
+			Description: "C:\\Windows\\CSC — кеш Offline Files. На домашних ПК обычно пуст.",
+			Paths:       []string{`C:\Windows\CSC`},
+			KeepRoot:    true,
+		},
+		{
+			ID:          "rdp-cache",
+			Name:        "Кеш миниатюр удалённого рабочего стола (RDP)",
+			Description: "%LOCALAPPDATA%\\Microsoft\\Terminal Server Client\\Cache — bitmap-кеш RDP-клиента.",
+			Paths:       []string{`%LOCALAPPDATA%\Microsoft\Terminal Server Client\Cache`},
+			KeepRoot:    true,
+		},
+		{
+			ID:          "windows-notifications-cache",
+			Name:        "Кеш центра уведомлений Windows",
+			Description: "%LOCALAPPDATA%\\Microsoft\\Windows\\Notifications — база данных уведомлений, пересоздаётся.",
+			Paths:       []string{`%LOCALAPPDATA%\Microsoft\Windows\Notifications`},
+			KeepRoot:    true,
+			MinAgeHours: 24,
+		},
+		{
+			ID:          "composer-cache",
+			Name:        "Кеш Composer (PHP)",
+			Description: "%APPDATA%\\Composer\\cache — восстанавливается при следующей установке.",
+			Paths:       []string{`%APPDATA%\Composer\cache`},
+			KeepRoot:    true,
+		},
+		{
+			ID:          "pnpm-store",
+			Name:        "Хранилище пакетов pnpm",
+			Description: "%LOCALAPPDATA%\\pnpm-store и pnpm\\store — восстанавливается при следующей установке.",
+			Paths: []string{
+				`%LOCALAPPDATA%\pnpm-store`,
+				`%LOCALAPPDATA%\pnpm\store`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "zoom-cache",
+			Name:        "Кеш и логи Zoom",
+			Description: "%APPDATA%\\Zoom\\logs и \\data\\Cache (не трогает записи собраний — см. zoom-recordings).",
+			Paths: []string{
+				`%APPDATA%\Zoom\logs`,
+				`%APPDATA%\Zoom\data\Cache`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "postman-cache",
+			Name:        "Кеш Postman",
+			Description: "%APPDATA%\\Postman\\Cache.",
+			Paths:       []string{`%APPDATA%\Postman\Cache`},
+			KeepRoot:    true,
+		},
+		{
+			ID:          "signal-cache",
+			Name:        "Кеш и логи Signal Desktop",
+			Description: "%APPDATA%\\Signal\\Cache и \\logs.",
+			Paths: []string{
+				`%APPDATA%\Signal\Cache`,
+				`%APPDATA%\Signal\logs`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "obs-studio-logs",
+			Name:        "Логи и краш-репорты OBS Studio",
+			Description: "%APPDATA%\\obs-studio\\logs и crash-reports.",
+			Paths: []string{
+				`%APPDATA%\obs-studio\logs`,
+				`%APPDATA%\obs-studio\crashes`,
+			},
+			KeepRoot: true,
+		},
+		{
+			ID:          "docker-desktop-logs",
+			Name:        "Логи Docker Desktop",
+			Description: "%LOCALAPPDATA%\\Docker\\log (не трогает образы/виртуальный диск).",
+			Paths:       []string{`%LOCALAPPDATA%\Docker\log`},
+			KeepRoot:    true,
+		},
+		{
+			ID:          "bits-downloader-cache",
+			Name:        "Кеш заданий BITS / Delivery Optimization",
+			Description: "C:\\ProgramData\\Microsoft\\Network\\Downloader — временные файлы фоновой загрузки.",
+			Paths:       []string{`C:\ProgramData\Microsoft\Network\Downloader`},
+			KeepRoot:    true,
+			MinAgeHours: 24,
+		},
+
 		// ---- Агрессивные ----
 		{
 			ID:          "vs-packages",
@@ -562,6 +655,44 @@ func AllTargets() []Target {
 				`C:\$SysReset`,
 			},
 			Aggressive: true,
+		},
+		{
+			ID:          "webcache",
+			Name:        "Кеш WinINet/IE (WebCacheV01.dat)",
+			Description: "%LOCALAPPDATA%\\Microsoft\\Windows\\WebCache — часто заблокирован активными процессами (Search и др.), пересоздаётся Windows.",
+			Paths:       []string{`%LOCALAPPDATA%\Microsoft\Windows\WebCache`},
+			KeepRoot:    true,
+			Aggressive:  true,
+		},
+		{
+			ID:          "go-mod-cache",
+			Name:        "Кеш модулей Go (go mod download)",
+			Description: "%USERPROFILE%\\go\\pkg\\mod — отдельно от go-build-cache. Может занимать десятки ГБ, потребует повторной загрузки при следующей сборке.",
+			Paths:       []string{`%USERPROFILE%\go\pkg\mod`},
+			KeepRoot:    true,
+			MinAgeHours: 24 * 14,
+			Aggressive:  true,
+		},
+		{
+			ID:          "cargo-registry-cache",
+			Name:        "Кеш реестра пакетов Cargo (Rust)",
+			Description: "%USERPROFILE%\\.cargo\\registry\\cache и \\registry\\src (не трогает .cargo\\bin).",
+			Paths: []string{
+				`%USERPROFILE%\.cargo\registry\cache`,
+				`%USERPROFILE%\.cargo\registry\src`,
+			},
+			KeepRoot:    true,
+			MinAgeHours: 24 * 14,
+			Aggressive:  true,
+		},
+		{
+			ID:          "huggingface-cache",
+			Name:        "Кеш моделей Hugging Face",
+			Description: "%USERPROFILE%\\.cache\\huggingface — загруженные ML-модели, могут быть по несколько ГБ каждая.",
+			Paths:       []string{`%USERPROFILE%\.cache\huggingface`},
+			KeepRoot:    true,
+			MinAgeHours: 24 * 14,
+			Aggressive:  true,
 		},
 
 		// ---- Агрессивные (только с --aggressive) ----

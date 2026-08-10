@@ -12,7 +12,9 @@ export class LeftoverItem {
     public readonly reason: string,
     public readonly type: LeftoverType = 'folder',
     public readonly orphanMatch: string = '',
-    public readonly cacheHit: boolean = false
+    public readonly cacheHit: boolean = false,
+    /** true = программа, которой принадлежит запись, всё ещё установлена. */
+    public readonly installedMatch: boolean = false
   ) {}
 
   get sizeFormatted(): string {
@@ -45,6 +47,16 @@ export class LeftoverItem {
     return this.orphanMatch !== '' && !this.cacheHit;
   }
 
+  /** Остаток программы, которая уже удалена из системы — приоритетный кандидат на очистку. */
+  get isRemovedProgram(): boolean {
+    return this.isOrphanKnown && !this.installedMatch;
+  }
+
+  /** Данные программы, которая всё ещё установлена — не мусор в строгом смысле. */
+  get isInstalledProgram(): boolean {
+    return this.isOrphanKnown && this.installedMatch;
+  }
+
   get isCache(): boolean {
     return this.cacheHit;
   }
@@ -60,9 +72,10 @@ export class LeftoverItem {
     reason: string = 'Нет в списке установленных программ',
     itemType: LeftoverType = 'folder',
     orphanMatch: string = '',
-    cacheHit: boolean = false
+    cacheHit: boolean = false,
+    installedMatch: boolean = false
   ): LeftoverItem {
-    return new LeftoverItem(path, sizeBytes, fileCount, reason, itemType, orphanMatch, cacheHit);
+    return new LeftoverItem(path, sizeBytes, fileCount, reason, itemType, orphanMatch, cacheHit, installedMatch);
   }
 }
 
@@ -108,6 +121,16 @@ export class LeftoverSummary {
 
   get orphanKnownItems(): LeftoverItem[] {
     return this.items.filter(i => i.isOrphanKnown);
+  }
+
+  /** Остатки уже удалённых программ — приоритетные кандидаты на очистку. */
+  get removedProgramItems(): LeftoverItem[] {
+    return this.items.filter(i => i.isRemovedProgram);
+  }
+
+  /** Данные ещё установленных программ — осторожнее, это не мусор. */
+  get installedProgramItems(): LeftoverItem[] {
+    return this.items.filter(i => i.isInstalledProgram);
   }
 
   get unknownFolders(): LeftoverItem[] {

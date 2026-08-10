@@ -63,7 +63,7 @@ CLI — это ядро проекта: один исполняемый файл
 | `recycle-bin` | корзина (PowerShell) |
 | `dns-cache` | `ipconfig /flushdns` |
 
-Дополнительно в коде есть расширенный набор категорий (например `readyboot`, `store-cache`, кеши игровых лаунчеров и др.) — полный актуальный список: **`win-cleaner-lamp.exe --list`**.
+Дополнительно в коде есть расширенный набор категорий (например `readyboot`, `store-cache`, кеши игровых лаунчеров, кеши CLI-инструментов разработчика — Composer/pnpm/Go modules/Cargo/Hugging Face, кеш RDP, автономных файлов (CSC) и др.) — полный актуальный список: **`win-cleaner-lamp.exe --list`**. Обоснование, откуда взят каждый новый пункт и почему он безопасен/агрессивен — в [`docs/research-junk-sources.md`](research-junk-sources.md).
 
 ---
 

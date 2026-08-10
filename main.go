@@ -47,6 +47,12 @@ func main() {
 		deleteDirFlag  = flag.String("delete-dir", "", "безопасно удалить папку целиком (по умолчанию — в Корзину)")
 		permanentFlag  = flag.Bool("permanent", false, "удалить навсегда вместо перемещения в Корзину (для --delete-path/--delete-dir)")
 
+		// Flags для менеджера автозагрузки (в первую очередь для GUI, см. docs/research-autostart.md)
+		autostartList    = flag.Bool("autostart-list", false, "показать записи автозагрузки (Run-ключи, папки автозагрузки, задания планировщика при входе)")
+		autostartSetID   = flag.String("autostart-set", "", "id записи автозагрузки для переключения (используется с --autostart-enable/--autostart-disable)")
+		autostartEnable  = flag.Bool("autostart-enable", false, "включить запись, указанную в --autostart-set")
+		autostartDisable = flag.Bool("autostart-disable", false, "выключить запись, указанную в --autostart-set")
+
 		// Flags для учёта мусора в конфиге
 		recordFlag = flag.Bool("record", false, "записать найденный мусор в конфиг-файл для последующей авточистки")
 		autoClean  = flag.Bool("auto-clean", false, "автоматически очистить мусор из записей конфига (без подтверждения)")
@@ -96,6 +102,42 @@ func main() {
 		result := cleaner.DeleteDir(*deleteDirFlag, *permanentFlag)
 		printDeleteResult(result, *jsonFlag)
 		if !result.Success {
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Менеджер автозагрузки — самостоятельные команды, см. docs/research-autostart.md.
+	if *autostartList {
+		entries := cleaner.ListAutostartEntries()
+		if *jsonFlag {
+			printJSON(entries)
+		} else {
+			printAutostartList(entries)
+		}
+		return
+	}
+	if *autostartSetID != "" {
+		if *autostartEnable == *autostartDisable {
+			fmt.Fprintln(os.Stderr, "укажите ровно один из флагов: --autostart-enable или --autostart-disable")
+			os.Exit(2)
+		}
+		err := cleaner.ToggleAutostart(*autostartSetID, *autostartEnable)
+		result := struct {
+			Success bool   `json:"success"`
+			Error   string `json:"error,omitempty"`
+		}{Success: err == nil}
+		if err != nil {
+			result.Error = err.Error()
+		}
+		if *jsonFlag {
+			printJSON(result)
+		} else if err != nil {
+			fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		} else {
+			fmt.Println("Готово.")
+		}
+		if err != nil {
 			os.Exit(1)
 		}
 		return
@@ -564,6 +606,43 @@ func printDeleteResult(r cleaner.DeleteResult, jsonOut bool) {
 	}
 }
 
+func printAutostartList(entries []cleaner.AutostartEntry) {
+	if len(entries) == 0 {
+		fmt.Println("Записей автозагрузки не найдено.")
+		return
+	}
+	bySource := map[cleaner.AutostartSource][]cleaner.AutostartEntry{}
+	for _, e := range entries {
+		bySource[e.Source] = append(bySource[e.Source], e)
+	}
+	labels := map[cleaner.AutostartSource]string{
+		cleaner.AutostartRunHKCU:             "Реестр — Run (текущий пользователь)",
+		cleaner.AutostartRunHKLM:             "Реестр — Run (все пользователи)",
+		cleaner.AutostartRunHKLM32:           "Реестр — Run (32-бит, WOW6432Node)",
+		cleaner.AutostartStartupFolderUser:   "Папка автозагрузки (пользователь)",
+		cleaner.AutostartStartupFolderCommon: "Папка автозагрузки (все пользователи)",
+		cleaner.AutostartScheduledTask:       "Задания планировщика (при входе в систему)",
+	}
+	for _, src := range []cleaner.AutostartSource{
+		cleaner.AutostartRunHKCU, cleaner.AutostartRunHKLM, cleaner.AutostartRunHKLM32,
+		cleaner.AutostartStartupFolderUser, cleaner.AutostartStartupFolderCommon, cleaner.AutostartScheduledTask,
+	} {
+		list := bySource[src]
+		if len(list) == 0 {
+			continue
+		}
+		fmt.Printf("=== %s (%d) ===\n", labels[src], len(list))
+		for _, e := range list {
+			state := "выкл"
+			if e.Enabled {
+				state = "вкл"
+			}
+			fmt.Printf("  [%s] %-30s %s\n", state, e.Name, e.Command)
+		}
+		fmt.Println()
+	}
+}
+
 func filterTargets(all []cleaner.Target, include, exclude string, aggressive bool) []cleaner.Target {
 	inc := splitCSV(include)
 	exc := splitCSV(exclude)
@@ -627,8 +706,12 @@ func runLeftovers(orphanCfgPath string, logFile string) {
 		return
 	}
 
-	// Группируем по типу
-	var knownOrphans, unknownFolders, cacheHits, empties, regKeys []cleaner.LeftoverCandidate
+	// Группируем по типу. Известные остатки (knownOrphans) дополнительно делим
+	// на "программа уже удалена" (приоритет для очистки) и "программа всё ещё
+	// установлена" (осторожнее — это не мусор, а действующие данные) — по
+	// запросу: показывать в первую очередь остатки именно удалённых программ,
+	// а не просто "известно/неизвестно".
+	var removedProgramLeftovers, installedProgramLeftovers, unknownFolders, cacheHits, empties, regKeys []cleaner.LeftoverCandidate
 	for _, c := range cands {
 		switch {
 		case c.Type == cleaner.LeftoverEmpty:
@@ -637,8 +720,10 @@ func runLeftovers(orphanCfgPath string, logFile string) {
 			regKeys = append(regKeys, c)
 		case c.CacheHit:
 			cacheHits = append(cacheHits, c)
+		case c.OrphanMatch != "" && !c.InstalledMatch:
+			removedProgramLeftovers = append(removedProgramLeftovers, c)
 		case c.OrphanMatch != "":
-			knownOrphans = append(knownOrphans, c)
+			installedProgramLeftovers = append(installedProgramLeftovers, c)
 		default:
 			unknownFolders = append(unknownFolders, c)
 		}
@@ -677,8 +762,11 @@ func runLeftovers(orphanCfgPath string, logFile string) {
 	// Кеш (безопасно удалить)
 	printFolderSection("Кеш программ из orphan DB (безопасно)", cacheHits, "[кеш]")
 
-	// Известные из orphan DB
-	printFolderSection("Известные остатки из orphan DB", knownOrphans, "")
+	// В первую очередь — остатки программ, которые уже удалены из системы.
+	printFolderSection("★ Остатки УДАЛЁННЫХ программ (приоритет для очистки)", removedProgramLeftovers, "")
+
+	// Затем — записи, принадлежащие ещё установленным программам (осторожнее).
+	printFolderSection("Данные ещё УСТАНОВЛЕННЫХ программ (не мусор — не удалять не глядя)", installedProgramLeftovers, "")
 
 	// Неизвестные
 	printFolderSection("Неизвестные папки (нет в orphan DB)", unknownFolders, "[?]")
@@ -1136,6 +1224,11 @@ func runOrphanScan(cfgPath string, verbose bool) {
 		fmt.Printf("  %s", r.App.DisplayName)
 		if r.TotalSize > 0 {
 			fmt.Printf("  (%s, %d файлов)", cleaner.Human(r.TotalSize), r.TotalFiles)
+		}
+		if r.ProgramInstalled {
+			fmt.Print("  [программа установлена]")
+		} else {
+			fmt.Print("  [★ программа удалена]")
 		}
 		fmt.Println()
 		for _, p := range r.FoundPaths {

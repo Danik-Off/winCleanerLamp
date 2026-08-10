@@ -19,25 +19,37 @@ export class ElectronLeftoverService implements ILeftoverService {
     const items: LeftoverItem[] = [];
     let currentSection: LeftoverType = 'folder';
     let currentCacheHit = false;
-    
+    let currentInstalledMatch = false;
+
     for (const line of lines) {
       // Detect section headers (new categorized format)
       if (line.includes('=== Кеш программ из orphan DB')) {
         currentSection = 'folder';
 
         currentCacheHit = true;
+        currentInstalledMatch = false;
         continue;
       }
-      if (line.includes('=== Известные остатки из orphan DB')) {
+      // Приоритет: остатки уже удалённых программ.
+      if (line.includes('Остатки УДАЛЁННЫХ программ') || line.includes('=== Известные остатки из orphan DB')) {
         currentSection = 'folder';
 
         currentCacheHit = false;
+        currentInstalledMatch = false;
+        continue;
+      }
+      if (line.includes('Данные ещё УСТАНОВЛЕННЫХ программ')) {
+        currentSection = 'folder';
+
+        currentCacheHit = false;
+        currentInstalledMatch = true;
         continue;
       }
       if (line.includes('=== Неизвестные папки')) {
         currentSection = 'folder';
 
         currentCacheHit = false;
+        currentInstalledMatch = false;
         continue;
       }
       // Legacy format support
@@ -66,7 +78,7 @@ export class ElectronLeftoverService implements ILeftoverService {
 
       // Parse folder data lines: "  SIZE  FILES  TAG  PATH"
       if (currentSection === 'folder') {
-        const parsed = this.parseFolderLine(trimmed, currentCacheHit);
+        const parsed = this.parseFolderLine(trimmed, currentCacheHit, currentInstalledMatch);
         if (parsed) items.push(parsed);
         continue;
       }
@@ -93,7 +105,7 @@ export class ElectronLeftoverService implements ILeftoverService {
     return items;
   }
 
-  private parseFolderLine(line: string, sectionCacheHit: boolean): LeftoverItem | null {
+  private parseFolderLine(line: string, sectionCacheHit: boolean, sectionInstalledMatch: boolean): LeftoverItem | null {
     // 4-column format: "SIZE  FILES  [TAG]  PATH"
     // TAG is bracketed: [кеш], [?], [Google Chrome], etc.
     const match4 = line.match(/^([\d.]+\s*[KMGT]?B|~большой)\s+(\d+)\s+\[([^\]]*)\]\s+(.+)$/);
@@ -107,7 +119,9 @@ export class ElectronLeftoverService implements ILeftoverService {
         ? `кеш (orphan DB)`
         : isUnknownTag
           ? 'нет в orphan DB'
-          : `orphan DB: ${orphanName}`;
+          : sectionInstalledMatch
+            ? `программа ещё установлена: ${orphanName}`
+            : `программа удалена: ${orphanName}`;
       return LeftoverItem.create(
         path.trim(),
         sizeBytes,
@@ -115,7 +129,8 @@ export class ElectronLeftoverService implements ILeftoverService {
         reason,
         'folder',
         isCacheTag ? 'cache' : orphanName,
-        isCacheTag
+        isCacheTag,
+        sectionInstalledMatch
       );
     }
     // Legacy 3-column: "SIZE  FILES  PATH"
