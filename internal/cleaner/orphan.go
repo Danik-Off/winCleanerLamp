@@ -50,7 +50,7 @@ func CacheTargetsFromOrphanConfig(cfg *OrphanConfig) []Target {
 	if cfg == nil {
 		return nil
 	}
-	var targets []Target
+	targets := make([]Target, 0, len(cfg.Apps))
 	for _, app := range cfg.Apps {
 		if len(app.CachePaths) == 0 {
 			continue
@@ -230,7 +230,7 @@ func isLikelyUserDataPath(path string) bool {
 
 // OrphanScan проверяет каждую запись из orphaned_apps.json.
 // Возвращает только те, у которых найдены остатки на диске.
-func OrphanScan(cfg *OrphanConfig, verbose bool) []OrphanScanResult {
+func OrphanScan(cfg *OrphanConfig, _ bool) []OrphanScanResult {
 	installed := installedProgramNames()
 
 	var mu sync.Mutex
@@ -469,12 +469,12 @@ func buildKnownPaths(cfg *OrphanConfig) map[string]bool {
 }
 
 func discoverInRoot(root string, knownPaths map[string]bool, whitelist map[string]bool, installed map[string]bool, installPaths map[string]bool) []DiscoverResult {
-	var results []DiscoverResult
-
 	entries, err := os.ReadDir(root)
 	if err != nil {
-		return results
+		return nil
 	}
+
+	results := make([]DiscoverResult, 0, len(entries))
 
 	for _, e := range entries {
 		if !e.IsDir() {
@@ -624,7 +624,7 @@ func OrphanClean(cfg *OrphanConfig, names []string, opts OrphanCleanOptions) []O
 		nameSet[strings.ToLower(n)] = true
 	}
 
-	var results []OrphanCleanResult
+	results := make([]OrphanCleanResult, 0, len(names))
 	for _, app := range cfg.Apps {
 		if !nameSet[strings.ToLower(app.DisplayName)] {
 			continue

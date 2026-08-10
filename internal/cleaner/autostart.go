@@ -167,14 +167,14 @@ func regQueryValues(key string) []regValue {
 // ─── Папки автозагрузки ───
 
 func listStartupFolderEntries(source AutostartSource, dir string) []AutostartEntry {
-	var out []AutostartEntry
 	if dir == "" {
-		return out
+		return nil
 	}
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
-		return out
+		return nil
 	}
+	out := make([]AutostartEntry, 0, len(dirEntries))
 	for _, e := range dirEntries {
 		if e.IsDir() || strings.EqualFold(e.Name(), "desktop.ini") {
 			continue

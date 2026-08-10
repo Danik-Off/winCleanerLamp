@@ -78,7 +78,7 @@ func GatherSysInfo() []SysInfoEntry {
 // Для файлов — мгновенный os.Lstat.
 // Для каталогов — dirSize с таймаутом 3 секунды.
 // Возвращает (size, exists). size=-1 если таймаут или ошибка доступа.
-func pathSizeFast(p string, isDir bool) (int64, bool) {
+func pathSizeFast(p string, _ bool) (int64, bool) {
 	info, err := os.Lstat(p)
 	if err != nil {
 		return 0, false

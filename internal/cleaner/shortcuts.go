@@ -165,7 +165,7 @@ $results | ConvertTo-Json -Compress
 		probes = []shortcutProbe{one}
 	}
 
-	var broken []BrokenShortcut
+	broken := make([]BrokenShortcut, 0, len(probes))
 	for _, p := range probes {
 		if p.Exists {
 			continue

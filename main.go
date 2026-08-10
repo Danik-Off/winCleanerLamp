@@ -1243,7 +1243,7 @@ func printTable(rows []cleaner.Report, totalBytes int64, totalFiles int, showEmp
 }
 
 // parallelScan прогоняет сканирование целей параллельно с прогресс-баром.
-func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int, junkCfg *cleaner.JunkConfig, record bool, junkPath string, quiet bool) []cleaner.Report {
+func parallelScan(targets []cleaner.Target, opts cleaner.Options, workers int, junkCfg *cleaner.JunkConfig, record bool, _ string, quiet bool) []cleaner.Report {
 	if workers < 1 {
 		workers = 1
 	}

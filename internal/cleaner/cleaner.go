@@ -478,7 +478,7 @@ func listDrives() []string {
 func dirSize(root string) (int64, int) {
 	var total int64
 	var n int
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(root, func(_ string, d fs.DirEntry, err error) error {
 		if err != nil || d == nil {
 			return nil
 		}
