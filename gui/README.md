@@ -1,3 +1,5 @@
+<img src="../assets/logo.svg" width="48" height="48" alt="winCleanerLamp logo">
+
 # WinCleanerLamp GUI
 
 Исходники графической оболочки (Electron + React + TypeScript + MUI).

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.svg" width="96" height="96" alt="winCleanerLamp logo">
+
 # winCleanerLamp
 
 **Очистка мусора на Windows: быстрый CLI на Go + удобный GUI на Electron**

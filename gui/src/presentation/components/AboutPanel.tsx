@@ -21,13 +21,13 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  CleaningServices as Icon,
   Info as InfoIcon,
   Code as CodeIcon,
   Security as SecurityIcon,
   SystemUpdateAlt as UpdateIcon,
   CheckCircle as CheckIcon,
 } from '@mui/icons-material';
+import { Logo } from './Logo';
 
 type UpdateState = 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'downloaded' | 'error';
 
@@ -132,17 +132,8 @@ export function AboutPanel(): JSX.Element {
 
       {/* Header */}
       <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Box sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 80,
-          height: 80,
-          borderRadius: 3,
-          background: `linear-gradient(135deg, #6366f1, #8b5cf6)`,
-          mb: 2,
-        }}>
-          <Icon sx={{ color: 'white', fontSize: 40 }} />
+        <Box sx={{ display: 'inline-flex', mb: 2 }}>
+          <Logo size={80} />
         </Box>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
           WinCleaner Lamp

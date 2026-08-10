@@ -15,7 +15,6 @@ import {
   Tooltip,
 } from '@mui/material';
 import {
-  CleaningServices as CleaningServicesIcon,
   Speed as SpeedIcon,
   Storage as StorageIcon,
   FolderDelete as FolderDeleteIcon,
@@ -44,6 +43,7 @@ import { EmptyFoldersPanel } from './presentation/components/EmptyFoldersPanel';
 import { AutostartPanel } from './presentation/components/AutostartPanel';
 import { HeroPanel } from './presentation/components/HeroPanel';
 import { AboutPanel } from './presentation/components/AboutPanel';
+import { Logo } from './presentation/components/Logo';
 
 const TITLEBAR_H = 36;
 const SIDEBAR_W = 220;
@@ -123,8 +123,6 @@ function App(): JSX.Element {
     { id: 8, label: 'О приложении', icon: <InfoIcon sx={{ fontSize: 18 }} />, accent: '#10b981' },
   ];
 
-  const activeAccent = navItems[activeTab]?.accent || '#3b82f6';
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -146,20 +144,7 @@ function App(): JSX.Element {
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, '-webkit-app-region': 'no-drag' as any }}>
-            <Box
-              sx={{
-                width: 22,
-                height: 22,
-                borderRadius: 1,
-                background: `linear-gradient(135deg, ${activeAccent}, ${activeAccent}88)`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background 0.3s',
-              }}
-            >
-              <CleaningServicesIcon sx={{ color: 'white', fontSize: 13 }} />
-            </Box>
+            <Logo size={22} />
             <Typography
               variant="caption"
               sx={{
