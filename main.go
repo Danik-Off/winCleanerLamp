@@ -40,6 +40,7 @@ func main() {
 		largeFilesMinMB  = flag.Int64("large-files-min-mb", 100, "минимальный размер файла в МБ для --large-files")
 		largeFilesTop    = flag.Int("large-files-top", 200, "сколько самых крупных файлов вернуть для --large-files")
 		uninstallLaunch  = flag.String("uninstall-launch", "", "запустить официальный деинсталлятор указанной программы (по displayName из реестра Uninstall)")
+		appsList         = flag.Bool("apps-list", false, "показать список установленных программ (реестр Uninstall)")
 		showEmpty        = flag.Bool("show-empty", false, "показывать в таблице категории с нулевым размером")
 		parallelN        = flag.Int("parallel", 8, "число параллельных сканеров (1 = последовательно)")
 		showVer          = flag.Bool("version", false, "показать версию")
@@ -145,6 +146,31 @@ func main() {
 			printJSON(result)
 		} else {
 			printShortcutScanResult(result)
+		}
+		return
+	}
+
+	// Список установленных программ (реестр Uninstall) — для вкладки "Программы"
+	// в GUI: каждая запись отмечена InOrphanDB, если для неё уже есть известные
+	// правила поиска остатков в orphaned_apps.json (используется, чтобы после
+	// деинсталляции сразу предложить почистить её мусор через --orphan-clean).
+	if *appsList {
+		orphanCfg, _ := cleaner.LoadOrphanConfig(*orphanConfig)
+		programs := cleaner.GetInstalledPrograms(orphanCfg)
+		if *jsonFlag {
+			printJSON(programs)
+		} else {
+			for i, p := range programs {
+				fmt.Printf("%d. %s", i+1, p.DisplayName)
+				if p.Publisher != "" {
+					fmt.Printf(" (%s)", p.Publisher)
+				}
+				if p.InOrphanDB {
+					fmt.Print("  [есть база остатков]")
+				}
+				fmt.Println()
+			}
+			fmt.Printf("\nВсего: %d программ.\n", len(programs))
 		}
 		return
 	}
@@ -604,7 +630,8 @@ func usage() {
   Win Cleaner Lamp --orphan-clean "Имя"  (пути с пользовательскими данными пропускаются;
                                           --orphan-include-user-data — включить и их)
 
-  # Деинсталляция программы (запускает официальный деинсталлятор)
+  # Список установленных программ и деинсталляция (запускает официальный деинсталлятор)
+  Win Cleaner Lamp --apps-list                 список установленных программ
   Win Cleaner Lamp --uninstall-launch "Имя программы"
 
   # Битые ярлыки и снимок для анализа

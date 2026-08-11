@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import {
   Speed as SpeedIcon,
+  Apps as AppsTabIcon,
   Storage as StorageIcon,
   FolderDelete as FolderDeleteIcon,
   ContentCopy as DupIcon,
@@ -35,6 +36,7 @@ import {
 
 // Feature Components
 import { CleanupPanel } from './presentation/components/CleanupPanel';
+import { AppsPanel } from './presentation/components/AppsPanel';
 import { SystemInfoPanel } from './presentation/components/SystemInfoPanel';
 import { LeftoversPanel } from './presentation/components/LeftoversPanel';
 import { DuplicatesPanel } from './presentation/components/DuplicatesPanel';
@@ -114,13 +116,14 @@ function App(): JSX.Element {
   const navItems = [
     { id: 0, label: 'Главная', icon: <RocketIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
     { id: 1, label: 'Очистка', icon: <SpeedIcon sx={{ fontSize: 18 }} />, accent: '#3b82f6' },
-    { id: 2, label: 'Система', icon: <StorageIcon sx={{ fontSize: 18 }} />, accent: '#06b6d4' },
-    { id: 3, label: 'Остатки', icon: <FolderDeleteIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
-    { id: 4, label: 'Дубликаты', icon: <DupIcon sx={{ fontSize: 18 }} />, accent: '#f59e0b' },
-    { id: 5, label: 'Большие файлы', icon: <LargeFilesIcon sx={{ fontSize: 18 }} />, accent: '#0ea5e9' },
-    { id: 6, label: 'Пустые папки', icon: <EmptyFolderIcon sx={{ fontSize: 18 }} />, accent: '#ef4444' },
-    { id: 7, label: 'Автозагрузка', icon: <AutostartIcon sx={{ fontSize: 18 }} />, accent: '#a855f7' },
-    { id: 8, label: 'О приложении', icon: <InfoIcon sx={{ fontSize: 18 }} />, accent: '#10b981' },
+    { id: 2, label: 'Программы', icon: <AppsTabIcon sx={{ fontSize: 18 }} />, accent: '#2563eb' },
+    { id: 3, label: 'Система', icon: <StorageIcon sx={{ fontSize: 18 }} />, accent: '#06b6d4' },
+    { id: 4, label: 'Остатки', icon: <FolderDeleteIcon sx={{ fontSize: 18 }} />, accent: '#8b5cf6' },
+    { id: 5, label: 'Дубликаты', icon: <DupIcon sx={{ fontSize: 18 }} />, accent: '#f59e0b' },
+    { id: 6, label: 'Большие файлы', icon: <LargeFilesIcon sx={{ fontSize: 18 }} />, accent: '#0ea5e9' },
+    { id: 7, label: 'Пустые папки', icon: <EmptyFolderIcon sx={{ fontSize: 18 }} />, accent: '#ef4444' },
+    { id: 8, label: 'Автозагрузка', icon: <AutostartIcon sx={{ fontSize: 18 }} />, accent: '#a855f7' },
+    { id: 9, label: 'О приложении', icon: <InfoIcon sx={{ fontSize: 18 }} />, accent: '#10b981' },
   ];
 
   return (
@@ -334,24 +337,27 @@ function App(): JSX.Element {
               <CleanupPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={2}>
-              <SystemInfoPanel onError={setError} />
+              <AppsPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={3}>
-              <LeftoversPanel onError={setError} />
+              <SystemInfoPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={4}>
-              <DuplicatesPanel onError={setError} />
+              <LeftoversPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={5}>
-              <LargeFilesPanel onError={setError} />
+              <DuplicatesPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={6}>
-              <EmptyFoldersPanel onError={setError} />
+              <LargeFilesPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={7}>
-              <AutostartPanel onError={setError} />
+              <EmptyFoldersPanel onError={setError} />
             </TabPanel>
             <TabPanel value={activeTab} index={8}>
+              <AutostartPanel onError={setError} />
+            </TabPanel>
+            <TabPanel value={activeTab} index={9}>
               <AboutPanel />
             </TabPanel>
           </Box>

@@ -488,6 +488,40 @@ ipcMain.handle('launch-uninstaller', async (_event: IpcMainInvokeEvent, displayN
   }
 });
 
+// Installed Apps IPC Handler — вкладка "Программы": список из реестра
+// Uninstall, каждая запись отмечена inOrphanDB (есть ли для неё известная
+// база остатков в orphaned_apps.json) — после успешной деинсталляции GUI
+// сам решает, предлагать ли почистить мусор программы.
+interface JsonInstalledProgram {
+  displayName: string;
+  publisher?: string;
+  installLocation?: string;
+  inOrphanDB: boolean;
+  uninstallString?: string;
+}
+
+ipcMain.handle('get-installed-apps', async () => {
+  const { stdout, stderr, code } = await executeCli(['--apps-list', '--json']);
+  if (code !== 0 || !stdout.trim()) {
+    return { apps: [], error: stderr || 'CLI не вернул результат' };
+  }
+  try {
+    const parsed: JsonInstalledProgram[] = JSON.parse(stdout);
+    return {
+      apps: parsed.map((p) => ({
+        displayName: p.displayName,
+        publisher: p.publisher || '',
+        installLocation: p.installLocation || '',
+        inOrphanDB: !!p.inOrphanDB,
+        canUninstall: !!p.uninstallString,
+      })),
+      error: '',
+    };
+  } catch {
+    return { apps: [], error: stdout || stderr };
+  }
+});
+
 ipcMain.handle('export-audit', async () => {
   if (!mainWindow) {
     return { success: false, error: 'Окно приложения недоступно' };

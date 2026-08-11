@@ -119,6 +119,18 @@ interface LargeFilesResultDto {
   error?: string;
 }
 
+interface InstalledAppDto {
+  displayName: string;
+  publisher: string;
+  installLocation: string;
+  inOrphanDB: boolean;
+  canUninstall: boolean;
+}
+interface InstalledAppsResultDto {
+  apps: InstalledAppDto[];
+  error?: string;
+}
+
 interface AuditExportResultDto {
   success: boolean;
   canceled?: boolean;
@@ -162,6 +174,7 @@ interface ElectronAPI {
   getBrokenShortcuts: () => Promise<ShortcutsResultDto>;
   getLargeFiles: (options?: { roots?: string; minSizeMB?: number }) => Promise<LargeFilesResultDto>;
   launchUninstaller: (displayName: string) => Promise<{ success: boolean; error?: string }>;
+  getInstalledApps: () => Promise<InstalledAppsResultDto>;
   exportAudit: () => Promise<AuditExportResultDto>;
   exportJson: (options: { suggestedName?: string; data: unknown }) => Promise<ExportJsonResultDto>;
   checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
