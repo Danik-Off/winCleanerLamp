@@ -17,26 +17,7 @@
         "%APPDATA%\\.minecraft\\libraries",
         "%APPDATA%\\.minecraft\\logs"
       ],
-      "notes": "Папка .minecraft в Roaming — основное хранилище игры. Остатки после удаления лаунчера."
-    },
-     {
-      "displayName": "Minecraft (Java Edition)",
-      "publisher": "Mojang Studios",
-      "installPaths": [
-        "%APPDATA%\\.minecraft"
-      ],
-      "additionalPaths": [
-        "%APPDATA%\\.minecraft\\saves",
-        "%APPDATA%\\.minecraft\\resourcepacks",
-        "%APPDATA%\\.minecraft\\versions"
-      ],
-      "registryKeys": [],
-      "cachePaths": [
-        "%APPDATA%\\.minecraft\\assets",
-        "%APPDATA%\\.minecraft\\libraries",
-        "%APPDATA%\\.minecraft\\logs"
-      ],
-      "notes": "Основная папка .minecraft в Roaming (46.31 GB)."
+      "notes": "Папка .minecraft в Roaming — основное хранилище игры (частые случаи — 40+ GB). Остатки после удаления лаунчера. saves/resourcepacks — пользовательские данные, проверить перед удалением."
     },
     {
       "displayName": "uv (Python package installer)",
@@ -76,15 +57,18 @@
       ],
       "additionalPaths": [
         "%APPDATA%\\kingsoft",
-        "%PROGRAMDATA%\\WPS"
+        "%PROGRAMDATA%\\WPS",
+        "%APPDATA%\\Kingsoft\\office6\\backup"
       ],
       "registryKeys": [
-        "HKCU\\Software\\Kingsoft\\WPS Office"
+        "HKCU\\Software\\Kingsoft\\WPS Office",
+        "HKLM\\SOFTWARE\\Kingsoft\\WPS Office"
       ],
       "cachePaths": [
-        "%LOCALAPPDATA%\\Kingsoft\\WPS Office\\cache"
+        "%LOCALAPPDATA%\\Kingsoft\\WPS Office\\cache",
+        "%LOCALAPPDATA%\\Kingsoft\\WPS Office"
       ],
-      "notes": "Остатки WPS Office (462.87 MB ProgramData/WPS, 102.78 MB Roaming/kingsoft)."
+      "notes": "Остатки WPS Office (462.87 MB ProgramData/WPS, 102.78 MB Roaming/kingsoft). office6/backup — резервные копии документов, проверить перед удалением."
     },
     {
       "displayName": "Go",
@@ -597,10 +581,8 @@
         "HKLM\\SOFTWARE\\WinRAR",
         "HKCU\\Software\\WinRAR"
       ],
-      "cachePaths": [
-        "%TEMP%"
-      ],
-      "notes": "WinRAR – временные файлы распаковки."
+      "cachePaths": [],
+      "notes": "WinRAR – временные файлы распаковки создаются в %TEMP% как папки Rar$EXa*/Rar$DIa* со случайным суффиксом. Здесь не указаны как cachePaths: движок сопоставления путей в этом проекте раскрывает только %ENV% переменные и не поддерживает маски (*), а буквальный '%TEMP%' целиком слишком опасен как \"кэш\" — затронет весь временный каталог, а не только файлы WinRAR."
     },
     {
       "displayName": "Notepad++",
@@ -1009,26 +991,6 @@
         "%TEMP%\\LibreOffice"
       ],
       "notes": "LibreOffice – резервные копии документов и временные файлы."
-    },
-    {
-      "displayName": "WPS Office",
-      "publisher": "Kingsoft Corp.",
-      "installPaths": [
-        "%PROGRAMFILES%\\Kingsoft\\WPS Office"
-      ],
-      "additionalPaths": [
-        "%APPDATA%\\Kingsoft\\office6\\backup",
-        "%LOCALAPPDATA%\\Kingsoft\\WPS Office"
-      ],
-      "registryKeys": [
-        "HKLM\\SOFTWARE\\Kingsoft\\WPS Office",
-        "HKCU\\Software\\Kingsoft\\WPS Office"
-      ],
-      "cachePaths": [
-        "%LOCALAPPDATA%\\Kingsoft\\WPS Office\\cache",
-        "%APPDATA%\\Kingsoft\\office6\\backup"
-      ],
-      "notes": "WPS Office – резервные копии и кэш."
     },
     {
       "displayName": "Foxit PDF Reader",
@@ -1563,6 +1525,306 @@
       "registryKeys": [],
       "cachePaths": [],
       "notes": "Настройки DS4Windows (эмуляция геймпада Xbox для DualShock 4). Издатель в реестре указан как \"Boundless Dynamics, LLC\"."
+    },
+    {
+      "displayName": "CurseForge",
+      "publisher": "Overwolf",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Programs\\curseforge"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\CurseForge",
+        "%LOCALAPPDATA%\\CurseForge"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Overwolf\\CurseForge"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\CurseForge\\Cache",
+        "%LOCALAPPDATA%\\CurseForge\\Cache"
+      ],
+      "userDataPaths": [
+        "%APPDATA%\\CurseForge\\minecraft\\Instances"
+      ],
+      "notes": "Лаунчер модов Minecraft на движке Overwolf. Instances — установленные модпаки/сборки (пользовательские данные), кэш загрузок может занимать много места."
+    },
+    {
+      "displayName": "Prism Launcher",
+      "publisher": "Prism Launcher Team",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Programs\\PrismLauncher"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\PrismLauncher"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\PrismLauncher\\libraries",
+        "%APPDATA%\\PrismLauncher\\meta"
+      ],
+      "userDataPaths": [
+        "%APPDATA%\\PrismLauncher\\instances"
+      ],
+      "notes": "Альтернативный лаунчер Minecraft (форк MultiMC/PolyMC). instances — установленные сборки/сохранения."
+    },
+    {
+      "displayName": "TLauncher",
+      "publisher": "TLauncher Team",
+      "installPaths": [
+        "%APPDATA%\\.tlauncher"
+      ],
+      "additionalPaths": [],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\.tlauncher\\assets",
+        "%APPDATA%\\.tlauncher\\libraries"
+      ],
+      "userDataPaths": [
+        "%APPDATA%\\.tlauncher\\minecraft\\saves"
+      ],
+      "notes": "Популярный неофициальный лаунчер Minecraft."
+    },
+    {
+      "displayName": "GitHub Desktop",
+      "publisher": "GitHub, Inc.",
+      "installPaths": [
+        "%LOCALAPPDATA%\\GitHubDesktop"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\GitHub Desktop"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\GitHub Desktop"
+      ],
+      "cachePaths": [
+        "%APPDATA%\\GitHub Desktop\\Cache"
+      ],
+      "notes": "GUI-клиент Git от GitHub — самообновляется в LocalAppData, старые версии-папки (app-*) можно чистить."
+    },
+    {
+      "displayName": "Godot Engine",
+      "publisher": "Godot Engine contributors",
+      "installPaths": [],
+      "additionalPaths": [
+        "%APPDATA%\\Godot"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\Godot\\.cache",
+        "%LOCALAPPDATA%\\Godot\\export_templates"
+      ],
+      "userDataPaths": [
+        "%APPDATA%\\Godot\\app_userdata"
+      ],
+      "notes": "Игровой движок Godot (часто portable, без записи в Uninstall). export_templates — шаблоны экспорта, могут занимать несколько ГБ на версию и переустанавливаются из редактора."
+    },
+    {
+      "displayName": "DBeaver",
+      "publisher": "DBeaver Corp",
+      "installPaths": [
+        "%PROGRAMFILES%\\DBeaver"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\DBeaverData"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\DBeaverData\\workspace6\\.metadata\\.plugins",
+        "%LOCALAPPDATA%\\DBeaverData\\drivers\\maven\\.m2\\repository"
+      ],
+      "notes": "Универсальный SQL-клиент. Кэш плагинов Eclipse-платформы и скачанные драйверы БД (Maven) могут занимать сотни МБ."
+    },
+    {
+      "displayName": "MySQL Server",
+      "publisher": "Oracle Corporation",
+      "installPaths": [
+        "%PROGRAMFILES%\\MySQL"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\MySQL"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\MySQL AB",
+        "HKLM\\SOFTWARE\\Oracle\\MySQL Server 8.0"
+      ],
+      "cachePaths": [],
+      "userDataPaths": [
+        "%PROGRAMDATA%\\MySQL\\MySQL Server 8.0\\Data"
+      ],
+      "notes": "СУБД MySQL. ВНИМАНИЕ: \\Data содержит фактические базы данных пользователя — не удалять автоматически."
+    },
+    {
+      "displayName": "Rustup / Cargo (Rust toolchain)",
+      "publisher": "Rust project developers",
+      "installPaths": [
+        "%USERPROFILE%\\.rustup"
+      ],
+      "additionalPaths": [
+        "%USERPROFILE%\\.cargo"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%USERPROFILE%\\.cargo\\registry\\cache",
+        "%USERPROFILE%\\.cargo\\registry\\src",
+        "%USERPROFILE%\\.rustup\\downloads",
+        "%USERPROFILE%\\.rustup\\tmp"
+      ],
+      "notes": "Тулчейн Rust, устанавливаемый через rustup. Кэш реестра crates.io и загруженные toolchains пересоздаются автоматически при следующей сборке."
+    },
+    {
+      "displayName": "Riot Client",
+      "publisher": "Riot Games, Inc.",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Riot Games"
+      ],
+      "additionalPaths": [],
+      "registryKeys": [
+        "HKCU\\Software\\Riot Games"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\Riot Games\\Riot Client\\Data",
+        "%LOCALAPPDATA%\\Riot Games\\Riot Client\\Logs"
+      ],
+      "notes": "Общий клиент игр Riot Games (League of Legends, Valorant и т.п.)."
+    },
+    {
+      "displayName": "ONLYOFFICE",
+      "publisher": "Ascensio System SIA",
+      "installPaths": [
+        "%PROGRAMFILES%\\ONLYOFFICE"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\ONLYOFFICE",
+        "%LOCALAPPDATA%\\ONLYOFFICE"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\ONLYOFFICE"
+      ],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\ONLYOFFICE\\DesktopEditors\\cache"
+      ],
+      "notes": "Офисный пакет ONLYOFFICE — кэш редактора и данные автосохранения."
+    },
+    {
+      "displayName": "r2modman",
+      "publisher": "Ebkr",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Programs\\r2modman"
+      ],
+      "additionalPaths": [],
+      "registryKeys": [],
+      "cachePaths": [
+        "%APPDATA%\\r2modmanPlus-local\\*\\cache"
+      ],
+      "userDataPaths": [
+        "%APPDATA%\\r2modmanPlus-local"
+      ],
+      "notes": "Менеджер модов Thunderstore для игр на Unity/BepInEx. Профили и установленные моды — пользовательские данные."
+    },
+    {
+      "displayName": "OpenVPN",
+      "publisher": "OpenVPN Inc.",
+      "installPaths": [
+        "%PROGRAMFILES%\\OpenVPN"
+      ],
+      "additionalPaths": [
+        "%PROGRAMDATA%\\OpenVPN"
+      ],
+      "registryKeys": [
+        "HKLM\\SOFTWARE\\OpenVPN"
+      ],
+      "cachePaths": [
+        "%PROGRAMDATA%\\OpenVPN\\log"
+      ],
+      "notes": "OpenVPN GUI/клиент — конфигурации и логи подключений."
+    },
+    {
+      "displayName": "Transmission",
+      "publisher": "The Transmission Project",
+      "installPaths": [
+        "%PROGRAMFILES%\\Transmission"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Transmission"
+      ],
+      "registryKeys": [
+        "HKCU\\Software\\Transmission"
+      ],
+      "cachePaths": [],
+      "notes": "Торрент-клиент Transmission — настройки и список раздач."
+    },
+    {
+      "displayName": "Hiddify",
+      "publisher": "Hiddify",
+      "installPaths": [
+        "%LOCALAPPDATA%\\Hiddify"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\Hiddify"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "VPN/прокси-клиент Hiddify — конфигурации подключений."
+    },
+    {
+      "displayName": "kdenlive",
+      "publisher": "KDE",
+      "installPaths": [
+        "%PROGRAMFILES%\\kdenlive"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\kdenlive"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%LOCALAPPDATA%\\cache\\kdenlive"
+      ],
+      "notes": "Видеоредактор kdenlive — кэш превью и рендера может занимать много места на больших проектах."
+    },
+    {
+      "displayName": "XAMPP",
+      "publisher": "Apache Friends",
+      "installPaths": [
+        "C:\\xampp"
+      ],
+      "additionalPaths": [],
+      "registryKeys": [],
+      "cachePaths": [],
+      "userDataPaths": [
+        "C:\\xampp\\mysql\\data",
+        "C:\\xampp\\htdocs"
+      ],
+      "notes": "Локальный веб-сервер (Apache/MySQL/PHP). ВНИМАНИЕ: htdocs и mysql\\data — сайты и базы данных пользователя, не удалять автоматически."
+    },
+    {
+      "displayName": "PascalABC.NET",
+      "publisher": "PascalABC.NET Team",
+      "installPaths": [
+        "%LOCALAPPDATA%\\PascalABC.NET"
+      ],
+      "additionalPaths": [
+        "%APPDATA%\\PascalABC.NET"
+      ],
+      "registryKeys": [],
+      "cachePaths": [],
+      "notes": "Учебная среда программирования PascalABC.NET."
+    },
+    {
+      "displayName": "Claude Code",
+      "publisher": "Anthropic",
+      "installPaths": [],
+      "additionalPaths": [
+        "%USERPROFILE%\\.claude"
+      ],
+      "registryKeys": [],
+      "cachePaths": [
+        "%USERPROFILE%\\.claude\\shell-snapshots"
+      ],
+      "userDataPaths": [
+        "%USERPROFILE%\\.claude\\projects",
+        "%USERPROFILE%\\.claude\\memory"
+      ],
+      "notes": "CLI-агент Claude Code. projects/memory — история сессий и память между разговорами, это не мусор."
     }
   ]
 }
