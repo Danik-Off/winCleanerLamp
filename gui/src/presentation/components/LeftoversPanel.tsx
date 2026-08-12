@@ -43,7 +43,7 @@ import {
   LinkOff as ShortcutsIcon,
   BookmarkAdd as TrackIcon,
   BookmarkAdded as TrackedIcon,
-  FileDownload as ExportIcon,
+  IosShare as ShareIcon,
   RemoveCircleOutline as UninstallIcon,
 } from '@mui/icons-material';
 import { useLeftovers } from '../hooks';
@@ -283,14 +283,19 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
 
   const canExport = !!result || shortcutsScanned !== null;
 
+  // "Поделиться информацией" — выгружает не только неизвестные/остаточные
+  // папки, но и полный список установленных программ (result.installedPrograms),
+  // чтобы можно было отправить разработчику один файл с полной картиной для
+  // дополнения базы программ/категорий очистки, а не только список "мусора".
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
       const res = await window.electronAPI.exportJson({
-        suggestedName: `wincleanerlamp-leftovers-${new Date().toISOString().slice(0, 10)}.json`,
+        suggestedName: `wincleanerlamp-info-${new Date().toISOString().slice(0, 10)}.json`,
         data: {
           generatedAt: new Date().toISOString(),
           leftovers: result,
+          installedPrograms: result?.installedPrograms ?? [],
           brokenShortcuts: shortcutsScanned !== null ? { scanned: shortcutsScanned, broken: shortcutsBroken } : undefined,
         },
       });
@@ -373,9 +378,10 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
   return (
     <Box>
       {/* Панель управления — контекстная кнопка сканирования: остатки для вкладок 0-4,
-          отдельный поиск для вкладки "Ярлыки" (другой источник данных). Плюс экспорт
-          текущих находок в JSON — чтобы можно было проанализировать список и дополнить
-          базу программ/категорий очистки офлайн. */}
+          отдельный поиск для вкладки "Ярлыки" (другой источник данных). Плюс "Поделиться
+          информацией для разработчика" — выгружает в JSON не только найденные остатки/ярлыки,
+          но и полный список установленных программ, чтобы можно было проанализировать
+          и дополнить базу программ/категорий очистки офлайн. */}
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
         {activeTab === 5 ? (
           <>
@@ -411,17 +417,17 @@ export function LeftoversPanel({ onError }: LeftoversPanelProps): JSX.Element {
             )}
           </>
         )}
-        <Tooltip title="Сохранить найденные остатки и ярлыки в JSON — для анализа и дополнения списка программ/категорий очистки">
+        <Tooltip title="Сохранить в JSON остатки, ярлыки и полный список установленных программ — чтобы поделиться этим файлом для анализа и дополнения базы программ/категорий очистки">
           <span>
             <Button
               variant="outlined"
               size="small"
               onClick={handleExport}
               disabled={!canExport || exporting}
-              startIcon={exporting ? <CircularProgress size={14} /> : <ExportIcon sx={{ fontSize: 16 }} />}
+              startIcon={exporting ? <CircularProgress size={14} /> : <ShareIcon sx={{ fontSize: 16 }} />}
               sx={{ borderRadius: 2, fontWeight: 600, ml: 'auto' }}
             >
-              Экспорт
+              Поделиться информацией для разработчика
             </Button>
           </span>
         </Tooltip>

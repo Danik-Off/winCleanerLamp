@@ -3,7 +3,7 @@
  * Implements ILeftoverService using Electron IPC
  */
 import type { ILeftoverService } from '@application/ports/ILeftoverService';
-import type { LeftoverType } from '@domain/index';
+import type { LeftoverType, InstalledProgramInfo } from '@domain/index';
 import { LeftoverSummary, LeftoverItem } from '@domain/index';
 
 interface JsonLeftoverCandidate {
@@ -18,9 +18,16 @@ interface JsonLeftoverCandidate {
   likelyUserData: boolean;
 }
 
+interface JsonInstalledProgram {
+  displayName: string;
+  publisher?: string;
+  installLocation?: string;
+  inOrphanDB: boolean;
+}
+
 interface JsonLeftoversResult {
   candidates: JsonLeftoverCandidate[] | null;
-  installed: unknown[] | null;
+  installed: JsonInstalledProgram[] | null;
   error?: string;
 }
 
@@ -44,6 +51,13 @@ export class ElectronLeftoverService implements ILeftoverService {
       c.likelyUserData
     ));
 
-    return new LeftoverSummary(items);
+    const installedPrograms: InstalledProgramInfo[] = (parsed.installed || []).map((p) => ({
+      displayName: p.displayName,
+      publisher: p.publisher,
+      installLocation: p.installLocation,
+      inOrphanDB: p.inOrphanDB,
+    }));
+
+    return new LeftoverSummary(items, installedPrograms);
   }
 }

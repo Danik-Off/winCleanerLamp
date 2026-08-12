@@ -83,11 +83,24 @@ export class LeftoverItem {
 }
 
 /**
+ * Установленная в системе программа (из реестра Uninstall) — используется
+ * при экспорте наряду с остатками, чтобы делиться полной картиной,
+ * а не только "мусором" от удалённого софта.
+ */
+export interface InstalledProgramInfo {
+  displayName: string;
+  publisher?: string;
+  installLocation?: string;
+  inOrphanDB: boolean;
+}
+
+/**
  * Domain Entity: LeftoverSummary
  */
 export class LeftoverSummary {
   constructor(
-    public readonly items: ReadonlyArray<LeftoverItem>
+    public readonly items: ReadonlyArray<LeftoverItem>,
+    public readonly installedPrograms: ReadonlyArray<InstalledProgramInfo> = []
   ) {}
 
   get totalBytes(): number {
