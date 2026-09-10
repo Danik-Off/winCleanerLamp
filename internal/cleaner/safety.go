@@ -6,37 +6,20 @@ import (
 	"strings"
 )
 
-// forbiddenPathPrefixes — каталоги, удаление которых (включая любые вложенные
-// пути) всегда запрещено. Раньше этот список дублировался в cleaner.go,
-// emptydirs.go и gui/electron/main.ts с разной (и местами более слабой)
-// логикой сравнения — теперь это единственный источник истины.
+// Единая проверка безопасности пути перед удалением — общая для всех ядер.
+// Списки защищённых каталогов и правила «корня» у каждой ОС свои и живут в
+// safety_windows.go / safety_linux.go / safety_darwin.go:
 //
-// Внутри C:\Windows намеренно запрещены только заведомо опасные подкаталоги
-// (System32, WinSxS и т.п.), а не весь C:\Windows целиком — часть встроенных
-// категорий (prefetch, windows-temp, cbs-logs, panther, windows-logs и др.)
-// легитимно чистят другие подпапки C:\Windows.
-var forbiddenPathPrefixes = []string{
-	`c:\windows\system32`,
-	`c:\windows\syswow64`,
-	`c:\windows\winsxs`,
-	`c:\windows\installer`,
-	`c:\windows\servicing`,
-	`c:\windows\boot`,
-	`c:\program files`,
-	`c:\program files (x86)`,
-	`c:\programdata\microsoft\windows\start menu`,
-	`c:\users\default`,
-	`c:\users\public`,
-	`c:\users\all users`,
-	`c:\perflogs`,
-}
-
-// pathSafetyExceptions — точечные, явно оправданные исключения из
-// forbiddenPathPrefixes для отдельных файлов внутри защищённых каталогов,
-// которые сама программа целенаправленно чистит (см. targets.go: font-cache).
-var pathSafetyExceptions = map[string]bool{
-	`c:\windows\system32\fntcache.dat`: true,
-}
+//	forbiddenPathPrefixes — каталоги (с вложенными путями), удаление которых
+//	                        всегда запрещено, в нижнем регистре;
+//	pathSafetyExceptions  — точечные исключения-файлы внутри них;
+//	platformPathSafety    — проверки, специфичные для ОС (корень диска и UNC
+//	                        в Windows, "/" и системные точки монтирования
+//	                        в Linux/macOS).
+//
+// Раньше этот список дублировался в cleaner.go, emptydirs.go и
+// gui/electron/main.ts с разной (и местами более слабой) логикой сравнения —
+// теперь это единственный источник истины.
 
 // IsPathSafeToDelete — единая проверка безопасности пути перед удалением.
 // Используется всеми операциями удаления (обычные категории, --delete-path,
@@ -76,28 +59,23 @@ func IsPathSafeToDelete(p string) (bool, string) {
 func checkStaticPathSafety(abs string) (bool, string) {
 	low := strings.ToLower(abs)
 
-	// UNC-пути (\\server\share) и расширенные (\\?\...) — вне зоны ответственности.
-	if strings.HasPrefix(low, `\\`) {
-		return false, "UNC/расширенные пути не поддерживаются"
-	}
-
-	// Корень диска ("C:\", "D:\").
-	if len(abs) <= 3 {
-		return false, "нельзя удалить корень диска"
+	if ok, reason := platformPathSafety(abs, low); !ok {
+		return false, reason
 	}
 
 	if pathSafetyExceptions[low] {
 		return true, ""
 	}
 
+	sep := string(filepath.Separator)
 	for _, f := range forbiddenPathPrefixes {
-		if low == f || strings.HasPrefix(low, f+`\`) {
+		if low == f || strings.HasPrefix(low, f+sep) {
 			return false, "путь входит в защищённый системный каталог: " + f
 		}
 	}
 
 	// Домашняя папка пользователя целиком (не вложенные пути в ней — они
-	// как раз и есть легитимные цели очистки, например AppData).
+	// как раз и есть легитимные цели очистки, например AppData / ~/.cache).
 	if home, err := os.UserHomeDir(); err == nil {
 		if strings.EqualFold(abs, filepath.Clean(home)) {
 			return false, "нельзя удалить домашнюю папку пользователя целиком"

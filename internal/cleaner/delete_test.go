@@ -7,7 +7,7 @@ import (
 )
 
 func TestDeleteFile_RejectsUnsafePath(t *testing.T) {
-	r := DeleteFile(`C:\Windows\System32\drivers\etc\hosts`, true)
+	r := DeleteFile(unsafeTestFile, true)
 	if r.Success {
 		t.Fatal("DeleteFile на защищённом пути должен провалиться")
 	}
@@ -52,7 +52,7 @@ func TestDeleteFile_PermanentRemovesRealFile(t *testing.T) {
 }
 
 func TestDeleteDir_RejectsUnsafePath(t *testing.T) {
-	r := DeleteDir(`C:\Program Files`, true)
+	r := DeleteDir(unsafeTestDir, true)
 	if r.Success {
 		t.Fatal("DeleteDir на защищённом пути должен провалиться")
 	}

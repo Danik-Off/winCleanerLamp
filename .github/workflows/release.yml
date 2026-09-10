@@ -87,7 +87,7 @@ jobs:
         run: npx tsc -p tsconfig.electron.json --noEmit
 
       - name: CLI — сборка Go
-        run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
+        run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe ./wincli
 
       - name: GUI — сборка (tsc + Vite + Electron main)
         working-directory: gui

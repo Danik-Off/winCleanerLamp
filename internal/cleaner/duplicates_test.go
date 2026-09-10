@@ -88,18 +88,7 @@ func TestScanDuplicates_NoFalsePositivesForUniqueFiles(t *testing.T) {
 }
 
 func TestIsSystemDirRoot(t *testing.T) {
-	cases := map[string]bool{
-		`C:\Program Files`:           true,
-		`C:\Program Files\SubApp`:    true,
-		`C:\Program Files (x86)`:     true,
-		`C:\Windows`:                 true,
-		`C:\Windows\System32`:        true,
-		`C:\ProgramData`:             true,
-		`C:\ProgramData\SomeApp`:     true,
-		`C:\Users\Someone\Documents`: false,
-		`D:\Games`:                   false,
-	}
-	for path, want := range cases {
+	for path, want := range systemDirRootCases() {
 		got := isSystemDirRoot(path)
 		if got != want {
 			t.Errorf("isSystemDirRoot(%q) = %v, want %v", path, got, want)
@@ -109,12 +98,13 @@ func TestIsSystemDirRoot(t *testing.T) {
 
 func TestDuplicateGroupRiskFlag_ExecutableFlagged(t *testing.T) {
 	dir := t.TempDir()
+	names := riskyExtFileNames()
 	flag := duplicateGroupRiskFlag([]string{
-		filepath.Join(dir, "app.exe"),
-		filepath.Join(dir, "app_backup.exe"),
+		filepath.Join(dir, names[0]),
+		filepath.Join(dir, names[1]),
 	})
 	if flag == "" {
-		t.Error("исполняемые файлы должны получать RiskFlag")
+		t.Error("исполняемые и библиотечные файлы должны получать RiskFlag")
 	}
 }
 
@@ -130,19 +120,21 @@ func TestDuplicateGroupRiskFlag_OrdinaryFilesClean(t *testing.T) {
 }
 
 func TestDuplicateGroupRiskFlag_SystemDirFlagged(t *testing.T) {
-	flag := duplicateGroupRiskFlag([]string{
-		`C:\Program Files\Vendor\shared.dll`,
-		`C:\Program Files\Other\shared.dll`,
-	})
+	flag := duplicateGroupRiskFlag(systemDirFilesForRisk())
 	if flag == "" {
-		t.Error("файлы внутри Program Files должны получать RiskFlag независимо от расширения")
+		t.Error("файлы внутри системного каталога должны получать RiskFlag независимо от расширения")
 	}
 }
 
 func TestScanDuplicates_HashCacheReusesUnchangedFiles(t *testing.T) {
-	// Изолируем кэш от реального %USERPROFILE% пользователя.
+	// Изолируем кэш хэшей от каталога реального пользователя. Каталог
+	// состояния (appStateDir) на каждой ОС берётся из своих переменных,
+	// поэтому подменяются все три.
 	fakeHome := t.TempDir()
-	t.Setenv("USERPROFILE", fakeHome)
+	t.Setenv("USERPROFILE", fakeHome)  // Windows
+	t.Setenv("LOCALAPPDATA", fakeHome) // Windows
+	t.Setenv("HOME", fakeHome)         // Linux, macOS
+	t.Setenv("XDG_STATE_HOME", fakeHome)
 
 	dir := t.TempDir()
 	content := make([]byte, 5000)
@@ -206,13 +198,12 @@ func TestScanDuplicates_HashCacheReusesUnchangedFiles(t *testing.T) {
 }
 
 func TestSkipDir(t *testing.T) {
-	mustSkip := []string{"windows", "program files", "program files (x86)", "node_modules", "$recycle.bin", "windows.old"}
+	mustSkip, mustNotSkip := skipDirNamesCases()
 	for _, name := range mustSkip {
 		if !skipDir(name) {
 			t.Errorf("skipDir(%q) = false, want true", name)
 		}
 	}
-	mustNotSkip := []string{"documents", "photos", "my project"}
 	for _, name := range mustNotSkip {
 		if skipDir(name) {
 			t.Errorf("skipDir(%q) = true, want false", name)

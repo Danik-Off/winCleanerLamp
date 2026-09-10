@@ -118,21 +118,20 @@ func isDirEmpty(dir string, junkFiles map[string]bool) bool {
 	return true
 }
 
-// protectedEmptyDir — папки, которые нельзя предлагать к удалению даже если пусты.
+// protectedEmptyDir — папки, которые нельзя предлагать к удалению даже если
+// пусты: стандартные пользовательские каталоги и служебные папки инструментов
+// (общая часть) плюс специфичные для ОС (protectedEmptyDirPlatform).
 func protectedEmptyDir(name string) bool {
 	protected := map[string]bool{
 		"desktop": true, "documents": true, "downloads": true,
-		"music": true, "pictures": true, "videos": true,
+		"music": true, "pictures": true, "videos": true, "movies": true,
 		"templates": true, "favorites": true, "links": true,
 		"contacts": true, "searches": true, "saved games": true,
-		"3d objects": true, "onedrive": true, "appdata": true,
-		"local": true, "locallow": true, "roaming": true,
-		"microsoft": true, "windows": true, "temp": true,
-		"start menu": true, "programs": true, "startup": true,
+		"public": true, "temp": true, "tmp": true,
 		".git": true, ".vscode": true, ".ssh": true, ".config": true,
-		"node_modules": true,
+		".local": true, ".cache": true, "node_modules": true,
 	}
-	return protected[name]
+	return protected[name] || protectedEmptyDirPlatform[name]
 }
 
 // Удаление пустых папок теперь идёт через единый безопасный путь:

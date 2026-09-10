@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -87,12 +86,10 @@ func ScanLeftoversEx(opts LeftoverScanOptions) (*LeftoversResult, error) {
 	var wg sync.WaitGroup
 	var out []LeftoverCandidate
 
-	// 1. Ассоциативный поиск: AppData + ProgramData
-	appDataRoots := []string{
-		ExpandPath(`%APPDATA%`),
-		ExpandPath(`%LOCALAPPDATA%`),
-		`C:\ProgramData`,
-	}
+	// 1. Ассоциативный поиск в пользовательских каталогах данных:
+	// AppData/ProgramData в Windows, ~/.config + ~/.local/share в Linux,
+	// ~/Library/Application Support в macOS (см. leftoverUserDataRoots).
+	appDataRoots := leftoverUserDataRoots()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -102,11 +99,10 @@ func ScanLeftoversEx(opts LeftoverScanOptions) (*LeftoversResult, error) {
 		mu.Unlock()
 	}()
 
-	// 2. Program Files: папки без записи в Uninstall
-	progRoots := []string{
-		`C:\Program Files`,
-		`C:\Program Files (x86)`,
-	}
+	// 2. Каталоги установленных программ: папки, которым не соответствует ни
+	// одна известная системе программа (Program Files в Windows, /opt и
+	// ~/.local/share/applications в Linux, /Applications в macOS).
+	progRoots := leftoverProgramRoots()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -116,7 +112,8 @@ func ScanLeftoversEx(opts LeftoverScanOptions) (*LeftoversResult, error) {
 		mu.Unlock()
 	}()
 
-	// 3. Реестр: ключи HKCU\Software без программ
+	// 3. Записи вне файлов: ключи HKCU\Software без программ в Windows,
+	// осиротевшие .desktop и юниты автозапуска в Linux/macOS.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -278,79 +275,6 @@ func scanOrphanCachePaths(cfg *OrphanConfig) []LeftoverCandidate {
 	return out
 }
 
-// GetInstalledPrograms возвращает список установленных программ из реестра.
-func GetInstalledPrograms(orphanCfg *OrphanConfig) []InstalledProgram {
-	orphanNames := make(map[string]bool)
-	if orphanCfg != nil {
-		for _, app := range orphanCfg.Apps {
-			orphanNames[strings.ToLower(app.DisplayName)] = true
-		}
-	}
-
-	keys := []string{
-		`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
-		`HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall`,
-		`HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
-	}
-	seen := make(map[string]bool)
-	var programs []InstalledProgram
-	for _, k := range keys {
-		out, err := exec.Command("reg", "query", k, "/s").Output()
-		if err != nil {
-			continue
-		}
-		var curName, curPublisher, curLocation, curUninstall string
-		flush := func() {
-			if curName != "" && !seen[strings.ToLower(curName)] {
-				seen[strings.ToLower(curName)] = true
-				programs = append(programs, InstalledProgram{
-					DisplayName:     curName,
-					Publisher:       curPublisher,
-					InstallLocation: curLocation,
-					InOrphanDB:      orphanNames[strings.ToLower(curName)],
-					UninstallString: curUninstall,
-				})
-			}
-		}
-		for _, line := range strings.Split(string(out), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" {
-				flush()
-				curName, curPublisher, curLocation, curUninstall = "", "", "", ""
-				continue
-			}
-			if strings.HasPrefix(line, "DisplayName") {
-				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
-					curName = strings.TrimSpace(line[idx+len("REG_SZ"):])
-				}
-			}
-			if strings.HasPrefix(line, "Publisher") {
-				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
-					curPublisher = strings.TrimSpace(line[idx+len("REG_SZ"):])
-				}
-			}
-			if strings.HasPrefix(line, "InstallLocation") {
-				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
-					curLocation = strings.TrimSpace(line[idx+len("REG_SZ"):])
-				}
-			}
-			// UninstallString предпочтительнее QuietUninstallString: показывает
-			// пользователю интерфейс деинсталлятора производителя вместо
-			// молчаливого удаления без подтверждения.
-			if strings.HasPrefix(line, "UninstallString") {
-				if idx := strings.Index(line, "REG_SZ"); idx >= 0 {
-					curUninstall = strings.TrimSpace(line[idx+len("REG_SZ"):])
-				}
-			}
-		}
-		flush() // последняя запись в выводе reg query не завершается пустой строкой
-	}
-	sort.Slice(programs, func(i, j int) bool {
-		return strings.ToLower(programs[i].DisplayName) < strings.ToLower(programs[j].DisplayName)
-	})
-	return programs
-}
-
 // logUnknownLeftovers записывает находки, которых нет в orphan DB, в лог-файл.
 func logUnknownLeftovers(candidates []LeftoverCandidate, logFile string) {
 	type logEntry struct {
@@ -474,49 +398,6 @@ func scanProgramFilesLeftovers(roots []string, installed map[string]bool, instal
 	return out
 }
 
-// scanRegistryLeftovers — ищет ключи HKCU\Software, которые не соответствуют установленным программам.
-func scanRegistryLeftovers(installed map[string]bool, whitelist map[string]bool) []LeftoverCandidate {
-	var out []LeftoverCandidate
-	regRoots := []string{
-		`HKCU\Software`,
-	}
-	for _, regRoot := range regRoots {
-		cmdOut, err := exec.Command("reg", "query", regRoot).Output()
-		if err != nil {
-			continue
-		}
-		for _, line := range strings.Split(string(cmdOut), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" || !strings.Contains(strings.ToUpper(line), strings.ToUpper(regRoot)) {
-				continue
-			}
-			parts := strings.Split(line, `\`)
-			if len(parts) < 3 {
-				continue
-			}
-			keyName := parts[len(parts)-1]
-			low := strings.ToLower(strings.TrimSpace(keyName))
-			if low == "" {
-				continue
-			}
-			if whitelist[low] || registryWhitelist()[low] {
-				continue
-			}
-			if matchesInstalled(keyName, installed) {
-				continue
-			}
-			out = append(out, LeftoverCandidate{
-				Path:   line,
-				Size:   0,
-				Files:  0,
-				Reason: "ключ реестра без установленной программы",
-				Type:   LeftoverRegistry,
-			})
-		}
-	}
-	return out
-}
-
 // scanEmptyFolders — ищет пустые или почти пустые папки (только служебные файлы).
 func scanEmptyFolders(roots []string) []LeftoverCandidate {
 	var out []LeftoverCandidate
@@ -569,6 +450,19 @@ func isDirEffectivelyEmpty(path string, junkFiles map[string]bool) bool {
 	return true
 }
 
+// nonEmpty убирает из списка путей пустые строки — ExpandPath возвращает "",
+// если переменной окружения нет (например, %PROGRAMFILES(X86)% на 32-битной
+// системе или windows-переменная в Linux-ядре).
+func nonEmpty(paths []string) []string {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // dirSizeWithTimeout считает размер папки с таймаутом.
 func dirSizeWithTimeout(path string, timeout time.Duration) (int64, int) {
 	type result struct {
@@ -586,90 +480,6 @@ func dirSizeWithTimeout(path string, timeout time.Duration) (int64, int) {
 	case <-time.After(timeout):
 		return -1, 0
 	}
-}
-
-// installedProgramNames читает DisplayName из реестра (Uninstall и Publisher папки).
-func installedProgramNames() map[string]bool {
-	keys := []string{
-		`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
-		`HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall`,
-		`HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
-	}
-	result := map[string]bool{}
-	for _, k := range keys {
-		out, err := exec.Command("reg", "query", k, "/s", "/v", "DisplayName").Output()
-		if err != nil {
-			continue
-		}
-		for _, line := range strings.Split(string(out), "\n") {
-			line = strings.TrimSpace(line)
-			// формат: "    DisplayName    REG_SZ    My App Name"
-			if !strings.HasPrefix(line, "DisplayName") {
-				continue
-			}
-			idx := strings.Index(line, "REG_SZ")
-			if idx < 0 {
-				continue
-			}
-			name := strings.TrimSpace(line[idx+len("REG_SZ"):])
-			if name == "" {
-				continue
-			}
-			for _, tok := range tokenize(name) {
-				result[tok] = true
-			}
-		}
-	}
-	// Также добавим вендоров из HKLM\SOFTWARE (первый уровень) — часто имя папки AppData совпадает с вендором.
-	if out, err := exec.Command("reg", "query", `HKLM\SOFTWARE`).Output(); err == nil {
-		for _, line := range strings.Split(string(out), "\n") {
-			line = strings.TrimSpace(line)
-			if !strings.HasPrefix(strings.ToUpper(line), "HKEY_LOCAL_MACHINE\\SOFTWARE\\") {
-				continue
-			}
-			parts := strings.Split(line, `\`)
-			if len(parts) == 0 {
-				continue
-			}
-			last := strings.ToLower(strings.TrimSpace(parts[len(parts)-1]))
-			if last != "" {
-				result[last] = true
-			}
-		}
-	}
-	return result
-}
-
-// installedProgramPaths читает InstallLocation из реестра Uninstall.
-func installedProgramPaths() map[string]bool {
-	keys := []string{
-		`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
-		`HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall`,
-		`HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`,
-	}
-	result := map[string]bool{}
-	for _, k := range keys {
-		out, err := exec.Command("reg", "query", k, "/s", "/v", "InstallLocation").Output()
-		if err != nil {
-			continue
-		}
-		for _, line := range strings.Split(string(out), "\n") {
-			line = strings.TrimSpace(line)
-			if !strings.HasPrefix(line, "InstallLocation") {
-				continue
-			}
-			idx := strings.Index(line, "REG_SZ")
-			if idx < 0 {
-				continue
-			}
-			loc := strings.TrimSpace(line[idx+len("REG_SZ"):])
-			if loc == "" {
-				continue
-			}
-			result[strings.ToLower(filepath.Clean(loc))] = true
-		}
-	}
-	return result
 }
 
 // tokenize режет DisplayName на значимые токены (слова >2 символов, lowercase).
@@ -713,71 +523,4 @@ func matchesInstalled(folder string, installed map[string]bool) bool {
 		}
 	}
 	return false
-}
-
-// knownSystemFolders — имена папок в AppData/ProgramData, которые не являются остатками программ.
-func knownSystemFolders() map[string]bool {
-	list := []string{
-		// общие системные / встроенные
-		"microsoft", "windows", "windowsapps", "packages", "temp", "tmp",
-		"d3dscache", "connecteddevicesplatform", "comms", "crashdumps",
-		"virtualstore", "programs", "application data", "history", "desktop",
-		"downloaded installations", "downloads", "diagnosis", "publishers",
-		".default", "default", "default user", "public",
-		// ProgramData системные
-		"ssh", "regid.1991-06.com.microsoft", "usoshared", "usoprivate",
-		"placeholdertilelogofolder",
-		"package cache", "softwaredistrribution", "windows defender",
-		"windows security health", "windowsholographicdevices",
-		// популярные вендоры, у которых AppData-папка остаётся навсегда
-		"adobe", "google", "mozilla", "apple", "realtek", "intel", "nvidia",
-		"amd", "dell", "hp", "lenovo", "asus", "acer", "logitech", "razer",
-		"oracle", "ibm", "sun", "jetbrains", "docker", "kubernetes",
-		"notepad++", "vlc", "7-zip", "git", "github",
-		// часто встречающиеся
-		"local", "locallow", "roaming",
-	}
-	out := make(map[string]bool, len(list))
-	for _, s := range list {
-		out[s] = true
-	}
-	return out
-}
-
-// programFilesWhitelist — папки в Program Files, которые точно системные.
-func programFilesWhitelist() map[string]bool {
-	list := []string{
-		"common files", "internet explorer", "microsoft update health tools",
-		"windows defender", "windows defender advanced threat protection",
-		"windows mail", "windows media player", "windows multimedia platform",
-		"windows nt", "windows photo viewer", "windows portable devices",
-		"windows security", "windows sidebar", "windowsapps",
-		"windowspowershell", "microsoft.net", "msbuild", "reference assemblies",
-		"dotnet", "iis", "iis express", "microsoft sdks", "microsoft sql server",
-		"microsoft visual studio", "uninstall information",
-		"windows kits", "nvidia corporation", "realtek", "intel",
-		"amd", "dell", "hp", "lenovo",
-	}
-	out := make(map[string]bool, len(list))
-	for _, s := range list {
-		out[s] = true
-	}
-	return out
-}
-
-// registryWhitelist — ключи HKCU\Software, которые всегда присутствуют.
-func registryWhitelist() map[string]bool {
-	list := []string{
-		"microsoft", "classes", "policies", "registeredapplications",
-		"wine", "wow6432node", "defaultuserext", "im providers",
-		"appdata", "intel", "nvidia corporation", "realtek",
-		"khronos", "opengl", "amd", "google", "mozilla",
-		"adobe", "apple", "apple computer, inc.", "apple inc.",
-		"java", "javafx", "javasoft", "oracle",
-	}
-	out := make(map[string]bool, len(list))
-	for _, s := range list {
-		out[s] = true
-	}
-	return out
 }

@@ -2,7 +2,7 @@
   "name": "wincleanerlamp",
   "version": "2.6.1",
   "private": true,
-  "description": "Очистка временных файлов и кешей Windows: CLI на Go и GUI на Electron.",
+  "description": "Очистка временных файлов и кешей: ядра на Go для Windows, Linux и macOS и GUI на Electron.",
   "license": "MIT",
   "author": "Danik Off",
   "repository": {
@@ -11,7 +11,9 @@
   },
   "scripts": {
     "version": "node scripts/sync-gui-version.js",
-    "build": "go build -o win-cleaner-lamp.exe",
+    "build": "go build -o win-cleaner-lamp.exe ./wincli",
+    "build:linux": "go build -o lin-cleaner-lamp ./lincli",
+    "build:mac": "go build -o mac-cleaner-lamp ./maccli",
     "release:patch": "npm version patch -m \"chore(release): %s\"",
     "release:minor": "npm version minor -m \"chore(release): %s\"",
     "release:major": "npm version major -m \"chore(release): %s\"",

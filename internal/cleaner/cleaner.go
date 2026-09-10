@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -48,18 +47,15 @@ func (o *Options) log(format string, a ...any) {
 func Process(t Target, opts Options) Report {
 	r := Report{Target: t}
 
-	// Спец-действия
-	switch t.Special {
-	case SpecialRecycleBin:
-		return processRecycleBin(t, opts)
-	case SpecialDNSCache:
-		return processDNSCache(t, opts)
-	case SpecialThumbnailCache:
-		return processThumbnailCache(t, opts)
-	case SpecialEventLogs:
-		return processEventLogs(t, opts)
-	case SpecialComponentCleanup:
-		return processComponentCleanup(t, opts)
+	// Спец-действия (Корзина, DNS-кеш, журналы и т.п.) реализует само ядро:
+	// specials_windows.go / specials_linux.go / specials_darwin.go.
+	if t.Special != SpecialNone {
+		if special, handled := processSpecial(t, opts); handled {
+			return special
+		}
+		r.Skipped = true
+		r.SkippedReason = "действие не поддерживается этой ОС: " + string(t.Special)
+		return r
 	}
 
 	for _, raw := range t.Paths {
@@ -116,93 +112,30 @@ func Process(t Target, opts Options) Report {
 	return r
 }
 
+// processDir обрабатывает один каталог категории. Категории, у которых внутри
+// корня нужно чистить не всё подряд, а конкретные подпапки профилей
+// (Firefox, JetBrains, Skype в Windows; профили браузеров в Linux/macOS),
+// обрабатывает своё ядро — см. platformProcessDir в specials_<os>.go.
 func processDir(root string, t Target, opts Options, r *Report) {
-	switch t.ID {
-	case "firefox-cache":
-		// только cache2 во всех профилях
-		forEachSubdir(root, r, func(profile string) {
-			p := filepath.Join(profile, "cache2")
-			if _, err := os.Stat(p); err == nil {
-				walkAndDelete(p, t, opts, r, true)
-			}
-		})
-		return
-	case "jetbrains-logs":
-		// %LOCALAPPDATA%\JetBrains\<IDE>\{log,caches}
-		forEachSubdir(root, r, func(ide string) {
-			for _, sub := range []string{"log", "caches"} {
-				p := filepath.Join(ide, sub)
-				if _, err := os.Stat(p); err == nil {
-					walkAndDelete(p, t, opts, r, true)
-				}
-			}
-		})
-		return
-	case "office-cache":
-		// %LOCALAPPDATA%\Microsoft\Office\<ver>\OfficeFileCache
-		forEachSubdir(root, r, func(ver string) {
-			p := filepath.Join(ver, "OfficeFileCache")
-			if _, err := os.Stat(p); err == nil {
-				walkAndDelete(p, t, opts, r, true)
-			}
-		})
-		return
-	case "teams-new-cache":
-		processUWPPackageCache(root, "MSTeams_",
-			[]string{`LocalCache\Microsoft\MSTeams\Cache`,
-				`LocalCache\Microsoft\MSTeams\GPUCache`,
-				`LocalCache\Microsoft\MSTeams\Code Cache`,
-				`LocalCache\Microsoft\MSTeams\tmp`},
-			t, opts, r)
-		return
-	case "store-cache":
-		processUWPPackageCache(root, "Microsoft.WindowsStore_",
-			[]string{`LocalCache`, `LocalState\Cache`, `AC\INetCache`},
-			t, opts, r)
-		return
-	case "skype-cache":
-		// %APPDATA%\Skype\<profile>\{media_messaging\media_cache_v3,skylib,cache}
-		forEachSubdir(root, r, func(profile string) {
-			for _, sub := range []string{
-				`media_messaging\media_cache_v3`,
-				`media_messaging\media_cache`,
-				`skylib`,
-				`cache`,
-			} {
-				p := filepath.Join(profile, sub)
-				if _, err := os.Stat(p); err == nil {
-					walkAndDelete(p, t, opts, r, true)
-				}
-			}
-		})
+	if platformProcessDir(root, t, opts, r) {
 		return
 	}
-
 	walkAndDelete(root, t, opts, r, t.KeepRoot)
 }
 
-// processUWPPackageCache обрабатывает папки %LOCALAPPDATA%\Packages\<prefix>*
-// и удаляет указанные относительные подпути внутри каждой найденной.
-func processUWPPackageCache(root, prefix string, relPaths []string, t Target, opts Options, r *Report) {
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			r.Errors = append(r.Errors, err.Error())
-		}
-		return
-	}
-	for _, e := range entries {
-		if !e.IsDir() || !strings.HasPrefix(e.Name(), prefix) {
-			continue
-		}
-		base := filepath.Join(root, e.Name())
+// processProfileSubdirs — общий помощник для ядер: для каждого подкаталога
+// root чистит перечисленные относительные подпути (профили браузеров, версии
+// IDE и т.п.). Относительные пути записываются через "/" и приводятся к
+// разделителю текущей ОС.
+func processProfileSubdirs(root string, relPaths []string, t Target, opts Options, r *Report) {
+	forEachSubdir(root, r, func(profile string) {
 		for _, rel := range relPaths {
-			p := filepath.Join(base, rel)
+			p := filepath.Join(profile, filepath.FromSlash(rel))
 			if _, err := os.Stat(p); err == nil {
 				walkAndDelete(p, t, opts, r, true)
 			}
 		}
-	}
+	})
 }
 
 // forEachSubdir вызывает fn для каждого поддиректория root.
@@ -251,11 +184,20 @@ func walkAndDelete(root string, t Target, opts Options, r *Report, keepRoot bool
 		if ierr != nil {
 			return nil
 		}
+		if t.forbidden(path) {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
 		if d.IsDir() {
 			dirs = append(dirs, item{path, info})
 			return nil
 		}
 		// Файл
+		if !isDeletableFile(info) {
+			return nil
+		}
 		if tooYoung(info, t, opts) {
 			return nil
 		}
@@ -326,6 +268,35 @@ func walkAndDelete(root string, t Target, opts Options, r *Report, keepRoot bool
 	}
 }
 
+// forbidden — путь попал под ForbidSubstrings категории. Так категории
+// защищают отдельные вложенные пути от удаления: в Linux это, например,
+// сокеты и блокировки внутри /tmp (.X11-unix, .ICE-unix), в macOS —
+// служебные подпапки внутри каталогов TMPDIR.
+func (t Target) forbidden(path string) bool {
+	if len(t.ForbidSubstrings) == 0 {
+		return false
+	}
+	low := strings.ToLower(filepath.ToSlash(path))
+	for _, s := range t.ForbidSubstrings {
+		if s == "" {
+			continue
+		}
+		if strings.Contains(low, strings.ToLower(filepath.ToSlash(s))) {
+			return true
+		}
+	}
+	return false
+}
+
+// isDeletableFile — обычный файл или символическая ссылка. Сокеты, каналы и
+// файлы устройств пропускаются: в Linux и macOS они лежат вперемешку с
+// мусором в /tmp и /private/var/folders и принадлежат запущенным программам,
+// а их размер на диске всё равно нулевой.
+func isDeletableFile(info fs.FileInfo) bool {
+	mode := info.Mode()
+	return mode.IsRegular() || mode&fs.ModeSymlink != 0
+}
+
 func tooYoung(info fs.FileInfo, t Target, opts Options) bool {
 	var minAge time.Duration
 	if t.MinAgeHours > 0 {
@@ -340,140 +311,7 @@ func tooYoung(info fs.FileInfo, t Target, opts Options) bool {
 	return time.Since(info.ModTime()) < minAge
 }
 
-// ---- Special actions ----
-
-func processRecycleBin(t Target, opts Options) Report {
-	r := Report{Target: t}
-	if opts.DryRun {
-		// Попробуем посчитать размер $Recycle.Bin на всех дисках
-		drives := listDrives()
-		for _, d := range drives {
-			p := filepath.Join(d, `$Recycle.Bin`)
-			size, files := dirSize(p)
-			r.Bytes += size
-			r.Files += files
-		}
-		return r
-	}
-	cmd := exec.Command("powershell", "-NoProfile", "-Command", "Clear-RecycleBin -Force -ErrorAction SilentlyContinue")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		r.Errors = append(r.Errors, fmt.Sprintf("Clear-RecycleBin: %v: %s", err, strings.TrimSpace(string(out))))
-	}
-	return r
-}
-
-func processDNSCache(t Target, opts Options) Report {
-	r := Report{Target: t}
-	if opts.DryRun {
-		r.Skipped = true
-		r.SkippedReason = "DNS-кеш — действие, не имеет размера"
-		return r
-	}
-	cmd := exec.Command("ipconfig", "/flushdns")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		r.Errors = append(r.Errors, fmt.Sprintf("ipconfig /flushdns: %v: %s", err, strings.TrimSpace(string(out))))
-	}
-	return r
-}
-
-func processEventLogs(t Target, opts Options) Report {
-	r := Report{Target: t}
-	if opts.DryRun {
-		size, files := dirSize(`C:\Windows\System32\winevt\Logs`)
-		r.Bytes = size
-		r.Files = files
-		return r
-	}
-	// Перечисляем журналы через wevtutil el и чистим каждый через wevtutil cl.
-	out, err := exec.Command("wevtutil", "el").Output()
-	if err != nil {
-		r.Errors = append(r.Errors, fmt.Sprintf("wevtutil el: %v", err))
-		return r
-	}
-	for _, line := range strings.Split(string(out), "\n") {
-		log := strings.TrimSpace(line)
-		if log == "" {
-			continue
-		}
-		if err := exec.Command("wevtutil", "cl", log).Run(); err != nil {
-			// многие журналы нельзя очищать (Analytical/Debug) — пропускаем молча
-			if opts.Verbose {
-				opts.log("  [skip evtx] %s: %v", log, err)
-			}
-			continue
-		}
-		r.Files++
-	}
-	return r
-}
-
-// processComponentCleanup запускает официальную очистку хранилища компонентов
-// (WinSxS) через DISM. Без /ResetBase — убираются только замещённые версии
-// компонентов, откат последнего обновления остаётся возможным. Размер
-// заранее не оценивается: DISM сам решает, что можно безопасно убрать.
-func processComponentCleanup(t Target, opts Options) Report {
-	r := Report{Target: t}
-	if opts.DryRun {
-		r.Skipped = true
-		r.SkippedReason = "очистка WinSxS через DISM — размер заранее неизвестен, оценивает сам DISM"
-		return r
-	}
-	cmd := exec.Command("Dism.exe", "/Online", "/Cleanup-Image", "/StartComponentCleanup", "/Quiet", "/NoRestart")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		r.Errors = append(r.Errors, fmt.Sprintf("Dism /StartComponentCleanup: %v: %s", err, strings.TrimSpace(string(out))))
-	}
-	return r
-}
-
-func processThumbnailCache(t Target, opts Options) Report {
-	r := Report{Target: t}
-	root := ExpandPath(`%LOCALAPPDATA%\Microsoft\Windows\Explorer`)
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			r.Errors = append(r.Errors, err.Error())
-		}
-		return r
-	}
-	for _, e := range entries {
-		n := strings.ToLower(e.Name())
-		if !strings.HasPrefix(n, "thumbcache_") && !strings.HasPrefix(n, "iconcache_") {
-			continue
-		}
-		p := filepath.Join(root, e.Name())
-		info, err := e.Info()
-		if err != nil {
-			continue
-		}
-		sz := info.Size()
-		if opts.DryRun {
-			r.Bytes += sz
-			r.Files++
-			continue
-		}
-		if err := os.Remove(p); err != nil {
-			r.Errors = append(r.Errors, fmt.Sprintf("remove %s: %v", p, err))
-			continue
-		}
-		r.Bytes += sz
-		r.Files++
-	}
-	return r
-}
-
 // ---- helpers ----
-
-func listDrives() []string {
-	var drives []string
-	for c := 'A'; c <= 'Z'; c++ {
-		d := string(c) + `:\`
-		if _, err := os.Stat(d); err == nil {
-			drives = append(drives, d)
-		}
-	}
-	return drives
-}
 
 func dirSize(root string) (int64, int) {
 	var total int64

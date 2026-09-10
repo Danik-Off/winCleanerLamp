@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -318,15 +317,6 @@ func scanOneOrphan(app OrphanApp) OrphanScanResult {
 	return r
 }
 
-func registryKeyExists(key string) bool {
-	err := exec.Command("reg", "query", key, "/ve").Run()
-	if err != nil {
-		// Пробуем без /ve — может быть просто ключ без значения по умолчанию
-		err = exec.Command("reg", "query", key).Run()
-	}
-	return err == nil
-}
-
 // ─── Discover: поиск неизвестных папок ───
 
 // DiscoverOptions — параметры для команды discover.
@@ -343,22 +333,6 @@ type DiscoverResult struct {
 	SizeMB        int64  `json:"size_mb"`
 	SizeBytes     int64  `json:"size_bytes"`
 	HasExecutable bool   `json:"has_executable"`
-}
-
-// DefaultDiscoverRoots — корневые папки по умолчанию.
-func DefaultDiscoverRoots() []string {
-	roots := []string{
-		`C:\Program Files`,
-		`C:\Program Files (x86)`,
-		`C:\ProgramData`,
-	}
-	if appdata := ExpandPath(`%APPDATA%`); appdata != "" {
-		roots = append(roots, appdata)
-	}
-	if localAppdata := ExpandPath(`%LOCALAPPDATA%`); localAppdata != "" {
-		roots = append(roots, localAppdata)
-	}
-	return roots
 }
 
 // OrphanDiscover ищет неизвестные папки в стандартных расположениях.
@@ -527,66 +501,6 @@ func discoverInRoot(root string, knownPaths map[string]bool, whitelist map[strin
 	return results
 }
 
-// dirHasExecutable проверяет, содержит ли папка .exe файлы (до 2 уровней вглубь).
-func dirHasExecutable(root string) bool {
-	depth := 0
-	found := false
-	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if found {
-			return filepath.SkipAll
-		}
-		// Ограничиваем глубину
-		rel, _ := filepath.Rel(root, path)
-		depth = strings.Count(rel, string(filepath.Separator))
-		if d.IsDir() && depth > 2 {
-			return filepath.SkipDir
-		}
-		if !d.IsDir() && strings.HasSuffix(strings.ToLower(d.Name()), ".exe") {
-			found = true
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	return found
-}
-
-// discoverWhitelist — папки, которые точно не мусор (системные/вендорские).
-func discoverWhitelist() map[string]bool {
-	list := []string{
-		// Windows / системные
-		"windowsapps", "microsoft", "common files", "internet explorer",
-		"windows defender", "windows defender advanced threat protection",
-		"windows mail", "windows media player", "windows multimedia platform",
-		"windows nt", "windows photo viewer", "windows portable devices",
-		"windows security", "windows sidebar", "windowspowershell",
-		"microsoft.net", "msbuild", "reference assemblies", "dotnet",
-		"iis", "iis express", "microsoft sdks", "microsoft sql server",
-		"microsoft visual studio", "uninstall information", "windows kits",
-		"package cache", "softwaredistrribution", "microsoft update health tools",
-		// Вендоры
-		"nvidia corporation", "nvidia", "realtek", "intel", "amd",
-		"dell", "hp", "lenovo", "asus", "acer", "logitech", "razer",
-		"google", "mozilla", "adobe", "apple", "oracle", "jetbrains",
-		// AppData системные
-		"microsoft", "windows", "packages", "temp", "tmp",
-		"d3dscache", "connecteddevicesplatform", "comms", "crashdumps",
-		"virtualstore", "programs", "application data", "history",
-		"desktop", "downloads", "diagnosis", "publishers",
-		".default", "default", "default user", "public",
-		"ssh", "regid.1991-06.com.microsoft", "usoshared", "usoprivate",
-		"windowsholographicdevices", "placeholdertilelogofolder",
-		"local", "locallow", "roaming",
-	}
-	out := make(map[string]bool, len(list))
-	for _, s := range list {
-		out[s] = true
-	}
-	return out
-}
-
 // ─── Clean: удаление мусора для указанных программ ───
 
 // OrphanCleanOptions — параметры очистки.
@@ -660,9 +574,8 @@ func cleanOneOrphan(app OrphanApp, opts OrphanCleanOptions) OrphanCleanResult {
 		if opts.ExportReg != "" && len(app.RegistryKeys) > 0 {
 			for _, key := range app.RegistryKeys {
 				outFile := filepath.Join(opts.ExportReg,
-					strings.ReplaceAll(strings.ReplaceAll(key, `\`, "_"), "/", "_")+".reg")
-				cmd := exec.Command("reg", "export", key, outFile, "/y")
-				if err := cmd.Run(); err != nil {
+					strings.ReplaceAll(strings.ReplaceAll(key, `\`, "_"), "/", "_")+registryExportExt)
+				if err := exportRegistryKey(key, outFile); err != nil {
 					r.Errors = append(r.Errors, fmt.Sprintf("экспорт реестра %s: %v", key, err))
 				} else {
 					log("  Экспортирован: %s → %s", key, outFile)
@@ -709,7 +622,7 @@ func cleanOneOrphan(app OrphanApp, opts OrphanCleanOptions) OrphanCleanResult {
 		}
 
 		if opts.Recycle {
-			if err := moveToRecycleBin(p, info.IsDir()); err != nil {
+			if err := moveToTrash(p, info.IsDir()); err != nil {
 				r.Errors = append(r.Errors, fmt.Sprintf("корзина %s: %v", p, err))
 				continue
 			}
@@ -749,9 +662,8 @@ func cleanOneOrphan(app OrphanApp, opts OrphanCleanOptions) OrphanCleanResult {
 		if !registryKeyExists(key) {
 			continue
 		}
-		cmd := exec.Command("reg", "delete", key, "/f")
-		if err := cmd.Run(); err != nil {
-			r.Errors = append(r.Errors, fmt.Sprintf("reg delete %s: %v", key, err))
+		if err := deleteRegistryKey(key); err != nil {
+			r.Errors = append(r.Errors, fmt.Sprintf("удаление ключа %s: %v", key, err))
 			continue
 		}
 		r.DeletedKeys = append(r.DeletedKeys, key)

@@ -25,14 +25,14 @@ type JunkConfig struct {
 	Stats     map[string]int64 `json:"stats,omitempty"` // category_id -> total_bytes
 }
 
-// DefaultConfigPath возвращает путь к файлу конфига.
+// DefaultConfigPath возвращает путь к файлу конфига учёта мусора. Каталог
+// зависит от ОС (см. appStateDir): %LOCALAPPDATA% в Windows, XDG_STATE_HOME
+// в Linux, ~/Library/Application Support в macOS.
 func DefaultConfigPath() string {
-	// %LOCALAPPDATA%\winCleanerLamp\junk.json
-	home, err := os.UserHomeDir()
-	if err != nil {
+	dir := appStateDir()
+	if dir == "" {
 		return "junk.json" // fallback
 	}
-	dir := filepath.Join(home, "AppData", "Local", "winCleanerLamp")
 	_ = os.MkdirAll(dir, 0o755)
 	return filepath.Join(dir, "junk.json")
 }

@@ -101,19 +101,11 @@ func TestSanitizeID(t *testing.T) {
 }
 
 func TestIsLikelyUserDataPath(t *testing.T) {
-	likely := []string{
-		`C:\Users\Me\AppData\Roaming\.minecraft\saves`,
-		`C:\Users\Me\Documents\MyGame\Screenshots`,
-		`C:\Users\Me\AppData\Roaming\.minecraft\resourcepacks`,
-	}
+	likely, notLikely := userDataPathCases()
 	for _, p := range likely {
 		if !isLikelyUserDataPath(p) {
 			t.Errorf("isLikelyUserDataPath(%q) = false, want true", p)
 		}
-	}
-	notLikely := []string{
-		`C:\Users\Me\AppData\Local\SomeApp\Cache`,
-		`C:\Users\Me\AppData\Roaming\SomeApp\logs`,
 	}
 	for _, p := range notLikely {
 		if isLikelyUserDataPath(p) {
@@ -260,7 +252,7 @@ func TestCleanOneOrphan_FullCleanIncludesUserDataWhenRequested(t *testing.T) {
 func TestCleanOneOrphan_RejectsUnsafePath(t *testing.T) {
 	app := OrphanApp{
 		DisplayName:  "Malicious",
-		InstallPaths: []string{`C:\Windows\System32`},
+		InstallPaths: []string{unsafeTestDir},
 	}
 	result := cleanOneOrphan(app, OrphanCleanOptions{CacheOnly: false})
 	if len(result.DeletedPaths) != 0 {

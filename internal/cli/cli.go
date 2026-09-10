@@ -1,4 +1,9 @@
-package main
+// Package cli — общая часть всех трёх ядер (Windows / Linux / macOS):
+// разбор флагов, текстовый вывод и JSON-протокол. Различия операционных
+// систем живут в пакете cleaner (файлы *_windows.go / *_linux.go /
+// *_darwin.go), поэтому набор команд и формат JSON у всех ядер одинаковый —
+// GUI и скрипты работают с любым из них без правок.
+package cli
 
 import (
 	"bufio"
@@ -7,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -16,9 +20,19 @@ import (
 	"github.com/suzen/wincleanerlamp/internal/cleaner"
 )
 
-const version = "0.1.0"
+// App описывает конкретное ядро, от имени которого работает CLI.
+type App struct {
+	Name    string // "Win Cleaner Lamp", "Lin Cleaner Lamp", "Mac Cleaner Lamp"
+	Version string
+}
 
-func main() {
+// current — приложение, переданное в Run. Нужен usage(), который пакет flag
+// вызывает без аргументов.
+var current = App{Name: "Cleaner Lamp", Version: "0.0.0"}
+
+// Run — точка входа общего CLI, вызывается из wincli / lincli / maccli.
+func Run(app App) {
+	current = app
 	var (
 		listFlag         = flag.Bool("list", false, "показать все категории и выйти")
 		scanFlag         = flag.Bool("scan", false, "только посчитать размер мусора (ничего не удалять)")
@@ -28,19 +42,19 @@ func main() {
 		categories       = flag.String("categories", "", "список категорий через запятую (по умолчанию — все безопасные)")
 		exclude          = flag.String("exclude", "", "исключить категории (через запятую)")
 		minAgeHours      = flag.Int("min-age-hours", 0, "удалять файлы старше N часов (применяется ко всем категориям)")
-		aggressive       = flag.Bool("aggressive", false, "включить агрессивные категории (Windows.old, $WINDOWS.~BT, event-logs, старые Downloads и т.п.)")
+		aggressive       = flag.Bool("aggressive", false, "включить агрессивные категории ("+usageAggressiveExamples+" и т.п.)")
 		leftovers        = flag.Bool("leftovers", false, "найти возможные остатки удалённых программ в AppData/ProgramData (только отчёт)")
 		leftoversLog     = flag.String("leftovers-log", "", "записать неизвестные находки в JSON-файл для обновления orphan DB")
 		sysinfo          = flag.Bool("sysinfo", false, "показать размеры системных файлов (hiberfil.sys, pagefile.sys, swapfile.sys, WinSxS) и советы")
 		duplicates       = flag.String("duplicates", "", "найти дубликаты файлов в указанных папках (через запятую, например C:\\Users\\Me)")
-		duplicatesSystem = flag.Bool("duplicates-system", false, "разрешить поиск дубликатов внутри системных папок (Program Files, Windows, ProgramData) — по умолчанию они пропускаются")
+		duplicatesSystem = flag.Bool("duplicates-system", false, "разрешить поиск дубликатов внутри системных папок ("+usageSystemDupDirs+") — по умолчанию они пропускаются")
 		emptyDirs        = flag.String("empty-dirs", "", "найти пустые папки в указанных папках (через запятую)")
 		largeFilesFlag   = flag.Bool("large-files", false, "найти самые крупные файлы (по умолчанию — весь профиль пользователя)")
 		largeFilesRoots  = flag.String("large-files-roots", "", "корневые папки для --large-files (через запятую), по умолчанию — профиль пользователя")
 		largeFilesMinMB  = flag.Int64("large-files-min-mb", 100, "минимальный размер файла в МБ для --large-files")
 		largeFilesTop    = flag.Int("large-files-top", 200, "сколько самых крупных файлов вернуть для --large-files")
-		uninstallLaunch  = flag.String("uninstall-launch", "", "запустить официальный деинсталлятор указанной программы (по displayName из реестра Uninstall)")
-		appsList         = flag.Bool("apps-list", false, "показать список установленных программ (реестр Uninstall)")
+		uninstallLaunch  = flag.String("uninstall-launch", "", "удалить указанную программу её штатным способом ("+usageAppsSource+"), по displayName из --apps-list")
+		appsList         = flag.Bool("apps-list", false, "показать список установленных программ ("+usageAppsSource+")")
 		showEmpty        = flag.Bool("show-empty", false, "показывать в таблице категории с нулевым размером")
 		parallelN        = flag.Int("parallel", 8, "число параллельных сканеров (1 = последовательно)")
 		showVer          = flag.Bool("version", false, "показать версию")
@@ -64,7 +78,7 @@ func main() {
 		autoClean  = flag.Bool("auto-clean", false, "автоматически очистить мусор из записей конфига (без подтверждения)")
 		showJunk   = flag.Bool("show-junk", false, "показать записанный мусор из конфига")
 		junkByProg = flag.String("junk-by-program", "", "показать мусор от указанной программы (например, 'chrome', 'teams')")
-		configPath = flag.String("config", "", "путь к файлу конфига учёта мусора (по умолчанию: %LOCALAPPDATA%\\Win Cleaner Lamp\\junk.json)")
+		configPath = flag.String("config", "", "путь к файлу конфига учёта мусора (по умолчанию: "+cleaner.DefaultConfigPath()+")")
 
 		// Flags для OrphanCleaner (orphaned_apps.json)
 		orphanConfig     = flag.String("orphan-config", cleaner.OrphanConfigPath(), "путь к файлу orphaned_apps.json")
@@ -77,7 +91,7 @@ func main() {
 		orphanOut        = flag.String("orphan-out", "", "сохранить результат discover в файл JSON")
 		orphanJSON       = flag.Bool("orphan-json", false, "вывод discover в формате JSON")
 		orphanRecycle    = flag.Bool("orphan-recycle", false, "перемещать в корзину вместо удаления (для orphan-clean)")
-		orphanExportReg  = flag.String("orphan-export-reg", "", "экспортировать ключи реестра перед удалением (папка)")
+		orphanExportReg  = flag.String("orphan-export-reg", "", "экспортировать ключи реестра перед удалением (папка; только Windows — в Linux и macOS реестра нет)")
 		orphanCacheOnly  = flag.Bool("orphan-cache-only", false, "удалять только кеш программ (безопасно, не трогает настройки)")
 		orphanIncludeUD  = flag.Bool("orphan-include-user-data", false, "разрешить удаление путей, похожих на пользовательские данные (сохранения, проекты и т.п.) — по умолчанию они пропускаются")
 		orphanTrackPath  = flag.String("orphan-track", "", "путь из --orphan-discover, который нужно добавить в orphaned_apps.json")
@@ -97,12 +111,8 @@ func main() {
 	flag.Parse()
 
 	if *showVer {
-		fmt.Printf("Win Cleaner Lamp %s\n", version)
+		fmt.Printf("%s %s\n", current.Name, current.Version)
 		return
-	}
-
-	if runtime.GOOS != "windows" {
-		fmt.Fprintln(os.Stderr, "Предупреждение: это приложение предназначено для Windows. На другой ОС большинство путей будут отсутствовать.")
 	}
 
 	// Безопасное удаление одного файла/папки — самостоятельная команда,
@@ -602,68 +612,78 @@ func main() {
 	}
 }
 
+// usage печатает справку. Общая часть (список команд) одинакова для всех
+// ядер — различаются только примеры путей и подсказки по правам/системным
+// особенностям, они живут в usage_<os>.go.
 func usage() {
-	fmt.Fprintf(os.Stderr, `Win Cleaner Lamp %s — CLI очиститель мусора Windows.
-
-Использование:
-  Win Cleaner Lamp --scan                      показать сколько можно освободить
-  Win Cleaner Lamp --clean                     очистить (с подтверждением)
-  Win Cleaner Lamp --clean --yes               очистить без подтверждения
-  Win Cleaner Lamp --list                      список категорий
-  Win Cleaner Lamp --clean --categories user-temp,prefetch,recycle-bin
-  Win Cleaner Lamp --clean --exclude recycle-bin,dns-cache
+	name := current.Name
+	fmt.Fprintf(os.Stderr, "%s %s — CLI очиститель мусора (%s).\n\n", name, current.Version, osTitle)
+	fmt.Fprintf(os.Stderr, `Использование:
+  %[1]s --scan                      показать сколько можно освободить
+  %[1]s --clean                     очистить (с подтверждением)
+  %[1]s --clean --yes               очистить без подтверждения
+  %[1]s --list                      список категорий
+  %[1]s --clean --categories %[2]s
+  %[1]s --clean --exclude %[3]s
 
   # Учёт мусора в конфиге
-  Win Cleaner Lamp --scan --record             сканировать и записать мусор в конфиг
-  Win Cleaner Lamp --show-junk                 показать записанный мусор
-  Win Cleaner Lamp --junk-by-program chrome    показать мусор от Chrome
-  Win Cleaner Lamp --auto-clean                автоматически очистить из конфига
+  %[1]s --scan --record             сканировать и записать мусор в конфиг
+  %[1]s --show-junk                 показать записанный мусор
+  %[1]s --junk-by-program chrome    показать мусор от Chrome
+  %[1]s --auto-clean                автоматически очистить из конфига
 
   # Поиск остатков удалённых программ (OrphanCleaner)
-  Win Cleaner Lamp --orphan-list               показать все записи из orphaned_apps.json
-  Win Cleaner Lamp --orphan-scan               проверить записи и найти подтверждённый мусор
-  Win Cleaner Lamp --orphan-info "Имя"         подробная информация по программе
-  Win Cleaner Lamp --orphan-discover           найти неизвестные папки (потенциальный мусор)
-  Win Cleaner Lamp --orphan-discover --orphan-out unknown.json
-  Win Cleaner Lamp --orphan-clean "Имя1,Имя2"  удалить остатки указанных программ
-  Win Cleaner Lamp --orphan-clean "Имя" --orphan-recycle  удалить в корзину
-  Win Cleaner Lamp --orphan-clean "Имя"  (пути с пользовательскими данными пропускаются;
+  %[1]s --orphan-list               показать все записи из orphaned_apps.json
+  %[1]s --orphan-scan               проверить записи и найти подтверждённый мусор
+  %[1]s --orphan-info "Имя"         подробная информация по программе
+  %[1]s --orphan-discover           найти неизвестные папки (потенциальный мусор)
+  %[1]s --orphan-discover --orphan-out unknown.json
+  %[1]s --orphan-clean "Имя1,Имя2"  удалить остатки указанных программ
+  %[1]s --orphan-clean "Имя" --orphan-recycle  удалить в Корзину
+  %[1]s --orphan-clean "Имя"  (пути с пользовательскими данными пропускаются;
                                           --orphan-include-user-data — включить и их)
 
   # Список установленных программ и деинсталляция (запускает официальный деинсталлятор)
-  Win Cleaner Lamp --apps-list                 список установленных программ
-  Win Cleaner Lamp --uninstall-launch "Имя программы"
+  %[1]s --apps-list                 список установленных программ
+  %[1]s --uninstall-launch "Имя программы"
 
   # Битые ярлыки и снимок для анализа
-  Win Cleaner Lamp --shortcuts-scan            найти .lnk с несуществующей целью
-  Win Cleaner Lamp --audit-export snapshot.json  сохранить неизвестные папки + список
+  %[1]s --shortcuts-scan            найти %[4]s
+  %[1]s --audit-export snapshot.json  сохранить неизвестные папки + список
                                                   установленных программ для ручного анализа
 
   # Безопасное удаление одного файла/папки (используется GUI)
-  Win Cleaner Lamp --delete-path "C:\путь\файл"   удалить файл (в Корзину)
-  Win Cleaner Lamp --delete-dir "C:\путь\папка"    удалить папку (в Корзину)
-  Win Cleaner Lamp --delete-path "..." --permanent удалить навсегда, минуя Корзину
+  %[1]s --delete-path "%[5]s"   удалить файл (в Корзину)
+  %[1]s --delete-dir "%[6]s"    удалить папку (в Корзину)
+  %[1]s --delete-path "..." --permanent удалить навсегда, минуя Корзину
 
   # JSON-вывод (для GUI/скриптов)
-  Win Cleaner Lamp --scan --json               структурированный JSON вместо таблицы
-  Win Cleaner Lamp --list --json
+  %[1]s --scan --json               структурированный JSON вместо таблицы
+  %[1]s --list --json
 
 Флаги:
-`, version)
+`, name, usageExampleCategories, usageExampleExclude, usageShortcutsHint, usageExampleFilePath, usageExampleDirPath)
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, `
-Подсказки:
-  • Для очистки C:\Windows\Temp, Prefetch, SoftwareDistribution и т.п.
-    запускайте консоль от имени администратора.
-  • Файлы, занятые запущенными процессами, будут пропущены.
-  • Сначала используйте --scan, чтобы убедиться, что всё корректно.
-  
-  • Для авточистки: сначала --scan --record, затем позже --auto-clean
-  • Конфиг хранится в: %LOCALAPPDATA%\winCleanerLamp\junk.json
-  
-  • OrphanCleaner: используйте --orphan-scan для проверки orphaned_apps.json
-  • Команда --orphan-discover найдёт папки, не связанные с установленными программами
-  • Безопасность: orphan-discover только собирает информацию, не удаляет ничего`)
+	fmt.Fprintln(os.Stderr, "\nПодсказки:")
+	for _, h := range usageHints() {
+		fmt.Fprintln(os.Stderr, "  • "+h)
+	}
+	for _, h := range commonUsageHints() {
+		fmt.Fprintln(os.Stderr, "  • "+h)
+	}
+}
+
+// commonUsageHints — подсказки, не зависящие от ОС.
+func commonUsageHints() []string {
+	return []string{
+		"Файлы, занятые запущенными процессами, будут пропущены.",
+		"Сначала используйте --scan, чтобы убедиться, что всё корректно.",
+		"Для авточистки: сначала --scan --record, затем позже --auto-clean",
+		"Конфиг учёта мусора: " + cleaner.DefaultConfigPath(),
+		"OrphanCleaner: используйте --orphan-scan для проверки orphaned_apps.json",
+		"Команда --orphan-discover найдёт папки, не связанные с установленными программами",
+		"Безопасность: orphan-discover только собирает информацию, не удаляет ничего",
+	}
 }
 
 func printList(all []cleaner.Target) {
@@ -817,23 +837,15 @@ func printAutostartList(entries []cleaner.AutostartEntry) {
 	for _, e := range entries {
 		bySource[e.Source] = append(bySource[e.Source], e)
 	}
-	labels := map[cleaner.AutostartSource]string{
-		cleaner.AutostartRunHKCU:             "Реестр — Run (текущий пользователь)",
-		cleaner.AutostartRunHKLM:             "Реестр — Run (все пользователи)",
-		cleaner.AutostartRunHKLM32:           "Реестр — Run (32-бит, WOW6432Node)",
-		cleaner.AutostartStartupFolderUser:   "Папка автозагрузки (пользователь)",
-		cleaner.AutostartStartupFolderCommon: "Папка автозагрузки (все пользователи)",
-		cleaner.AutostartScheduledTask:       "Задания планировщика (при входе в систему)",
-	}
-	for _, src := range []cleaner.AutostartSource{
-		cleaner.AutostartRunHKCU, cleaner.AutostartRunHKLM, cleaner.AutostartRunHKLM32,
-		cleaner.AutostartStartupFolderUser, cleaner.AutostartStartupFolderCommon, cleaner.AutostartScheduledTask,
-	} {
+	// Порядок и подписи источников зависят от ОС (реестр Run и планировщик в
+	// Windows, systemd/autostart в Linux, LaunchAgents в macOS) — их задаёт
+	// само ядро, см. autostart_<os>.go.
+	for _, src := range cleaner.AutostartSourceOrder() {
 		list := bySource[src]
 		if len(list) == 0 {
 			continue
 		}
-		fmt.Printf("=== %s (%d) ===\n", labels[src], len(list))
+		fmt.Printf("=== %s (%d) ===\n", cleaner.AutostartSourceLabel(src), len(list))
 		for _, e := range list {
 			state := "выкл"
 			if e.Enabled {
@@ -883,7 +895,7 @@ func filterTargets(all []cleaner.Target, include, exclude string, aggressive boo
 func runLeftovers(orphanCfgPath string, logFile string, jsonOut bool) {
 	if !jsonOut {
 		fmt.Println("Поиск возможных остатков удалённых программ...")
-		fmt.Println("Сканирование: AppData, ProgramData, Program Files, реестр HKCU\\Software")
+		fmt.Println("Сканирование: " + cleaner.LeftoverScanDescription())
 	}
 
 	// Загружаем orphan DB если доступна
@@ -999,11 +1011,12 @@ func runLeftovers(orphanCfgPath string, logFile string, jsonOut bool) {
 		fmt.Println()
 	}
 
-	// Ключи реестра
+	// Записи реестра (Windows) / осиротевшие конфиги автозапуска и .desktop
+	// (Linux/macOS) — общий тип LeftoverRegistry, заголовок задаёт ядро.
 	if len(regKeys) > 0 {
-		fmt.Printf("  === Ключи реестра без программ (%d) ===\n", len(regKeys))
+		fmt.Printf("  === %s (%d) ===\n", cleaner.LeftoverRegistrySectionTitle(), len(regKeys))
 		for _, c := range regKeys {
-			fmt.Printf("  [реестр]  %s\n", c.Path)
+			fmt.Printf("  [%s]  %s\n", cleaner.LeftoverRegistryTag(), c.Path)
 			totalCount++
 		}
 		fmt.Println()
@@ -1033,8 +1046,10 @@ func runLeftovers(orphanCfgPath string, logFile string, jsonOut bool) {
 		fmt.Printf(" (в orphan DB: %d)", inDB)
 	}
 	fmt.Println()
-	fmt.Println("\n  Для удаления папок используйте GUI или Проводник / rmdir /s.")
-	fmt.Println("  Для реестра: regedit или reg delete <ключ>.")
+	fmt.Println()
+	for _, h := range cleaner.LeftoverRemovalHints() {
+		fmt.Println("  " + h)
+	}
 }
 
 func runDuplicates(pathsCSV string, allowSystemDirs bool, jsonOut bool) {
@@ -1113,8 +1128,8 @@ func runEmptyDirs(pathsCSV string, jsonOut bool) {
 	}
 	if !jsonOut {
 		fmt.Printf("Поиск пустых папок в: %s\n", strings.Join(roots, ", "))
-		fmt.Println("Правила: • Игнорируются Thumbs.db, desktop.ini и подобные")
-		fmt.Println("         • Системные папки (Windows, Program Files) пропускаются")
+		fmt.Println("Правила: • Игнорируются Thumbs.db, desktop.ini, .DS_Store и подобные")
+		fmt.Println("         • Системные папки пропускаются")
 		fmt.Println()
 	}
 
@@ -1149,7 +1164,7 @@ func runEmptyDirs(pathsCSV string, jsonOut bool) {
 	fmt.Println()
 	fmt.Printf("ИТОГО: %d пустых папок найдено\n", result.Total)
 	fmt.Println("Для удаления используйте GUI (перемещение в Корзину) или команду:")
-	fmt.Println("  Win Cleaner Lamp --empty-dirs \"путь\" --clean")
+	fmt.Printf("  %s --empty-dirs \"путь\" --clean\n", current.Name)
 }
 
 func runLargeFiles(rootsCSV string, minMB int64, topN int, jsonOut bool) {
@@ -1355,10 +1370,9 @@ func runSysInfo() {
 	}
 	fmt.Println("  Эти файлы НЕ удаляются этой утилитой — только информативно.")
 	fmt.Println("  Управление:")
-	fmt.Println("    • hiberfil.sys  — отключить:  powercfg /h off")
-	fmt.Println("    • pagefile.sys  — размер:    Система → Дополнительные → Быстродействие → Виртуальная память")
-	fmt.Println("    • WinSxS        — анализ:    dism /Online /Cleanup-Image /AnalyzeComponentStore")
-	fmt.Println("                      очистка:   dism /Online /Cleanup-Image /StartComponentCleanup /ResetBase")
+	for _, line := range cleaner.SysInfoAdvice() {
+		fmt.Printf("    %s\n", line)
+	}
 	fmt.Println()
 }
 
@@ -1552,7 +1566,7 @@ func runOrphanScan(cfgPath string, verbose bool, jsonOut bool) {
 	}
 	fmt.Println(strings.Repeat("-", 70))
 	fmt.Printf("ИТОГО: %d программ, ~%s на диске\n", len(results), cleaner.Human(totalSize))
-	fmt.Println("Для удаления: Win Cleaner Lamp --orphan-clean \"Имя программы1,Имя программы2\"")
+	fmt.Printf("Для удаления: %s --orphan-clean \"Имя программы1,Имя программы2\"\n", current.Name)
 	fmt.Println("Пути с пометкой [ПОЛЬЗОВАТЕЛЬСКИЕ ДАННЫЕ] --orphan-clean не удаляет без --orphan-include-user-data.")
 }
 
@@ -1635,9 +1649,9 @@ func runOrphanDiscover(cfgPath string, roots []string, jsonOutput bool, outFile 
 		fmt.Println("Найденные папки (потенциальный мусор):")
 		fmt.Println(strings.Repeat("-", 70))
 		for i, r := range results {
-			exeStr := "нет .exe"
+			exeStr := "нет " + usageExecutableLabel
 			if r.HasExecutable {
-				exeStr = "есть .exe"
+				exeStr = "есть " + usageExecutableLabel
 			}
 			fmt.Printf("%d. %s (%d MB, %s)\n", i+1, r.Path, r.SizeMB, exeStr)
 		}

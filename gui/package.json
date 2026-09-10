@@ -14,7 +14,7 @@
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron dist-electron/main.js",
     "build": "tsc && vite build && npm run build:electron",
-    "build:cli": "go build -ldflags \"-s -w\" -o ../win-cleaner-lamp.exe ..",
+    "build:cli": "go build -ldflags \"-s -w\" -o ../win-cleaner-lamp.exe ../wincli",
     "build:electron": "tsc -p tsconfig.electron.json",
     "electron": "electron dist-electron/main.js",
     "start": "npm run build && electron dist-electron/main.js",

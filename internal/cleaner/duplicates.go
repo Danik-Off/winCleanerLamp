@@ -219,8 +219,9 @@ func ScanDuplicates(opts DuplicateScanOptions) (*DuplicateScanResult, error) {
 }
 
 // isSystemDirRoot проверяет, что корень сканирования лежит внутри
-// системного/установочного каталога (Program Files, Windows, ProgramData) —
-// такие корни по умолчанию исключаются из поиска дубликатов, см.
+// системного/установочного каталога (Program Files и Windows в Windows,
+// /usr и /opt в Linux, /System и /Applications в macOS — см. systemDirRoots)
+// — такие корни по умолчанию исключаются из поиска дубликатов, см.
 // DuplicateScanOptions.AllowSystemDirs.
 func isSystemDirRoot(root string) bool {
 	abs, err := filepath.Abs(root)
@@ -228,25 +229,13 @@ func isSystemDirRoot(root string) bool {
 		return false
 	}
 	low := strings.ToLower(filepath.Clean(abs))
-	systemRoots := []string{
-		`c:\windows`,
-		`c:\program files`,
-		`c:\program files (x86)`,
-		`c:\programdata`,
-	}
-	for _, s := range systemRoots {
-		if low == s || strings.HasPrefix(low, s+`\`) {
+	sep := string(filepath.Separator)
+	for _, s := range systemDirRoots {
+		if low == s || strings.HasPrefix(low, s+sep) {
 			return true
 		}
 	}
 	return false
-}
-
-// riskyDuplicateExt — расширения, для которых "дубликат" может оказаться
-// разделяемым между программами файлом (рантайм, библиотека, драйвер), а не
-// просто лишней копией.
-var riskyDuplicateExt = map[string]bool{
-	".exe": true, ".dll": true, ".sys": true, ".ocx": true, ".msi": true,
 }
 
 // duplicateGroupRiskFlag возвращает непустое предупреждение, если группа
@@ -317,11 +306,10 @@ type dupHashCache struct {
 const maxDupHashCacheEntries = 150000
 
 func dupHashCachePath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
+	dir := appStateDir()
+	if dir == "" {
 		return "dup-hash-cache.json"
 	}
-	dir := filepath.Join(home, "AppData", "Local", "winCleanerLamp")
 	_ = os.MkdirAll(dir, 0o755)
 	return filepath.Join(dir, "dup-hash-cache.json")
 }
@@ -397,15 +385,13 @@ func fullHashCached(path string, size int64, cache *dupHashCache, mu *sync.Mutex
 	return h
 }
 
-// skipDir — папки, которые не нужно обходить при поиске дубликатов.
+// skipDir — папки, которые не нужно обходить при поиске дубликатов: рабочие
+// каталоги инструментов разработки (общие для всех ОС) плюс системные папки
+// конкретной ОС (skipDirPlatform).
 func skipDir(name string) bool {
 	skip := map[string]bool{
-		"$recycle.bin": true, "system volume information": true,
-		"$windows.~bt": true, "$windows.~ws": true,
-		"windows": true, "windows.old": true, "winsxs": true, ".git": true,
-		"node_modules": true, "__pycache__": true, ".cache": true,
-		"appdata": true, "recovery": true,
-		"program files": true, "program files (x86)": true,
+		".git": true, "node_modules": true, "__pycache__": true,
+		".cache": true, ".svn": true, ".hg": true, "vendor": true,
 	}
-	return skip[name]
+	return skip[name] || skipDirPlatform[name]
 }

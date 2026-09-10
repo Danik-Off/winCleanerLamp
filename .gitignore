@@ -8,6 +8,11 @@
 # Игнорируем конкретный ваш файл (на всякий случай)
 ./wincleanerlamp.exe
 
+# Собранные ядра Linux и macOS (у них нет расширения, под *.exe не подпадают)
+/lin-cleaner-lamp
+/mac-cleaner-lamp
+/dist/
+
 # Папки сборки (если вы компилируете из C/C++, Go, C# и т.п.)
 Debug/
 Release/

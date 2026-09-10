@@ -84,11 +84,13 @@ CLI — это ядро проекта: один исполняемый файл
 
 ## Что не трогается
 
-В коде заданы ограничения (`safePath` в `internal/cleaner/cleaner.go`), в том числе:
+В коде заданы ограничения (`IsPathSafeToDelete` в `internal/cleaner/safety.go` плюс список защищённых путей своей ОС в `safety_windows.go` / `safety_linux.go` / `safety_darwin.go`), в том числе:
 
-- корни дисков, `System32`, `SysWOW64`, `WinSxS`;
-- `Program Files`, `Program Files (x86)`;
-- системные разделы профиля, которые не должны чиститься как «кеш».
+- **Windows:** корни дисков, `System32`, `SysWOW64`, `WinSxS`, `Program Files`, `Program Files (x86)`, системные разделы профиля;
+- **Linux:** `/`, `/usr`, `/etc`, `/boot`, `/proc`, `/sys`, `/dev`, `/var/lib`, `/snap`, домашний каталог целиком, `~/.ssh`, `~/.gnupg`;
+- **macOS:** `/`, `/System`, `/usr`, `/Applications`, `/Library/Frameworks`, `/private/var/db`, `/private/var/vm`, `/Volumes`, домашний каталог целиком, `~/Library/Keychains`, `~/Library/Mail`, `~/Library/Mobile Documents`.
+
+Проверка выполняется дважды: перед обработкой пути категории и на каждом файле при обходе дерева.
 
 В браузерах намеренно затрагиваются в основном **кеши**, а не пароли, cookies и история целиком — см. исходники категорий.
 
@@ -96,15 +98,24 @@ CLI — это ядро проекта: один исполняемый файл
 
 ## Сборка
 
+Ядро собирается под свою ОС из отдельного каталога:
+
 ```powershell
-go build -o win-cleaner-lamp.exe .
+go build -o win-cleaner-lamp.exe ./wincli
+```
+
+```bash
+go build -o lin-cleaner-lamp ./lincli   # Linux
+go build -o mac-cleaner-lamp ./maccli   # macOS
 ```
 
 Оптимизация размера бинарника (как в релизных скриптах):
 
 ```powershell
-go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
+go build -ldflags "-s -w" -o win-cleaner-lamp.exe ./wincli
 ```
+
+Все три ядра сразу (из-под любой ОС, cgo не используется): `make build-all`.
 
 ---
 
@@ -169,12 +180,16 @@ go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
 
 | Файл | Роль |
 |------|------|
-| `main.go` | Точка входа, флаги, таблица, подтверждение, `--leftovers` |
-| `internal/cleaner/targets.go` | Категории и подстановка `%ENV%` |
-| `internal/cleaner/cleaner.go` | Scan/Clean, спец-действия, `safePath` |
-| `internal/cleaner/leftovers.go` | Логика `--leftovers` |
+| `wincli/`, `lincli/`, `maccli/` | Точки входа трёх ядер (по несколько строк каждая) |
+| `internal/cli/cli.go` | Флаги, таблица, подтверждение, JSON-вывод — общие для всех ОС |
+| `internal/cleaner/targets.go` | Модель категории и раскрытие путей; сами категории — в `targets_windows.go` / `targets_linux.go` / `targets_darwin.go` |
+| `internal/cleaner/cleaner.go` | Scan/Clean и обход дерева; спец-действия — в `specials_<os>.go` |
+| `internal/cleaner/safety.go` | Проверка безопасности пути; списки защищённых путей — в `safety_<os>.go` |
+| `internal/cleaner/leftovers.go` | Логика `--leftovers`; корни и списки исключений — в `apps_<os>.go` |
 
 Общая логика: `cleaner.Process(Target, Options) Report`; при `DryRun=true` выполняется только подсчёт.
+
+Платформенные файлы разделены суффиксом имени (`_windows.go`, `_linux.go`, `_darwin.go`) — build-теги Go подключают только файлы своей ОС, поэтому в ядре каждой платформы нет чужого кода и нет ветвлений по `runtime.GOOS`.
 
 ---
 

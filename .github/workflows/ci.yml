@@ -33,7 +33,7 @@ jobs:
           version: latest
 
   verify:
-    name: 'Проверка: Go + GUI'
+    name: 'Windows: ядро + GUI'
     runs-on: windows-latest
     defaults:
       run:
@@ -61,8 +61,8 @@ jobs:
       - name: Go — тесты (internal/cleaner)
         run: go test ./internal/cleaner/... -short
 
-      - name: Go — сборка CLI
-        run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe .
+      - name: Go — сборка ядра Windows
+        run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe ./wincli
 
       - name: GUI — npm ci
         working-directory: gui
@@ -79,3 +79,77 @@ jobs:
       - name: GUI — сборка (tsc + Vite + Electron main)
         working-directory: gui
         run: npm run build
+
+  verify-linux:
+    name: 'Linux: ядро lincli'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Go — установка
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Go — vet
+        run: go vet ./...
+
+      - name: Go — тесты (internal/cleaner)
+        run: go test ./internal/cleaner/... -short
+
+      - name: Go — сборка ядра Linux
+        run: go build -ldflags "-s -w" -o lin-cleaner-lamp ./lincli
+
+      # Дымовая проверка: ядро должно отдавать список категорий в JSON —
+      # именно этим вызовом начинает работу GUI.
+      - name: Ядро — --list --json
+        run: ./lin-cleaner-lamp --list --json > /dev/null
+
+  verify-macos:
+    name: 'macOS: ядро maccli'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Go — установка
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Go — vet
+        run: go vet ./...
+
+      - name: Go — тесты (internal/cleaner)
+        run: go test ./internal/cleaner/... -short
+
+      - name: Go — сборка ядра macOS
+        run: go build -ldflags "-s -w" -o mac-cleaner-lamp ./maccli
+
+      - name: Ядро — --list --json
+        run: ./mac-cleaner-lamp --list --json > /dev/null
+
+  cross-vet:
+    name: 'Кросс-проверка трёх ядер'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Go — установка
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      # Файлы *_windows.go / *_linux.go / *_darwin.go компилируются только
+      # под свою ОС: без этого шага поломка в чужом ядре осталась бы
+      # незамеченной до сборки релиза.
+      - name: vet под все три ОС
+        run: |
+          GOOS=windows go vet ./...
+          GOOS=linux go vet ./...
+          GOOS=darwin go vet ./...

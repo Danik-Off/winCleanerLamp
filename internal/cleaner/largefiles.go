@@ -47,7 +47,7 @@ type LargeFilesOptions struct {
 // Desktop, Documents, Videos и т.п. уже внутри него).
 func DefaultLargeFileRoots() []string {
 	var roots []string
-	if home := ExpandPath(`%USERPROFILE%`); home != "" {
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
 		roots = append(roots, home)
 	}
 	return roots

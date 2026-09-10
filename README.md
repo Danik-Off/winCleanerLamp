@@ -10,7 +10,7 @@
 [![Release](https://github.com/Danik-Off/winCleanerLamp/actions/workflows/release.yml/badge.svg)](https://github.com/Danik-Off/winCleanerLamp/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go&logoColor=white)](go.mod)
-[![Platform](https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white)](#)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-0078D6)](#три-ядра)
 
 [Возможности](#возможности) ·
 [Установка](#установка) ·
@@ -23,7 +23,9 @@
 
 ---
 
-Набор инструментов для **Windows**: консольная утилита (**CLI**, чистый Go, без внешних зависимостей) и опциональный **графический интерфейс** (**GUI**, Electron + React + MUI), которые помогают оценить и освободить место на диске за счёт удаления кешей, временных файлов и типичного «мусора» по заранее заданным и предсказуемым правилам.
+Набор инструментов для **Windows, Linux и macOS**: консольная утилита (**CLI**, чистый Go, без внешних зависимостей) и опциональный **графический интерфейс** (**GUI**, Electron + React + MUI), которые помогают оценить и освободить место на диске за счёт удаления кешей, временных файлов и типичного «мусора» по заранее заданным и предсказуемым правилам.
+
+У каждой ОС своё **ядро** со своими категориями и системными механизмами, но с одинаковым набором команд и одинаковым JSON-выводом — см. [«Три ядра»](#три-ядра).
 
 > Это **некоммерческий личный проект**: автор не предлагает платной поддержки и гарантий, не несёт ответственности за последствия использования. Изначально всё делалось **для себя**, потому что не нашлось удобных **бесплатных** альтернатив с **поддержкой и развитием**, которые бы устраивали по сценарию использования.
 
@@ -53,8 +55,8 @@
 **Вариант 2 — из исходников.** Нужен [Go 1.21+](https://go.dev/dl/) для CLI и дополнительно [Node.js 20+](https://nodejs.org/) для GUI:
 
 ```powershell
-# CLI
-go build -o win-cleaner-lamp.exe .
+# Ядро своей ОС
+go build -o win-cleaner-lamp.exe ./wincli    # Windows
 .\win-cleaner-lamp.exe --scan
 
 # GUI (использует уже собранный win-cleaner-lamp.exe из корня)
@@ -64,7 +66,36 @@ npm run build:electron
 npm run dev
 ```
 
+```bash
+# Linux и macOS
+go build -o lin-cleaner-lamp ./lincli && ./lin-cleaner-lamp --scan
+go build -o mac-cleaner-lamp ./maccli && ./mac-cleaner-lamp --scan
+```
+
+Все три ядра собираются из-под любой ОС (`make build-all`) — cgo не используется.
+
 Сборка установщика GUI (`npm run dist`) и полный dev-цикл — в [docs/gui.md](docs/gui.md).
+
+---
+
+## Три ядра
+
+Ядро — это исполняемый файл, который делает всю работу; GUI и скрипты только вызывают его команды. Ядер три, по одному на ОС:
+
+| Ядро | Сборка | Что внутри специфичного |
+|---|---|---|
+| **wincli** | `go build -o win-cleaner-lamp.exe ./wincli` | `%TEMP%`, Prefetch, SoftwareDistribution, WinSxS/DISM, Корзина и `.lnk` через PowerShell, реестр (`Uninstall`, `Run`-ключи), `wevtutil`, `ipconfig /flushdns`, отложенное удаление занятых файлов через `MoveFileEx` |
+| **lincli** | `go build -o lin-cleaner-lamp ./lincli` | XDG-пути (`~/.cache`, `~/.local/share`), Корзина по FreeDesktop Trash spec, `journalctl --vacuum-time`, кеши apt/dnf/zypper/pacman/apk, неиспользуемые runtime flatpak, отключённые ревизии snap, автозапуск через `~/.config/autostart` и `systemctl --user`, список программ из dpkg/rpm/pacman/flatpak/snap и `.desktop` |
+| **maccli** | `go build -o mac-cleaner-lamp ./maccli` | `~/Library/{Caches,Logs,Application Support}`, `~/.Trash`, `$TMPDIR`, Xcode (DerivedData, DeviceSupport, архивы), симуляторы iOS, `brew cleanup`, `qlmanage -r cache`, локальные снимки Time Machine (`tmutil`), автозапуск через LaunchAgents/LaunchDaemons и объекты входа, программы из `/Applications` и Homebrew |
+
+Общее для всех трёх — в `internal/`:
+
+* `internal/cli` — разбор флагов, таблицы, подтверждения, JSON-протокол (одинаковый на всех ОС, поэтому GUI и скрипты не переписываются под платформу);
+* `internal/cleaner` — модель категорий, обход и удаление файлов, проверка безопасности пути, дубликаты, крупные файлы, пустые папки, учёт мусора, база остатков.
+
+Платформенные части лежат в том же пакете в файлах `*_windows.go` / `*_linux.go` / `*_darwin.go` — компилятор выбирает нужные по имени файла, так что ядро каждой ОС содержит только свой код.
+
+**Чего в Linux и macOS нет по определению:** реестра Windows. Поля `registryKeys` в `orphaned_apps.json` эти ядра не проверяют и не удаляют, а `--orphan-export-reg` честно сообщает, что экспортировать нечего. Проверка `.lnk`-ярлыков заменена на `.desktop` (Linux) и символические ссылки с `.app`-бандлами (macOS).
 
 ---
 
