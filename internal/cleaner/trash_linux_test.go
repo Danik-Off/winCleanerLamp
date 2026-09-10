@@ -11,12 +11,11 @@ import (
 
 // fakeTrashHome подменяет каталог данных пользователя, чтобы тесты не
 // трогали настоящую Корзину.
-func fakeTrashHome(t *testing.T) string {
+func fakeTrashHome(t *testing.T) {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_DATA_HOME", filepath.Join(home, ".local", "share"))
-	return home
 }
 
 func TestMoveToTrash_MovesFileAndWritesInfo(t *testing.T) {

@@ -218,29 +218,63 @@ func desktopPrograms() []InstalledProgram {
 // desktopExecPath — путь к исполняемому файлу из ключей TryExec/Exec, без
 // аргументов и подстановок вида %U/%F.
 func desktopExecPath(keys map[string]string) string {
-	if try := strings.TrimSpace(keys["TryExec"]); try != "" {
-		return unquoteDesktopArg(try)
+	if try := splitDesktopExec(keys["TryExec"]); len(try) > 0 {
+		return try[0]
 	}
-	execLine := strings.TrimSpace(keys["Exec"])
-	if execLine == "" {
-		return ""
-	}
-	for _, field := range strings.Fields(execLine) {
+	for _, arg := range splitDesktopExec(keys["Exec"]) {
 		// env VAR=value program — пропускаем обёртку и присваивания.
-		if field == "env" || strings.Contains(field, "=") {
+		if arg == "env" || strings.Contains(arg, "=") {
 			continue
 		}
-		if strings.HasPrefix(field, "%") {
+		if strings.HasPrefix(arg, "%") {
 			continue
 		}
-		return unquoteDesktopArg(field)
+		return arg
 	}
 	return ""
 }
 
-func unquoteDesktopArg(s string) string {
-	s = strings.Trim(s, `"'`)
-	return strings.ReplaceAll(s, `\\`, `\`)
+// splitDesktopExec разбирает значение ключа Exec на аргументы по правилам
+// Desktop Entry Specification: аргумент с пробелом или другим особым
+// символом заключается в двойные кавычки, а внутри них символы " ` $ \
+// экранируются обратным слэшем.
+//
+// strings.Fields здесь не годится: путь вида "/opt/My App/app" она разорвала
+// бы по пробелу, и проверка «программа существует» всегда давала бы ложное
+// «не найдена» — ярлык попадал бы в битые, а его каталог в остатки.
+func splitDesktopExec(line string) []string {
+	var args []string
+	var current strings.Builder
+	inQuotes, hasToken := false, false
+
+	flush := func() {
+		if hasToken {
+			args = append(args, current.String())
+			current.Reset()
+			hasToken = false
+		}
+	}
+
+	runes := []rune(line)
+	for i := 0; i < len(runes); i++ {
+		c := runes[i]
+		switch {
+		case inQuotes && c == '\\' && i+1 < len(runes):
+			i++
+			current.WriteRune(runes[i])
+			hasToken = true
+		case c == '"':
+			inQuotes = !inQuotes
+			hasToken = true // "" — это пустой аргумент, а не отсутствие его
+		case !inQuotes && (c == ' ' || c == '\t'):
+			flush()
+		default:
+			current.WriteRune(c)
+			hasToken = true
+		}
+	}
+	flush()
+	return args
 }
 
 // installedProgramNames — токены имён установленных программ для эвристики

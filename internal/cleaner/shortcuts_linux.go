@@ -16,12 +16,11 @@ func isShortcutCandidate(p string, d os.DirEntry) bool {
 // DefaultShortcutRoots — стандартные места, где лежат ярлыки приложений:
 // рабочий стол, меню приложений (пользовательское и системное), автозапуск.
 func DefaultShortcutRoots() []string {
-	roots := []string{
+	roots := append([]string{
 		sub(userHomeDir(), "Desktop"),
 		sub(userHomeDir(), "Рабочий стол"),
 		userAutostartDir(),
-	}
-	roots = append(roots, desktopApplicationDirs()...)
+	}, desktopApplicationDirs()...)
 	return nonEmpty(roots)
 }
 

@@ -28,11 +28,10 @@ func isShortcutCandidate(p string, d os.DirEntry) bool {
 // DefaultShortcutRoots — рабочий стол, папки приложений и Dock-ярлыки
 // пользователя.
 func DefaultShortcutRoots() []string {
-	roots := []string{
+	roots := append([]string{
 		sub(userHomeDir(), "Desktop"),
 		sub(userHomeDir(), "Documents"),
-	}
-	roots = append(roots, applicationDirs()...)
+	}, applicationDirs()...)
 	return nonEmpty(roots)
 }
 

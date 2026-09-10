@@ -18,8 +18,16 @@ jobs:
     # .golangci.yml существовал в репозитории, но раньше не был подключён
     # ни к одному workflow — golangci-lint запускался только вручную (make lint),
     # если разработчик о нём вспоминал.
-    name: 'Go — golangci-lint'
+    #
+    # Матрица по GOOS: файлы *_windows.go / *_linux.go / *_darwin.go
+    # компилируются только под свою ОС, поэтому один прогон линтера проверил
+    # бы лишь одно ядро из трёх.
+    name: 'Go — golangci-lint (${{ matrix.goos }})'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [windows, linux, darwin]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,9 +36,14 @@ jobs:
         with:
           go-version: '1.21'
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        # Версия action и версия линтера зафиксированы намеренно: конфиг в
+        # формате v2 читают только action v7+ и golangci-lint v2, а плавающий
+        # `latest` однажды уже сломал этот шаг сменой мажорной версии.
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          version: v2.13.2
+        env:
+          GOOS: ${{ matrix.goos }}
 
   verify:
     name: 'Windows: ядро + GUI'

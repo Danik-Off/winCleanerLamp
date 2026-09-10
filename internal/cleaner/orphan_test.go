@@ -137,7 +137,7 @@ func TestCacheTargetsFromOrphanConfig_NilConfig(t *testing.T) {
 // setupOrphanFixture создаёт временную "программу" с реальными файлами на
 // диске для end-to-end проверки scanOneOrphan/cleanOneOrphan без обращения
 // к реестру/установленным программам.
-func setupOrphanFixture(t *testing.T) (OrphanApp, string) {
+func setupOrphanFixture(t *testing.T) OrphanApp {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -165,11 +165,11 @@ func setupOrphanFixture(t *testing.T) (OrphanApp, string) {
 		CachePaths:      []string{cacheDir},
 		AdditionalPaths: []string{savesDir}, // намеренно НЕ в userDataPaths — ловим эвристикой по имени
 	}
-	return app, dir
+	return app
 }
 
 func TestScanOneOrphan_FindsPathsAndFlagsUserData(t *testing.T) {
-	app, _ := setupOrphanFixture(t)
+	app := setupOrphanFixture(t)
 
 	result := scanOneOrphan(app)
 
@@ -192,7 +192,7 @@ func TestScanOneOrphan_FindsPathsAndFlagsUserData(t *testing.T) {
 }
 
 func TestCleanOneOrphan_CacheOnlyTouchesOnlyCache(t *testing.T) {
-	app, _ := setupOrphanFixture(t)
+	app := setupOrphanFixture(t)
 
 	result := cleanOneOrphan(app, OrphanCleanOptions{CacheOnly: true})
 
@@ -215,7 +215,7 @@ func TestCleanOneOrphan_CacheOnlyTouchesOnlyCache(t *testing.T) {
 }
 
 func TestCleanOneOrphan_FullCleanSkipsUserDataByDefault(t *testing.T) {
-	app, _ := setupOrphanFixture(t)
+	app := setupOrphanFixture(t)
 
 	result := cleanOneOrphan(app, OrphanCleanOptions{CacheOnly: false})
 
@@ -235,7 +235,7 @@ func TestCleanOneOrphan_FullCleanSkipsUserDataByDefault(t *testing.T) {
 }
 
 func TestCleanOneOrphan_FullCleanIncludesUserDataWhenRequested(t *testing.T) {
-	app, _ := setupOrphanFixture(t)
+	app := setupOrphanFixture(t)
 
 	result := cleanOneOrphan(app, OrphanCleanOptions{CacheOnly: false, IncludeUserData: true})
 

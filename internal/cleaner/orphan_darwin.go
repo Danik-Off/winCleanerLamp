@@ -15,14 +15,13 @@ func registryKeyExists(_ string) bool { return false }
 // DefaultDiscoverRoots — где искать неизвестные каталоги: пользовательские
 // каталоги настроек, данных и кешей плюс папки приложений.
 func DefaultDiscoverRoots() []string {
-	roots := []string{
+	roots := append([]string{
 		userAppSupportDir(),
 		userCacheDir(),
 		userLogsDir(),
 		sub(userLibraryDir(), "Containers"),
 		sub(userLibraryDir(), "Preferences"),
-	}
-	roots = append(roots, applicationDirs()...)
+	}, applicationDirs()...)
 	return nonEmpty(roots)
 }
 

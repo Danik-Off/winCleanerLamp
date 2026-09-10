@@ -97,11 +97,49 @@ func TestDesktopExecPath(t *testing.T) {
 		{map[string]string{"Exec": `"/opt/My App/app" %F`}, "/opt/My App/app"},
 		{map[string]string{"Exec": "env LANG=C /usr/bin/app"}, "/usr/bin/app"},
 		{map[string]string{"TryExec": "/usr/bin/real", "Exec": "/usr/bin/wrapper"}, "/usr/bin/real"},
+		{map[string]string{"TryExec": `"/opt/My App/app"`}, "/opt/My App/app"},
+		{map[string]string{"Exec": "%U"}, ""},
 		{map[string]string{}, ""},
 	}
 	for _, c := range cases {
 		if got := desktopExecPath(c.keys); got != c.want {
 			t.Errorf("desktopExecPath(%v) = %q, want %q", c.keys, got, c.want)
+		}
+	}
+}
+
+// Путь с пробелом в Exec заключён в кавычки — если разбирать строку по
+// пробелам, программа «пропадает», и ярлык попадает в битые, а его каталог
+// в остатки.
+func TestSplitDesktopExec(t *testing.T) {
+	const bs = `\`
+	const q = `"`
+
+	cases := []struct {
+		name string
+		line string
+		want []string
+	}{
+		{"без кавычек", `/usr/bin/app --flag %U`, []string{"/usr/bin/app", "--flag", "%U"}},
+		{"пробел в кавычках", `"/opt/My App/app" %F`, []string{"/opt/My App/app", "%F"}},
+		{"экранированная кавычка", q + "/opt/a" + bs + q + "b/app" + q, []string{`/opt/a"b/app`}},
+		{"экранированный слэш", q + "/opt/a" + bs + bs + "b/app" + q, []string{"/opt/a" + bs + "b/app"}},
+		{"пустой аргумент", `app "" x`, []string{"app", "", "x"}},
+		{"табуляция как разделитель", "a\tb", []string{"a", "b"}},
+		{"незакрытая кавычка", `"/opt/My App/app`, []string{"/opt/My App/app"}},
+		{"пустая строка", "", nil},
+		{"только пробелы", "   ", nil},
+	}
+	for _, c := range cases {
+		got := splitDesktopExec(c.line)
+		if len(got) != len(c.want) {
+			t.Errorf("%s: splitDesktopExec(%q) = %q, want %q", c.name, c.line, got, c.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("%s: splitDesktopExec(%q)[%d] = %q, want %q", c.name, c.line, i, got[i], c.want[i])
+			}
 		}
 	}
 }

@@ -1,18 +1,8 @@
+version: "2"
 run:
-  timeout: 5m
   go: "1.21"
-
 linters:
   enable:
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-    - gofmt
-    - goimports
     - misspell
     - nakedret
     - prealloc
@@ -20,37 +10,61 @@ linters:
     - unconvert
     - unparam
     - whitespace
-
-linters-settings:
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/suzen/wincleanerlamp
-  revive:
-    rules:
-      - name: blank-imports
-        disabled: false
-      - name: context-as-argument
-        disabled: false
-      - name: var-declaration
-        disabled: false
-      - name: package-comments
-        disabled: true
-      - name: exported
-        disabled: false
-        arguments:
-          - "checkPrivateReceivers"
-          - "disableStutteringCheck"
-      - name: indent-error-flow
-        disabled: false
-      - name: unexported-return
-        disabled: false
-      - name: unused-parameter
-        disabled: false
-
+  settings:
+    revive:
+      rules:
+        - name: blank-imports
+          disabled: false
+        - name: context-as-argument
+          disabled: false
+        - name: var-declaration
+          disabled: false
+        - name: package-comments
+          disabled: true
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - disableStutteringCheck
+          disabled: false
+        - name: indent-error-flow
+          disabled: false
+        - name: unexported-return
+          disabled: false
+        - name: unused-parameter
+          disabled: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - gui/node_modules
+      - vendor
+      - third_party
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-dirs:
-    - vendor
-    - third_party
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/suzen/wincleanerlamp
+  exclusions:
+    generated: lax
+    paths:
+      - gui/node_modules
+      - vendor
+      - third_party
+      - third_party$
+      - builtin$
+      - examples$

@@ -32,11 +32,17 @@ vet-all:
 	GOOS=linux go vet ./...
 	GOOS=darwin go vet ./...
 
+# Линт всех трёх ядер: файлы *_windows.go / *_linux.go / *_darwin.go
+# компилируются только под свою ОС, и один прогон проверил бы одно ядро.
 lint:
-	golangci-lint run
+	GOOS=windows golangci-lint run
+	GOOS=linux golangci-lint run
+	GOOS=darwin golangci-lint run
 
+# Путь модуля с /v2 обязателен: конфиг .golangci.yml в формате v2, и
+# установка по старому пути поставила бы линтер v1, который его не прочитает.
 lint-install:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 
 clean:
 	go clean
