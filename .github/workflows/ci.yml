@@ -31,10 +31,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # Для линтера нужен свежий тулчейн: golangci-lint v2.13 собран с Go 1.26
+      # и поддерживает только две последние версии Go — с 1.21 (как в
+      # остальных джобах) он не может загрузить пакеты и падает. Код при этом
+      # по-прежнему соответствует `go 1.21` из go.mod (run.go в .golangci.yml).
       - name: Go — установка
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: 'stable'
       - name: golangci-lint
         # Версия action и версия линтера зафиксированы намеренно: конфиг в
         # формате v2 читают только action v7+ и golangci-lint v2, а плавающий
