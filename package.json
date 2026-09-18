@@ -1,6 +1,6 @@
 {
   "name": "wincleanerlamp",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "private": true,
   "description": "Очистка временных файлов и кешей: ядра на Go для Windows, Linux и macOS и GUI на Electron.",
   "license": "MIT",
