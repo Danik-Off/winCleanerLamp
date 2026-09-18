@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+// orphanConfigName — база остатков Windows-ядра (пути с %APPDATA%,
+// %LOCALAPPDATA%, %PROGRAMFILES% и ключами реестра).
+const orphanConfigName = "orphaned_apps.windows.json"
+
 func registryKeyExists(key string) bool {
 	err := exec.Command("reg", "query", key, "/ve").Run()
 	if err != nil {

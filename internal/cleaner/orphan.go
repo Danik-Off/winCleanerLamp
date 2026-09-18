@@ -34,13 +34,37 @@ type OrphanApp struct {
 	Notes         string   `json:"notes,omitempty"`
 }
 
-// OrphanConfigPath возвращает путь к orphaned_apps.json рядом с исполняемым файлом.
+// legacyOrphanConfigName — имя файла базы остатков до разделения по ОС.
+// Оставлено как запасной вариант: у пользователя рядом с exe может лежать
+// собственный orphaned_apps.json, собранный вручную, и терять его при
+// обновлении нельзя.
+const legacyOrphanConfigName = "orphaned_apps.json"
+
+// OrphanConfigPath возвращает путь к базе остатков рядом с исполняемым файлом.
+//
+// База своя у каждой ОС (orphanConfigName задан в orphan_windows.go,
+// orphan_linux.go и orphan_darwin.go): пути вида %LOCALAPPDATA%\... в Linux и
+// macOS не существуют, а ~/Library/... и ~/.config/... — в Windows, поэтому
+// один общий файл на три платформы означал бы, что две трети записей всегда
+// мусор. Если файла для текущей ОС рядом нет, но есть старый общий
+// orphaned_apps.json — используется он.
 func OrphanConfigPath() string {
-	exe, err := os.Executable()
-	if err != nil {
-		return "orphaned_apps.json"
+	dir := "."
+	if exe, err := os.Executable(); err == nil {
+		dir = filepath.Dir(exe)
 	}
-	return filepath.Join(filepath.Dir(exe), "orphaned_apps.json")
+	osSpecific := filepath.Join(dir, orphanConfigName)
+	if _, err := os.Stat(osSpecific); err == nil {
+		return osSpecific
+	}
+	if legacy := filepath.Join(dir, legacyOrphanConfigName); legacy != osSpecific {
+		if _, err := os.Stat(legacy); err == nil {
+			return legacy
+		}
+	}
+	// Ни того, ни другого нет — возвращаем ожидаемое имя для текущей ОС,
+	// чтобы сообщение об ошибке подсказало, какой файл положить рядом.
+	return osSpecific
 }
 
 // CacheTargetsFromOrphanConfig создаёт Target-ы из cachePaths всех записей orphaned_apps.json.

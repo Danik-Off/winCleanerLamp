@@ -67,7 +67,9 @@
         "from": "../",
         "filter": [
           "win-cleaner-lamp.exe",
-          "orphaned_apps.json"
+          "orphaned_apps.windows.json",
+          "orphaned_apps.linux.json",
+          "orphaned_apps.darwin.json"
         ],
         "to": "."
       }

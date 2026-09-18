@@ -80,13 +80,13 @@ func Run(app App) {
 		junkByProg = flag.String("junk-by-program", "", "показать мусор от указанной программы (например, 'chrome', 'teams')")
 		configPath = flag.String("config", "", "путь к файлу конфига учёта мусора (по умолчанию: "+cleaner.DefaultConfigPath()+")")
 
-		// Flags для OrphanCleaner (orphaned_apps.json)
-		orphanConfig     = flag.String("orphan-config", cleaner.OrphanConfigPath(), "путь к файлу orphaned_apps.json")
-		orphanScan       = flag.Bool("orphan-scan", false, "проверить записи из orphaned_apps.json (найти подтверждённый мусор)")
+		// Flags для OrphanCleaner (база остатков orphaned_apps.<ос>.json)
+		orphanConfig     = flag.String("orphan-config", cleaner.OrphanConfigPath(), "путь к базе остатков (по умолчанию orphaned_apps.<ос>.json рядом с исполняемым файлом)")
+		orphanScan       = flag.Bool("orphan-scan", false, "проверить записи из базы остатков (найти подтверждённый мусор)")
 		orphanDiscover   = flag.Bool("orphan-discover", false, "найти неизвестные папки, не связанные с установленными программами")
-		orphanCleanNames = flag.String("orphan-clean", "", "удалить мусор указанных программ из orphaned_apps.json (имена через запятую)")
-		orphanInfo       = flag.String("orphan-info", "", "подробная информация по программе из orphaned_apps.json")
-		orphanList       = flag.Bool("orphan-list", false, "показать все записи из orphaned_apps.json")
+		orphanCleanNames = flag.String("orphan-clean", "", "удалить мусор указанных программ из базы остатков (имена через запятую)")
+		orphanInfo       = flag.String("orphan-info", "", "подробная информация по программе из базы остатков")
+		orphanList       = flag.Bool("orphan-list", false, "показать все записи из базы остатков")
 		orphanRoots      = flag.String("orphan-roots", "", "корневые папки для discover (через ;)")
 		orphanOut        = flag.String("orphan-out", "", "сохранить результат discover в файл JSON")
 		orphanJSON       = flag.Bool("orphan-json", false, "вывод discover в формате JSON")
@@ -94,7 +94,7 @@ func Run(app App) {
 		orphanExportReg  = flag.String("orphan-export-reg", "", "экспортировать ключи реестра перед удалением (папка; только Windows — в Linux и macOS реестра нет)")
 		orphanCacheOnly  = flag.Bool("orphan-cache-only", false, "удалять только кеш программ (безопасно, не трогает настройки)")
 		orphanIncludeUD  = flag.Bool("orphan-include-user-data", false, "разрешить удаление путей, похожих на пользовательские данные (сохранения, проекты и т.п.) — по умолчанию они пропускаются")
-		orphanTrackPath  = flag.String("orphan-track", "", "путь из --orphan-discover, который нужно добавить в orphaned_apps.json")
+		orphanTrackPath  = flag.String("orphan-track", "", "путь из --orphan-discover, который нужно добавить в базу остатков")
 		orphanTrackName  = flag.String("orphan-track-name", "", "отображаемое имя для --orphan-track (по умолчанию — имя папки)")
 		orphanTrackCache = flag.Bool("orphan-track-cache", false, "добавить путь как безопасный кеш (cachePaths) вместо обычного пути на проверку (additionalPaths)")
 
@@ -288,8 +288,8 @@ func Run(app App) {
 			fmt.Fprintf(os.Stderr, "Предупреждение (orphaned_apps.json): %s\n", w)
 		}
 	} else if *verboseFlag || *scanFlag || *cleanFlag {
-		fmt.Fprintf(os.Stderr, "Предупреждение: не удалось загрузить orphaned_apps.json (%s): %v\n", *orphanConfig, orphErr)
-		fmt.Fprintln(os.Stderr, "Категории кеша приложений не будут доступны. Положите orphaned_apps.json рядом с exe.")
+		fmt.Fprintf(os.Stderr, "Предупреждение: не удалось загрузить базу остатков (%s): %v\n", *orphanConfig, orphErr)
+		fmt.Fprintf(os.Stderr, "Категории кеша приложений не будут доступны. Положите %s рядом с исполняемым файлом.\n", filepath.Base(cleaner.OrphanConfigPath()))
 	}
 
 	if *listFlag {

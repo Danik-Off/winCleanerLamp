@@ -1,0 +1,2082 @@
+{
+  "apps": [
+    {
+      "displayName": "Mozilla Firefox",
+      "publisher": "Mozilla",
+      "installPaths": [
+        "~/.mozilla/firefox"
+      ],
+      "additionalPaths": [
+        "~/.mozilla",
+        "~/snap/firefox",
+        "~/.var/app/org.mozilla.firefox"
+      ],
+      "cachePaths": [
+        "~/.cache/mozilla/firefox",
+        "~/.cache/mozilla",
+        "~/snap/firefox/common/.cache",
+        "~/.var/app/org.mozilla.firefox/cache"
+      ],
+      "userDataPaths": [
+        "~/.mozilla/firefox"
+      ],
+      "notes": "Профили Firefox (закладки, пароли, куки) лежат в ~/.mozilla/firefox — это пользовательские данные. Чистый мусор — только ~/.cache/mozilla. Snap- и Flatpak-сборки хранят всё отдельно."
+    },
+    {
+      "displayName": "Mozilla Thunderbird",
+      "publisher": "Mozilla",
+      "installPaths": [
+        "~/.thunderbird"
+      ],
+      "additionalPaths": [
+        "~/snap/thunderbird",
+        "~/.var/app/org.mozilla.Thunderbird"
+      ],
+      "cachePaths": [
+        "~/.cache/thunderbird",
+        "~/.var/app/org.mozilla.Thunderbird/cache"
+      ],
+      "userDataPaths": [
+        "~/.thunderbird"
+      ],
+      "notes": "~/.thunderbird содержит локальную почту (Local Folders) — удалять только осознанно."
+    },
+    {
+      "displayName": "Google Chrome",
+      "publisher": "Google",
+      "installPaths": [
+        "~/.config/google-chrome"
+      ],
+      "additionalPaths": [
+        "~/.config/google-chrome-beta",
+        "~/.config/google-chrome-unstable",
+        "~/.var/app/com.google.Chrome",
+        "/opt/google/chrome"
+      ],
+      "cachePaths": [
+        "~/.cache/google-chrome",
+        "~/.cache/google-chrome-beta",
+        "~/.cache/google-chrome-unstable",
+        "~/.var/app/com.google.Chrome/cache"
+      ],
+      "notes": "Пути подтверждены правилами BleachBit (cleaners/google_chrome.xml). Профиль Default — пользовательские данные, ~/.cache/google-chrome — чистый мусор."
+    },
+    {
+      "displayName": "Chromium",
+      "publisher": "The Chromium Project",
+      "installPaths": [
+        "~/.config/chromium"
+      ],
+      "additionalPaths": [
+        "~/snap/chromium",
+        "~/.var/app/org.chromium.Chromium"
+      ],
+      "cachePaths": [
+        "~/.cache/chromium",
+        "~/snap/chromium/common/.cache",
+        "~/.var/app/org.chromium.Chromium/cache"
+      ],
+      "notes": "Chromium из репозитория, Snap и Flatpak используют три разных каталога — остатки часто остаются во всех трёх."
+    },
+    {
+      "displayName": "Brave Browser",
+      "publisher": "Brave Software",
+      "installPaths": [
+        "~/.config/BraveSoftware"
+      ],
+      "additionalPaths": [
+        "~/.var/app/com.brave.Browser",
+        "/opt/brave.com/brave"
+      ],
+      "cachePaths": [
+        "~/.cache/BraveSoftware",
+        "~/.var/app/com.brave.Browser/cache"
+      ],
+      "notes": "Остатки Brave после удаления пакета brave-browser."
+    },
+    {
+      "displayName": "Microsoft Edge",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "~/.config/microsoft-edge"
+      ],
+      "additionalPaths": [
+        "~/.config/microsoft-edge-beta",
+        "~/.config/microsoft-edge-dev",
+        "/opt/microsoft/msedge"
+      ],
+      "cachePaths": [
+        "~/.cache/microsoft-edge",
+        "~/.cache/microsoft-edge-beta",
+        "~/.cache/microsoft-edge-dev"
+      ],
+      "notes": "Edge для Linux ставится в /opt/microsoft/msedge, профиль — в ~/.config/microsoft-edge."
+    },
+    {
+      "displayName": "Opera",
+      "publisher": "Opera Software",
+      "installPaths": [
+        "~/.config/opera"
+      ],
+      "additionalPaths": [
+        "~/.config/opera-beta",
+        "~/.config/opera-developer"
+      ],
+      "cachePaths": [
+        "~/.cache/opera",
+        "~/.cache/opera-beta",
+        "~/.cache/opera-developer"
+      ],
+      "notes": "Остатки Opera (см. cleaners/opera.xml в BleachBit). Opera GX официальной Linux-сборки не имеет."
+    },
+    {
+      "displayName": "Vivaldi",
+      "publisher": "Vivaldi Technologies",
+      "installPaths": [
+        "~/.config/vivaldi"
+      ],
+      "additionalPaths": [
+        "~/.config/vivaldi-snapshot",
+        "/opt/vivaldi"
+      ],
+      "cachePaths": [
+        "~/.cache/vivaldi",
+        "~/.cache/vivaldi-snapshot"
+      ],
+      "notes": "Остатки Vivaldi (см. cleaners/vivaldi.xml в BleachBit)."
+    },
+    {
+      "displayName": "Yandex Browser",
+      "publisher": "Yandex",
+      "installPaths": [
+        "~/.config/yandex-browser"
+      ],
+      "additionalPaths": [
+        "~/.config/yandex-browser-beta",
+        "/opt/yandex/browser"
+      ],
+      "cachePaths": [
+        "~/.cache/yandex-browser",
+        "~/.cache/yandex-browser-beta"
+      ],
+      "notes": "Остатки Яндекс.Браузера."
+    },
+    {
+      "displayName": "LibreWolf",
+      "publisher": "LibreWolf Community",
+      "installPaths": [
+        "~/.librewolf"
+      ],
+      "additionalPaths": [
+        "~/.var/app/io.gitlab.librewolf-community"
+      ],
+      "cachePaths": [
+        "~/.cache/librewolf",
+        "~/.var/app/io.gitlab.librewolf-community/cache"
+      ],
+      "userDataPaths": [
+        "~/.librewolf"
+      ],
+      "notes": "Форк Firefox со своим каталогом профиля (см. cleaners/librewolf.xml в BleachBit)."
+    },
+    {
+      "displayName": "Zen Browser",
+      "publisher": "Zen Browser",
+      "installPaths": [
+        "~/.zen"
+      ],
+      "additionalPaths": [
+        "~/.var/app/app.zen_browser.zen"
+      ],
+      "cachePaths": [
+        "~/.cache/zen",
+        "~/.var/app/app.zen_browser.zen/cache"
+      ],
+      "userDataPaths": [
+        "~/.zen"
+      ],
+      "notes": "Форк Firefox; профиль в ~/.zen (см. cleaners/zen.xml в BleachBit)."
+    },
+    {
+      "displayName": "Tor Browser",
+      "publisher": "The Tor Project",
+      "installPaths": [
+        "~/.local/share/torbrowser"
+      ],
+      "additionalPaths": [
+        "~/.tor-browser",
+        "~/.var/app/org.torproject.torbrowser-launcher"
+      ],
+      "cachePaths": [
+        "~/.cache/torbrowser"
+      ],
+      "notes": "Каталог torbrowser-launcher со скачанным бандлом браузера."
+    },
+    {
+      "displayName": "Visual Studio Code",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "~/.config/Code"
+      ],
+      "additionalPaths": [
+        "~/.vscode",
+        "~/.vscode-server",
+        "/usr/share/code"
+      ],
+      "cachePaths": [
+        "~/.config/Code/Cache",
+        "~/.config/Code/CachedData",
+        "~/.config/Code/CachedExtensionVSIXs",
+        "~/.config/Code/Code Cache",
+        "~/.config/Code/GPUCache",
+        "~/.config/Code/logs",
+        "~/.config/Code/User/workspaceStorage"
+      ],
+      "notes": "CachedData копится при каждом обновлении VS Code и легко занимает несколько ГБ. ~/.vscode/extensions — установленные расширения, ~/.vscode-server остаётся после Remote-SSH."
+    },
+    {
+      "displayName": "VS Code Insiders и VSCodium",
+      "publisher": "Microsoft / VSCodium",
+      "installPaths": [
+        "~/.config/Code - Insiders"
+      ],
+      "additionalPaths": [
+        "~/.vscode-insiders",
+        "~/.config/VSCodium",
+        "~/.vscode-oss",
+        "~/.var/app/com.vscodium.codium"
+      ],
+      "cachePaths": [
+        "~/.config/Code - Insiders/CachedData",
+        "~/.config/VSCodium/CachedData",
+        "~/.config/VSCodium/logs"
+      ],
+      "notes": "Имена каталогов подтверждены правилами BleachBit (cleaners/vscode.xml)."
+    },
+    {
+      "displayName": "Cursor",
+      "publisher": "Anysphere",
+      "installPaths": [
+        "~/.config/Cursor"
+      ],
+      "additionalPaths": [
+        "~/.cursor",
+        "~/.cursor-server"
+      ],
+      "cachePaths": [
+        "~/.config/Cursor/CachedData",
+        "~/.config/Cursor/Cache",
+        "~/.config/Cursor/Code Cache",
+        "~/.config/Cursor/logs"
+      ],
+      "notes": "Форк VS Code: та же структура каталогов и тот же разрастающийся CachedData."
+    },
+    {
+      "displayName": "Windsurf",
+      "publisher": "Codeium",
+      "installPaths": [
+        "~/.config/Windsurf"
+      ],
+      "additionalPaths": [
+        "~/.codeium",
+        "~/.windsurf"
+      ],
+      "cachePaths": [
+        "~/.config/Windsurf/CachedData",
+        "~/.config/Windsurf/logs"
+      ],
+      "notes": "Форк VS Code (см. cleaners/vscode.xml в BleachBit)."
+    },
+    {
+      "displayName": "Sublime Text и Sublime Merge",
+      "publisher": "Sublime HQ",
+      "installPaths": [
+        "~/.config/sublime-text"
+      ],
+      "additionalPaths": [
+        "~/.config/sublime-text-3",
+        "~/.config/sublime-merge"
+      ],
+      "cachePaths": [
+        "~/.cache/sublime-text",
+        "~/.cache/sublime-text-3",
+        "~/.cache/sublime-merge"
+      ],
+      "notes": "Sublime Text 3 и 4 используют разные каталоги — после обновления старый обычно остаётся."
+    },
+    {
+      "displayName": "JetBrains IDE (IntelliJ IDEA, PyCharm, WebStorm, GoLand)",
+      "publisher": "JetBrains",
+      "installPaths": [
+        "~/.config/JetBrains"
+      ],
+      "additionalPaths": [
+        "~/.local/share/JetBrains",
+        "~/.java"
+      ],
+      "cachePaths": [
+        "~/.cache/JetBrains"
+      ],
+      "notes": "Официальная схема JetBrains для Linux: настройки ~/.config/JetBrains/<IDE><версия>, плагины ~/.local/share/JetBrains/<IDE><версия>, кеши и индексы ~/.cache/JetBrains/<IDE><версия>. Каталоги версионированы, поэтому от каждой прошлой версии остаётся свой набор."
+    },
+    {
+      "displayName": "JetBrains Toolbox",
+      "publisher": "JetBrains",
+      "installPaths": [
+        "~/.local/share/JetBrains/Toolbox"
+      ],
+      "additionalPaths": [
+        "~/.local/share/JetBrains/Toolbox/apps"
+      ],
+      "cachePaths": [
+        "~/.cache/JetBrains/Toolbox"
+      ],
+      "notes": "Toolbox хранит сами IDE в ~/.local/share/JetBrains/Toolbox/apps; после его удаления каталог остаётся целиком."
+    },
+    {
+      "displayName": "Android Studio",
+      "publisher": "Google",
+      "installPaths": [
+        "~/.config/Google"
+      ],
+      "additionalPaths": [
+        "~/.local/share/Google",
+        "~/.AndroidStudio",
+        "/opt/android-studio"
+      ],
+      "cachePaths": [
+        "~/.cache/Google"
+      ],
+      "notes": "С версии 4.1 Android Studio следует схеме JetBrains: ~/.config/Google/AndroidStudio<версия>, ~/.cache/Google/AndroidStudio<версия>. От старых версий остаются каталоги ~/.AndroidStudio*."
+    },
+    {
+      "displayName": "Android SDK и эмулятор",
+      "publisher": "Google",
+      "installPaths": [
+        "~/Android/Sdk"
+      ],
+      "additionalPaths": [
+        "~/.android",
+        "~/Android"
+      ],
+      "cachePaths": [
+        "~/.android/cache",
+        "~/.android/build-cache",
+        "~/Android/Sdk/system-images",
+        "~/Android/Sdk/sources"
+      ],
+      "userDataPaths": [
+        "~/.android/avd"
+      ],
+      "notes": "Один из крупнейших остатков у Android-разработчиков (десятки ГБ). ~/.android/avd — образы виртуальных устройств, это пользовательские данные."
+    },
+    {
+      "displayName": "Gradle",
+      "publisher": "Gradle Inc.",
+      "installPaths": [
+        "~/.gradle"
+      ],
+      "cachePaths": [
+        "~/.gradle/caches",
+        "~/.gradle/daemon",
+        "~/.gradle/wrapper",
+        "~/.gradle/native"
+      ],
+      "notes": "~/.gradle/caches — кеш зависимостей и сборок, безопасно удаляется и пересобирается. Типично 5–30 ГБ."
+    },
+    {
+      "displayName": "Apache Maven",
+      "publisher": "Apache Software Foundation",
+      "installPaths": [
+        "~/.m2"
+      ],
+      "cachePaths": [
+        "~/.m2/repository",
+        "~/.m2/wrapper"
+      ],
+      "notes": "Локальный репозиторий Maven — кеш скачанных артефактов, восстанавливается из сети."
+    },
+    {
+      "displayName": "npm (Node.js)",
+      "publisher": "npm, Inc.",
+      "installPaths": [
+        "~/.npm"
+      ],
+      "additionalPaths": [
+        "~/.node-gyp",
+        "~/.npm-global"
+      ],
+      "cachePaths": [
+        "~/.npm/_cacache",
+        "~/.npm/_logs",
+        "~/.cache/node-gyp"
+      ],
+      "notes": "~/.npm/_cacache — кеш пакетов, чистится npm cache clean --force, спокойно вырастает до нескольких ГБ."
+    },
+    {
+      "displayName": "Yarn",
+      "publisher": "Yarn",
+      "installPaths": [
+        "~/.yarn"
+      ],
+      "additionalPaths": [
+        "~/.config/yarn"
+      ],
+      "cachePaths": [
+        "~/.cache/yarn",
+        "~/.yarn/berry/cache"
+      ],
+      "notes": "Yarn 1 кеширует в ~/.cache/yarn, Yarn Berry — в ~/.yarn/berry/cache."
+    },
+    {
+      "displayName": "pnpm",
+      "publisher": "pnpm",
+      "installPaths": [
+        "~/.local/share/pnpm"
+      ],
+      "additionalPaths": [
+        "~/.config/pnpm"
+      ],
+      "cachePaths": [
+        "~/.local/share/pnpm/store",
+        "~/.cache/pnpm",
+        "~/.pnpm-store"
+      ],
+      "notes": "Контент-адресуемое хранилище pnpm — общее для всех проектов, чистится pnpm store prune."
+    },
+    {
+      "displayName": "Bun",
+      "publisher": "Oven",
+      "installPaths": [
+        "~/.bun"
+      ],
+      "cachePaths": [
+        "~/.bun/install/cache"
+      ],
+      "notes": "Остатки рантайма Bun и кеш установленных пакетов."
+    },
+    {
+      "displayName": "Deno",
+      "publisher": "Deno Land",
+      "installPaths": [
+        "~/.deno"
+      ],
+      "cachePaths": [
+        "~/.cache/deno"
+      ],
+      "notes": "Кеш загруженных модулей Deno."
+    },
+    {
+      "displayName": "nvm (Node Version Manager)",
+      "publisher": "nvm-sh",
+      "installPaths": [
+        "~/.nvm"
+      ],
+      "cachePaths": [
+        "~/.nvm/.cache"
+      ],
+      "notes": "~/.nvm/versions хранит все когда-либо установленные версии Node — часто несколько ГБ забытых сборок."
+    },
+    {
+      "displayName": "Go",
+      "publisher": "Google",
+      "installPaths": [
+        "~/go"
+      ],
+      "additionalPaths": [
+        "/usr/local/go",
+        "~/.config/go"
+      ],
+      "cachePaths": [
+        "~/.cache/go-build",
+        "~/go/pkg/mod/cache",
+        "~/go/pkg"
+      ],
+      "userDataPaths": [
+        "~/go/src"
+      ],
+      "notes": "~/.cache/go-build — кеш сборки (безопасно), ~/go/pkg/mod — скачанные модули. ~/go/src может содержать исходники пользователя."
+    },
+    {
+      "displayName": "Rust (rustup и Cargo)",
+      "publisher": "Rust Foundation",
+      "installPaths": [
+        "~/.cargo"
+      ],
+      "additionalPaths": [
+        "~/.rustup"
+      ],
+      "cachePaths": [
+        "~/.cargo/registry",
+        "~/.cargo/git",
+        "~/.rustup/downloads",
+        "~/.rustup/tmp"
+      ],
+      "notes": "~/.rustup/toolchains хранит все установленные тулчейны (по ~1.5 ГБ каждый), ~/.cargo/registry — кеш крейтов."
+    },
+    {
+      "displayName": "pip (Python)",
+      "publisher": "Python Software Foundation",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/.config/pip"
+      ],
+      "cachePaths": [
+        "~/.cache/pip",
+        "~/.cache/pip-tools"
+      ],
+      "notes": "Кеш колёс и загрузок pip, чистится pip cache purge."
+    },
+    {
+      "displayName": "uv (Python package installer)",
+      "publisher": "Astral",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/.local/share/uv",
+        "~/.config/uv"
+      ],
+      "cachePaths": [
+        "~/.cache/uv"
+      ],
+      "notes": "uv кеширует колёса в ~/.cache/uv (XDG), интерпретаторы — в ~/.local/share/uv/python. Кеш легко перерастает несколько ГБ."
+    },
+    {
+      "displayName": "Poetry",
+      "publisher": "Poetry",
+      "installPaths": [
+        "~/.local/share/pypoetry"
+      ],
+      "additionalPaths": [
+        "~/.config/pypoetry"
+      ],
+      "cachePaths": [
+        "~/.cache/pypoetry"
+      ],
+      "notes": "Кеш и виртуальные окружения Poetry (~/.cache/pypoetry/virtualenvs)."
+    },
+    {
+      "displayName": "Conda, Miniconda и Anaconda",
+      "publisher": "Anaconda, Inc.",
+      "installPaths": [
+        "~/miniconda3"
+      ],
+      "additionalPaths": [
+        "~/anaconda3",
+        "~/miniforge3",
+        "~/mambaforge",
+        "~/.conda",
+        "~/.continuum"
+      ],
+      "cachePaths": [
+        "~/.conda/pkgs",
+        "~/miniconda3/pkgs",
+        "~/anaconda3/pkgs"
+      ],
+      "userDataPaths": [
+        "~/miniconda3/envs",
+        "~/anaconda3/envs"
+      ],
+      "notes": "Каталог pkgs — распакованный кеш пакетов (conda clean -a). envs — рабочие окружения пользователя."
+    },
+    {
+      "displayName": "pyenv",
+      "publisher": "pyenv",
+      "installPaths": [
+        "~/.pyenv"
+      ],
+      "cachePaths": [
+        "~/.pyenv/cache"
+      ],
+      "notes": "~/.pyenv/versions — все собранные версии Python."
+    },
+    {
+      "displayName": ".NET SDK",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "~/.dotnet"
+      ],
+      "additionalPaths": [
+        "~/.nuget",
+        "~/.templateengine",
+        "/usr/share/dotnet"
+      ],
+      "cachePaths": [
+        "~/.nuget/packages",
+        "~/.local/share/NuGet",
+        "~/.dotnet/optimizationdata"
+      ],
+      "notes": "~/.nuget/packages — глобальный кеш пакетов (dotnet nuget locals all --clear)."
+    },
+    {
+      "displayName": "Flutter и Dart",
+      "publisher": "Google",
+      "installPaths": [
+        "~/flutter"
+      ],
+      "additionalPaths": [
+        "~/.flutter",
+        "~/.dart",
+        "~/.dart-tool"
+      ],
+      "cachePaths": [
+        "~/flutter/bin/cache",
+        "~/.pub-cache"
+      ],
+      "notes": "SDK Flutter плюс глобальный кеш пакетов pub — вместе часто больше 10 ГБ."
+    },
+    {
+      "displayName": "Composer (PHP)",
+      "publisher": "Composer",
+      "installPaths": [
+        "~/.composer"
+      ],
+      "additionalPaths": [
+        "~/.config/composer"
+      ],
+      "cachePaths": [
+        "~/.cache/composer",
+        "~/.composer/cache"
+      ],
+      "notes": "Кеш пакетов Composer."
+    },
+    {
+      "displayName": "RubyGems, rbenv и RVM",
+      "publisher": "Ruby Community",
+      "installPaths": [
+        "~/.gem"
+      ],
+      "additionalPaths": [
+        "~/.rbenv",
+        "~/.rvm",
+        "~/.bundle"
+      ],
+      "cachePaths": [
+        "~/.gem/cache",
+        "~/.bundle/cache",
+        "~/.rvm/archives"
+      ],
+      "notes": "RVM и rbenv держат все установленные версии Ruby и гемы к ним."
+    },
+    {
+      "displayName": "SDKMAN!",
+      "publisher": "SDKMAN!",
+      "installPaths": [
+        "~/.sdkman"
+      ],
+      "cachePaths": [
+        "~/.sdkman/archives",
+        "~/.sdkman/tmp"
+      ],
+      "notes": "~/.sdkman/candidates хранит все установленные JDK и инструменты, ~/.sdkman/archives — скачанные архивы."
+    },
+    {
+      "displayName": "Java Web Start и IcedTea",
+      "publisher": "Oracle / IcedTea",
+      "installPaths": [
+        "~/.java"
+      ],
+      "additionalPaths": [
+        "~/.icedteaplugin",
+        "~/.icedtea"
+      ],
+      "cachePaths": [
+        "~/.java/deployment/cache",
+        "~/.icedteaplugin/cache",
+        "~/.icedtea/cache"
+      ],
+      "notes": "Пути подтверждены правилами BleachBit (cleaners/java.xml)."
+    },
+    {
+      "displayName": "Homebrew on Linux",
+      "publisher": "Homebrew",
+      "installPaths": [
+        "/home/linuxbrew/.linuxbrew"
+      ],
+      "additionalPaths": [
+        "~/.linuxbrew"
+      ],
+      "cachePaths": [
+        "~/.cache/Homebrew"
+      ],
+      "notes": "Кеш скачанных бутылок Homebrew (brew cleanup)."
+    },
+    {
+      "displayName": "Docker",
+      "publisher": "Docker Inc.",
+      "installPaths": [
+        "~/.docker"
+      ],
+      "additionalPaths": [
+        "~/.docker/desktop",
+        "~/.local/share/docker",
+        "~/.config/docker"
+      ],
+      "cachePaths": [
+        "~/.docker/buildx",
+        "~/.docker/scan"
+      ],
+      "userDataPaths": [
+        "~/.local/share/docker/volumes"
+      ],
+      "notes": "Официальная инструкция по удалению Docker Desktop для Linux требует убрать $HOME/.docker/desktop вручную — пакетный менеджер его не трогает. Образы rootless-демона в ~/.local/share/docker занимают десятки ГБ."
+    },
+    {
+      "displayName": "Podman и containers",
+      "publisher": "Red Hat",
+      "installPaths": [
+        "~/.local/share/containers"
+      ],
+      "additionalPaths": [
+        "~/.config/containers"
+      ],
+      "cachePaths": [
+        "~/.local/share/containers/cache",
+        "~/.cache/containers"
+      ],
+      "notes": "Хранилище образов rootless-Podman (~/.local/share/containers/storage)."
+    },
+    {
+      "displayName": "VirtualBox",
+      "publisher": "Oracle",
+      "installPaths": [
+        "~/.config/VirtualBox"
+      ],
+      "additionalPaths": [
+        "~/.VirtualBox"
+      ],
+      "userDataPaths": [
+        "~/VirtualBox VMs"
+      ],
+      "notes": "~/VirtualBox VMs — сами виртуальные машины (десятки ГБ), это пользовательские данные. Мусор — логи и настройки в ~/.config/VirtualBox."
+    },
+    {
+      "displayName": "VMware Workstation и Player",
+      "publisher": "Broadcom",
+      "installPaths": [
+        "~/.vmware"
+      ],
+      "userDataPaths": [
+        "~/vmware"
+      ],
+      "notes": "~/vmware — каталог виртуальных машин по умолчанию (пользовательские данные)."
+    },
+    {
+      "displayName": "libvirt, QEMU и virt-manager",
+      "publisher": "Red Hat",
+      "installPaths": [
+        "~/.config/libvirt"
+      ],
+      "additionalPaths": [
+        "~/.local/share/libvirt"
+      ],
+      "cachePaths": [
+        "~/.cache/libvirt"
+      ],
+      "userDataPaths": [
+        "~/.local/share/libvirt/images"
+      ],
+      "notes": "Образы дисков в ~/.local/share/libvirt/images — пользовательские данные."
+    },
+    {
+      "displayName": "Vagrant",
+      "publisher": "HashiCorp",
+      "installPaths": [
+        "~/.vagrant.d"
+      ],
+      "cachePaths": [
+        "~/.vagrant.d/boxes",
+        "~/.vagrant.d/tmp"
+      ],
+      "notes": "~/.vagrant.d/boxes — скачанные образы боксов, часто по несколько ГБ каждый."
+    },
+    {
+      "displayName": "Terraform",
+      "publisher": "HashiCorp",
+      "installPaths": [
+        "~/.terraform.d"
+      ],
+      "cachePaths": [
+        "~/.terraform.d/plugin-cache"
+      ],
+      "notes": "Кеш провайдеров Terraform."
+    },
+    {
+      "displayName": "Kubernetes (kubectl, Helm, minikube)",
+      "publisher": "CNCF",
+      "installPaths": [
+        "~/.kube"
+      ],
+      "additionalPaths": [
+        "~/.config/helm",
+        "~/.minikube",
+        "~/.k9s"
+      ],
+      "cachePaths": [
+        "~/.kube/cache",
+        "~/.kube/http-cache",
+        "~/.cache/helm"
+      ],
+      "notes": "~/.minikube хранит образы виртуальных машин кластера (несколько ГБ)."
+    },
+    {
+      "displayName": "AWS CLI",
+      "publisher": "Amazon",
+      "installPaths": [
+        "~/.aws"
+      ],
+      "cachePaths": [
+        "~/.aws/cli/cache",
+        "~/.aws/sso/cache"
+      ],
+      "userDataPaths": [
+        "~/.aws/credentials"
+      ],
+      "notes": "~/.aws/credentials — ключи доступа, не удалять вместе с кешем."
+    },
+    {
+      "displayName": "Google Cloud SDK",
+      "publisher": "Google",
+      "installPaths": [
+        "~/google-cloud-sdk"
+      ],
+      "additionalPaths": [
+        "~/.config/gcloud"
+      ],
+      "cachePaths": [
+        "~/.config/gcloud/logs",
+        "~/.config/gcloud/cache"
+      ],
+      "notes": "Остатки gcloud после удаления SDK."
+    },
+    {
+      "displayName": "Azure CLI",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "~/.azure"
+      ],
+      "cachePaths": [
+        "~/.azure/logs",
+        "~/.azure/telemetry"
+      ],
+      "notes": "Остатки az cli."
+    },
+    {
+      "displayName": "Ansible",
+      "publisher": "Red Hat",
+      "installPaths": [
+        "~/.ansible"
+      ],
+      "cachePaths": [
+        "~/.ansible/tmp",
+        "~/.ansible/collections"
+      ],
+      "notes": "Остатки Ansible и скачанные коллекции."
+    },
+    {
+      "displayName": "GitHub CLI и GitKraken",
+      "publisher": "GitHub / Axosoft",
+      "installPaths": [
+        "~/.config/gh"
+      ],
+      "additionalPaths": [
+        "~/.gitkraken",
+        "~/.config/GitKraken"
+      ],
+      "cachePaths": [
+        "~/.config/GitKraken/Cache",
+        "~/.config/GitKraken/logs"
+      ],
+      "notes": "Остатки Git-клиентов."
+    },
+    {
+      "displayName": "Postman",
+      "publisher": "Postman Inc.",
+      "installPaths": [
+        "~/.config/Postman"
+      ],
+      "additionalPaths": [
+        "~/Postman"
+      ],
+      "cachePaths": [
+        "~/.config/Postman/Cache",
+        "~/.config/Postman/Code Cache",
+        "~/.config/Postman/GPUCache"
+      ],
+      "notes": "Electron-приложение: кеш растёт независимо от размера коллекций."
+    },
+    {
+      "displayName": "Insomnia",
+      "publisher": "Kong",
+      "installPaths": [
+        "~/.config/Insomnia"
+      ],
+      "cachePaths": [
+        "~/.config/Insomnia/Cache",
+        "~/.config/Insomnia/GPUCache"
+      ],
+      "notes": "Остатки Insomnia."
+    },
+    {
+      "displayName": "DBeaver",
+      "publisher": "DBeaver Corp.",
+      "installPaths": [
+        "~/.local/share/DBeaverData"
+      ],
+      "additionalPaths": [
+        "~/.dbeaver",
+        "~/.dbeaver4"
+      ],
+      "userDataPaths": [
+        "~/.local/share/DBeaverData/workspace6"
+      ],
+      "notes": "workspace6 содержит подключения и SQL-скрипты пользователя."
+    },
+    {
+      "displayName": "Arduino IDE",
+      "publisher": "Arduino",
+      "installPaths": [
+        "~/.arduino15"
+      ],
+      "additionalPaths": [
+        "~/.arduinoIDE",
+        "~/.config/arduino-ide"
+      ],
+      "cachePaths": [
+        "~/.arduino15/staging",
+        "~/.cache/arduino"
+      ],
+      "userDataPaths": [
+        "~/Arduino"
+      ],
+      "notes": "~/Arduino — скетчбук пользователя. ~/.arduino15/packages — тулчейны плат (несколько ГБ)."
+    },
+    {
+      "displayName": "PlatformIO",
+      "publisher": "PlatformIO",
+      "installPaths": [
+        "~/.platformio"
+      ],
+      "cachePaths": [
+        "~/.platformio/.cache",
+        "~/.platformio/packages",
+        "~/.platformio/.download"
+      ],
+      "notes": "Тулчейны и фреймворки PlatformIO — типично 3–10 ГБ."
+    },
+    {
+      "displayName": "Unity Hub и Unity Editor",
+      "publisher": "Unity Technologies",
+      "installPaths": [
+        "~/.config/unity3d"
+      ],
+      "additionalPaths": [
+        "~/.config/UnityHub",
+        "~/.local/share/unity3d",
+        "~/Unity"
+      ],
+      "cachePaths": [
+        "~/.cache/unity3d",
+        "~/.local/share/unity3d/cache",
+        "~/.config/UnityHub/logs"
+      ],
+      "notes": "Установленные редакторы Unity занимают по 5–15 ГБ каждый и после удаления Hub остаются на диске."
+    },
+    {
+      "displayName": "Godot Engine",
+      "publisher": "Godot Foundation",
+      "installPaths": [
+        "~/.local/share/godot"
+      ],
+      "additionalPaths": [
+        "~/.config/godot"
+      ],
+      "cachePaths": [
+        "~/.cache/godot",
+        "~/.local/share/godot/export_templates"
+      ],
+      "notes": "export_templates — шаблоны экспорта, примерно по 1 ГБ на версию."
+    },
+    {
+      "displayName": "Steam",
+      "publisher": "Valve",
+      "installPaths": [
+        "~/.local/share/Steam"
+      ],
+      "additionalPaths": [
+        "~/.steam",
+        "~/.var/app/com.valvesoftware.Steam",
+        "~/.local/share/Steam/compatibilitytools.d"
+      ],
+      "cachePaths": [
+        "~/.local/share/Steam/appcache",
+        "~/.local/share/Steam/depotcache",
+        "~/.local/share/Steam/logs",
+        "~/.local/share/Steam/steamapps/shadercache",
+        "~/.local/share/Steam/steamapps/downloading",
+        "~/.local/share/Steam/steamapps/temp"
+      ],
+      "userDataPaths": [
+        "~/.local/share/Steam/userdata",
+        "~/.local/share/Steam/steamapps/common",
+        "~/.local/share/Steam/steamapps/compatdata"
+      ],
+      "notes": "shadercache и depotcache — безопасный мусор, пересоздаются. compatdata — Proton-префиксы с сохранениями игр без Steam Cloud, userdata — локальные сохранения и настройки: удалять нельзя. ~/.steam обычно симлинки на ~/.local/share/Steam."
+    },
+    {
+      "displayName": "Lutris",
+      "publisher": "Lutris",
+      "installPaths": [
+        "~/.local/share/lutris"
+      ],
+      "additionalPaths": [
+        "~/.config/lutris",
+        "~/.var/app/net.lutris.Lutris"
+      ],
+      "cachePaths": [
+        "~/.cache/lutris",
+        "~/.local/share/lutris/runtime"
+      ],
+      "notes": "~/.local/share/lutris/runners и runtime — скачанные версии Wine и рантайма (несколько ГБ)."
+    },
+    {
+      "displayName": "Heroic Games Launcher",
+      "publisher": "Heroic",
+      "installPaths": [
+        "~/.config/heroic"
+      ],
+      "additionalPaths": [
+        "~/.var/app/com.heroicgameslauncher.hgl"
+      ],
+      "cachePaths": [
+        "~/.cache/heroic",
+        "~/.config/heroic/Cache",
+        "~/.config/heroic/tools"
+      ],
+      "userDataPaths": [
+        "~/Games/Heroic"
+      ],
+      "notes": "Клиент Epic Games и GOG для Linux; ~/.config/heroic/tools хранит сборки Proton-GE и Wine-GE."
+    },
+    {
+      "displayName": "Bottles",
+      "publisher": "Bottles",
+      "installPaths": [
+        "~/.local/share/bottles"
+      ],
+      "additionalPaths": [
+        "~/.var/app/com.usebottles.bottles"
+      ],
+      "cachePaths": [
+        "~/.local/share/bottles/temp",
+        "~/.cache/bottles"
+      ],
+      "userDataPaths": [
+        "~/.local/share/bottles/bottles"
+      ],
+      "notes": "Сами бутылки (Wine-префиксы) — пользовательские данные с установленными Windows-программами."
+    },
+    {
+      "displayName": "Wine и winetricks",
+      "publisher": "WineHQ",
+      "installPaths": [
+        "~/.wine"
+      ],
+      "additionalPaths": [
+        "~/.local/share/wineprefixes",
+        "~/.local/share/winetricks"
+      ],
+      "cachePaths": [
+        "~/.cache/wine",
+        "~/.cache/winetricks"
+      ],
+      "userDataPaths": [
+        "~/.wine/drive_c/users"
+      ],
+      "notes": "~/.cache/wine и ~/.cache/winetricks — скачанные mono/gecko и дистрибутивы (см. cleaners/wine.xml и winetricks.xml в BleachBit). Сам префикс ~/.wine содержит установленные программы."
+    },
+    {
+      "displayName": "PlayOnLinux",
+      "publisher": "PlayOnLinux",
+      "installPaths": [
+        "~/.PlayOnLinux"
+      ],
+      "cachePaths": [
+        "~/.PlayOnLinux/tmp",
+        "~/.PlayOnLinux/ressources"
+      ],
+      "notes": "Проект заброшен; каталог с Wine-префиксами часто остаётся на годы."
+    },
+    {
+      "displayName": "Minecraft (Java Edition)",
+      "publisher": "Mojang Studios",
+      "installPaths": [
+        "~/.minecraft"
+      ],
+      "additionalPaths": [
+        "~/.var/app/com.mojang.Minecraft"
+      ],
+      "cachePaths": [
+        "~/.minecraft/assets",
+        "~/.minecraft/libraries",
+        "~/.minecraft/logs",
+        "~/.minecraft/versions",
+        "~/.minecraft/crash-reports",
+        "~/.minecraft/webcache2"
+      ],
+      "userDataPaths": [
+        "~/.minecraft/saves",
+        "~/.minecraft/resourcepacks",
+        "~/.minecraft/shaderpacks",
+        "~/.minecraft/screenshots",
+        "~/.minecraft/mods"
+      ],
+      "notes": "assets, libraries и versions — переустанавливаемые файлы и обычно основной объём; saves — миры игрока, удалять нельзя."
+    },
+    {
+      "displayName": "Prism Launcher, PolyMC и MultiMC",
+      "publisher": "Prism Launcher",
+      "installPaths": [
+        "~/.local/share/PrismLauncher"
+      ],
+      "additionalPaths": [
+        "~/.local/share/multimc",
+        "~/.local/share/polymc",
+        "~/.var/app/org.prismlauncher.PrismLauncher"
+      ],
+      "cachePaths": [
+        "~/.local/share/PrismLauncher/assets",
+        "~/.local/share/PrismLauncher/libraries",
+        "~/.local/share/PrismLauncher/meta",
+        "~/.cache/PrismLauncher"
+      ],
+      "userDataPaths": [
+        "~/.local/share/PrismLauncher/instances"
+      ],
+      "notes": "instances — сборки и миры игрока. PolyMC и MultiMC оставляют свои каталоги после миграции на Prism."
+    },
+    {
+      "displayName": "Legendary (Epic Games для Linux)",
+      "publisher": "derrod",
+      "installPaths": [
+        "~/.config/legendary"
+      ],
+      "cachePaths": [
+        "~/.cache/legendary"
+      ],
+      "notes": "CLI-клиент Epic Games Store."
+    },
+    {
+      "displayName": "itch.io",
+      "publisher": "itch corp",
+      "installPaths": [
+        "~/.config/itch"
+      ],
+      "additionalPaths": [
+        "~/.itch"
+      ],
+      "cachePaths": [
+        "~/.config/itch/Cache",
+        "~/.cache/itch"
+      ],
+      "notes": "Остатки лаунчера itch.io."
+    },
+    {
+      "displayName": "RetroArch",
+      "publisher": "Libretro",
+      "installPaths": [
+        "~/.config/retroarch"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.libretro.RetroArch",
+        "~/.local/share/retroarch"
+      ],
+      "cachePaths": [
+        "~/.config/retroarch/cache",
+        "~/.config/retroarch/thumbnails",
+        "~/.config/retroarch/downloads"
+      ],
+      "userDataPaths": [
+        "~/.config/retroarch/saves",
+        "~/.config/retroarch/states"
+      ],
+      "notes": "saves и states — сохранения игр."
+    },
+    {
+      "displayName": "Эмуляторы консолей (Dolphin, RPCS3, PCSX2, DuckStation)",
+      "publisher": "Open Source",
+      "installPaths": [
+        "~/.local/share/dolphin-emu"
+      ],
+      "additionalPaths": [
+        "~/.config/dolphin-emu",
+        "~/.config/rpcs3",
+        "~/.local/share/rpcs3",
+        "~/.config/PCSX2",
+        "~/.config/duckstation"
+      ],
+      "cachePaths": [
+        "~/.cache/dolphin-emu",
+        "~/.cache/rpcs3",
+        "~/.local/share/rpcs3/cache",
+        "~/.config/PCSX2/cache"
+      ],
+      "userDataPaths": [
+        "~/.local/share/dolphin-emu/GC",
+        "~/.config/PCSX2/memcards"
+      ],
+      "notes": "Кеши шейдеров эмуляторов вырастают до нескольких ГБ; карты памяти и сейвы — пользовательские данные."
+    },
+    {
+      "displayName": "Discord",
+      "publisher": "Discord Inc.",
+      "installPaths": [
+        "~/.config/discord"
+      ],
+      "additionalPaths": [
+        "~/.config/discordcanary",
+        "~/.config/discordptb",
+        "~/.config/discorddevelopment",
+        "~/.var/app/com.discordapp.Discord",
+        "~/snap/discord"
+      ],
+      "cachePaths": [
+        "~/.config/discord/Cache",
+        "~/.config/discord/Code Cache",
+        "~/.config/discord/GPUCache",
+        "~/.config/discord/blob_storage",
+        "~/.var/app/com.discordapp.Discord/cache"
+      ],
+      "notes": "Пути подтверждены правилами BleachBit (cleaners/discord.xml): помимо стабильной версии остаются каталоги Canary, PTB и Development."
+    },
+    {
+      "displayName": "Slack",
+      "publisher": "Slack Technologies",
+      "installPaths": [
+        "~/.config/Slack"
+      ],
+      "additionalPaths": [
+        "~/snap/slack",
+        "~/.var/app/com.slack.Slack"
+      ],
+      "cachePaths": [
+        "~/.config/Slack/Cache",
+        "~/.config/Slack/Code Cache",
+        "~/.config/Slack/GPUCache",
+        "~/.config/Slack/Service Worker/CacheStorage",
+        "~/.config/Slack/logs"
+      ],
+      "notes": "Каталог ~/.config/Slack подтверждён правилами BleachBit (cleaners/slack.xml)."
+    },
+    {
+      "displayName": "Telegram Desktop",
+      "publisher": "Telegram FZ-LLC",
+      "installPaths": [
+        "~/.local/share/TelegramDesktop"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.telegram.desktop",
+        "~/snap/telegram-desktop"
+      ],
+      "cachePaths": [
+        "~/.local/share/TelegramDesktop/tdata/user_data/cache",
+        "~/.local/share/TelegramDesktop/tdata/user_data/media_cache"
+      ],
+      "userDataPaths": [
+        "~/.local/share/TelegramDesktop/tdata"
+      ],
+      "notes": "tdata — авторизованная сессия: удаление означает разлогинивание. Медиа-кеш внутри неё чистится безопасно и часто занимает десятки ГБ."
+    },
+    {
+      "displayName": "Signal Desktop",
+      "publisher": "Signal Foundation",
+      "installPaths": [
+        "~/.config/Signal"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.signal.Signal"
+      ],
+      "cachePaths": [
+        "~/.config/Signal/Cache",
+        "~/.config/Signal/Code Cache",
+        "~/.config/Signal/GPUCache",
+        "~/.config/Signal/logs"
+      ],
+      "userDataPaths": [
+        "~/.config/Signal/sql"
+      ],
+      "notes": "sql — локальная база переписки, восстановлению не подлежит."
+    },
+    {
+      "displayName": "Zoom",
+      "publisher": "Zoom Video Communications",
+      "installPaths": [
+        "~/.zoom"
+      ],
+      "additionalPaths": [
+        "~/snap/zoom-client"
+      ],
+      "cachePaths": [
+        "~/.cache/zoom",
+        "~/.zoom/logs",
+        "~/.zoom/data"
+      ],
+      "userDataPaths": [
+        "~/Documents/Zoom"
+      ],
+      "notes": "Пути подтверждены правилами BleachBit (cleaners/zoom.xml). ~/Documents/Zoom — локальные записи встреч, часто десятки ГБ, это пользовательские данные."
+    },
+    {
+      "displayName": "Skype",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "~/.config/skypeforlinux"
+      ],
+      "additionalPaths": [
+        "~/.Skype",
+        "~/snap/skype"
+      ],
+      "cachePaths": [
+        "~/.config/skypeforlinux/Cache",
+        "~/.config/skypeforlinux/Code Cache",
+        "~/.config/skypeforlinux/GPUCache",
+        "~/.config/skypeforlinux/logs"
+      ],
+      "notes": "Классический Skype для Linux снят с поддержки — каталог обычно остаётся полностью."
+    },
+    {
+      "displayName": "Microsoft Teams",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "~/.config/Microsoft/Microsoft Teams"
+      ],
+      "additionalPaths": [
+        "~/.config/teams-for-linux"
+      ],
+      "cachePaths": [
+        "~/.config/Microsoft/Microsoft Teams/Cache",
+        "~/.config/Microsoft/Microsoft Teams/Code Cache",
+        "~/.config/Microsoft/Microsoft Teams/GPUCache",
+        "~/.config/Microsoft/Microsoft Teams/blob_storage",
+        "~/.config/Microsoft/Microsoft Teams/databases",
+        "~/.config/Microsoft/Microsoft Teams/tmp"
+      ],
+      "notes": "Нативный клиент Teams для Linux снят с поддержки — каталог остаётся у многих пользователей целиком."
+    },
+    {
+      "displayName": "Element (Matrix)",
+      "publisher": "Element",
+      "installPaths": [
+        "~/.config/Element"
+      ],
+      "additionalPaths": [
+        "~/.var/app/im.riot.Riot"
+      ],
+      "cachePaths": [
+        "~/.config/Element/Cache",
+        "~/.config/Element/GPUCache",
+        "~/.config/Element/IndexedDB"
+      ],
+      "notes": "Остатки Element и старого Riot."
+    },
+    {
+      "displayName": "Viber",
+      "publisher": "Rakuten",
+      "installPaths": [
+        "~/.ViberPC"
+      ],
+      "additionalPaths": [
+        "~/.config/ViberPC"
+      ],
+      "cachePaths": [
+        "~/.ViberPC/Cache",
+        "~/.cache/Viber"
+      ],
+      "notes": "Локальные медиа Viber копятся внутри ~/.ViberPC/<номер телефона>."
+    },
+    {
+      "displayName": "Mattermost",
+      "publisher": "Mattermost",
+      "installPaths": [
+        "~/.config/Mattermost"
+      ],
+      "cachePaths": [
+        "~/.config/Mattermost/Cache",
+        "~/.config/Mattermost/GPUCache"
+      ],
+      "notes": "Остатки десктоп-клиента Mattermost."
+    },
+    {
+      "displayName": "Spotify",
+      "publisher": "Spotify AB",
+      "installPaths": [
+        "~/.config/spotify"
+      ],
+      "additionalPaths": [
+        "~/snap/spotify",
+        "~/.var/app/com.spotify.Client",
+        "~/.local/share/spotify"
+      ],
+      "cachePaths": [
+        "~/.cache/spotify",
+        "~/.config/spotify/Users",
+        "~/.var/app/com.spotify.Client/cache",
+        "~/snap/spotify/common/.cache/spotify"
+      ],
+      "notes": "Кеш офлайн-треков в ~/.cache/spotify по умолчанию не ограничен и часто занимает несколько ГБ."
+    },
+    {
+      "displayName": "VLC media player",
+      "publisher": "VideoLAN",
+      "installPaths": [
+        "~/.config/vlc"
+      ],
+      "additionalPaths": [
+        "~/.local/share/vlc",
+        "~/.var/app/org.videolan.VLC"
+      ],
+      "cachePaths": [
+        "~/.cache/vlc"
+      ],
+      "notes": "Пути соответствуют правилам BleachBit (cleaners/vlc.xml)."
+    },
+    {
+      "displayName": "OBS Studio",
+      "publisher": "OBS Project",
+      "installPaths": [
+        "~/.config/obs-studio"
+      ],
+      "additionalPaths": [
+        "~/.var/app/com.obsproject.Studio"
+      ],
+      "cachePaths": [
+        "~/.config/obs-studio/logs",
+        "~/.config/obs-studio/crashes",
+        "~/.config/obs-studio/plugin_config"
+      ],
+      "userDataPaths": [
+        "~/.config/obs-studio/basic"
+      ],
+      "notes": "Сцены и профили в basic — настройки пользователя, восстановить их нельзя."
+    },
+    {
+      "displayName": "GIMP",
+      "publisher": "GIMP Team",
+      "installPaths": [
+        "~/.config/GIMP"
+      ],
+      "additionalPaths": [
+        "~/.gimp-2.8",
+        "~/.var/app/org.gimp.GIMP"
+      ],
+      "cachePaths": [
+        "~/.cache/GIMP",
+        "~/.cache/babl",
+        "~/.cache/gegl-0.4"
+      ],
+      "notes": "Пути соответствуют правилам BleachBit (cleaners/gimp.xml); от старых версий остаются каталоги ~/.gimp-*."
+    },
+    {
+      "displayName": "Inkscape",
+      "publisher": "Inkscape Project",
+      "installPaths": [
+        "~/.config/inkscape"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.inkscape.Inkscape"
+      ],
+      "cachePaths": [
+        "~/.cache/inkscape"
+      ],
+      "notes": "Остатки Inkscape."
+    },
+    {
+      "displayName": "Krita",
+      "publisher": "Krita Foundation",
+      "installPaths": [
+        "~/.local/share/krita"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.kde.krita"
+      ],
+      "cachePaths": [
+        "~/.cache/krita",
+        "~/.local/share/krita/backup"
+      ],
+      "notes": "Остатки Krita."
+    },
+    {
+      "displayName": "Blender",
+      "publisher": "Blender Foundation",
+      "installPaths": [
+        "~/.config/blender"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.blender.Blender",
+        "~/snap/blender"
+      ],
+      "cachePaths": [
+        "~/.cache/blender",
+        "~/.cache/cycles"
+      ],
+      "notes": "~/.config/blender версионирован — от каждой версии остаётся свой каталог с аддонами."
+    },
+    {
+      "displayName": "Kdenlive",
+      "publisher": "KDE",
+      "installPaths": [
+        "~/.local/share/kdenlive"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.kde.kdenlive"
+      ],
+      "cachePaths": [
+        "~/.cache/kdenlive",
+        "~/.local/share/kdenlive/titles"
+      ],
+      "notes": "Прокси-файлы и кеш аудиограмм Kdenlive легко занимают десятки ГБ."
+    },
+    {
+      "displayName": "Audacity",
+      "publisher": "Muse Group",
+      "installPaths": [
+        "~/.audacity-data"
+      ],
+      "additionalPaths": [
+        "~/.config/audacity",
+        "~/.var/app/org.audacityteam.Audacity"
+      ],
+      "cachePaths": [
+        "~/.cache/audacity",
+        "~/.audacity-data/SessionData"
+      ],
+      "notes": "SessionData — временные файлы незакрытых проектов."
+    },
+    {
+      "displayName": "DaVinci Resolve",
+      "publisher": "Blackmagic Design",
+      "installPaths": [
+        "/opt/resolve"
+      ],
+      "additionalPaths": [
+        "~/.local/share/DaVinciResolve"
+      ],
+      "cachePaths": [
+        "~/.local/share/DaVinciResolve/CacheClip",
+        "~/.cache/BlackmagicDesign"
+      ],
+      "userDataPaths": [
+        "~/.local/share/DaVinciResolve/Resolve Disk Database"
+      ],
+      "notes": "Кеш оптимизированных клипов Resolve — один из крупнейших источников мусора у видеомонтажёров."
+    },
+    {
+      "displayName": "darktable",
+      "publisher": "darktable",
+      "installPaths": [
+        "~/.config/darktable"
+      ],
+      "additionalPaths": [
+        "~/.var/app/org.darktable.Darktable"
+      ],
+      "cachePaths": [
+        "~/.cache/darktable"
+      ],
+      "userDataPaths": [
+        "~/.config/darktable/library.db"
+      ],
+      "notes": "library.db — каталог снимков пользователя."
+    },
+    {
+      "displayName": "LibreOffice",
+      "publisher": "The Document Foundation",
+      "installPaths": [
+        "~/.config/libreoffice"
+      ],
+      "additionalPaths": [
+        "~/.libreoffice",
+        "~/.var/app/org.libreoffice.LibreOffice",
+        "~/snap/libreoffice"
+      ],
+      "cachePaths": [
+        "~/.cache/libreoffice"
+      ],
+      "notes": "Пути соответствуют правилам BleachBit (cleaners/libreoffice.xml)."
+    },
+    {
+      "displayName": "ONLYOFFICE Desktop Editors",
+      "publisher": "Ascensio System",
+      "installPaths": [
+        "~/.config/ONLYOFFICE"
+      ],
+      "additionalPaths": [
+        "~/.local/share/ONLYOFFICE",
+        "~/.var/app/org.onlyoffice.desktopeditors"
+      ],
+      "cachePaths": [
+        "~/.cache/ONLYOFFICE"
+      ],
+      "notes": "Остатки ONLYOFFICE."
+    },
+    {
+      "displayName": "WPS Office",
+      "publisher": "Kingsoft Corp.",
+      "installPaths": [
+        "~/.config/Kingsoft"
+      ],
+      "additionalPaths": [
+        "~/.kingsoft",
+        "~/.local/share/Kingsoft",
+        "/opt/kingsoft/wps-office"
+      ],
+      "cachePaths": [
+        "~/.cache/Kingsoft",
+        "~/.kingsoft/office6/cache"
+      ],
+      "userDataPaths": [
+        "~/.kingsoft/office6/backup"
+      ],
+      "notes": "office6/backup — автосохранённые копии документов, проверить перед удалением."
+    },
+    {
+      "displayName": "Dropbox",
+      "publisher": "Dropbox Inc.",
+      "installPaths": [
+        "~/.dropbox"
+      ],
+      "additionalPaths": [
+        "~/.dropbox-dist"
+      ],
+      "cachePaths": [
+        "~/.dropbox/cache",
+        "~/Dropbox/.dropbox.cache"
+      ],
+      "userDataPaths": [
+        "~/Dropbox"
+      ],
+      "notes": "~/.dropbox-dist — сам клиент, ~/Dropbox — синхронизированные файлы (не мусор). Скрытый .dropbox.cache внутри папки синхронизации чистится безопасно."
+    },
+    {
+      "displayName": "Nextcloud Desktop",
+      "publisher": "Nextcloud GmbH",
+      "installPaths": [
+        "~/.config/Nextcloud"
+      ],
+      "additionalPaths": [
+        "~/.local/share/Nextcloud",
+        "~/.var/app/com.nextcloud.desktopclient.nextcloud"
+      ],
+      "cachePaths": [
+        "~/.cache/Nextcloud"
+      ],
+      "notes": "Остатки клиента Nextcloud; логи синхронизации могут быть крупными."
+    },
+    {
+      "displayName": "MEGAsync",
+      "publisher": "MEGA Limited",
+      "installPaths": [
+        "~/.local/share/data/Mega Limited"
+      ],
+      "additionalPaths": [
+        "~/.config/Mega Limited",
+        "~/.megaCmd"
+      ],
+      "cachePaths": [
+        "~/.cache/Mega Limited",
+        "~/.local/share/data/Mega Limited/MEGAsync/logs"
+      ],
+      "notes": "Остатки MEGAsync и megacmd."
+    },
+    {
+      "displayName": "Яндекс.Диск",
+      "publisher": "Yandex",
+      "installPaths": [
+        "~/.config/yandex-disk"
+      ],
+      "additionalPaths": [
+        "~/.local/share/yandex-disk"
+      ],
+      "cachePaths": [
+        "~/.cache/yandex-disk"
+      ],
+      "userDataPaths": [
+        "~/Yandex.Disk"
+      ],
+      "notes": "~/Yandex.Disk — синхронизированные файлы пользователя."
+    },
+    {
+      "displayName": "Syncthing",
+      "publisher": "Syncthing Foundation",
+      "installPaths": [
+        "~/.config/syncthing"
+      ],
+      "additionalPaths": [
+        "~/.local/state/syncthing",
+        "~/.local/share/syncthing"
+      ],
+      "notes": "Индексная база Syncthing разрастается пропорционально числу синхронизируемых файлов."
+    },
+    {
+      "displayName": "rclone",
+      "publisher": "rclone",
+      "installPaths": [
+        "~/.config/rclone"
+      ],
+      "cachePaths": [
+        "~/.cache/rclone"
+      ],
+      "userDataPaths": [
+        "~/.config/rclone/rclone.conf"
+      ],
+      "notes": "VFS-кеш rclone может занимать столько же, сколько все просмотренные файлы."
+    },
+    {
+      "displayName": "qBittorrent",
+      "publisher": "qBittorrent Project",
+      "installPaths": [
+        "~/.config/qBittorrent"
+      ],
+      "additionalPaths": [
+        "~/.local/share/qBittorrent",
+        "~/.var/app/org.qbittorrent.qBittorrent"
+      ],
+      "cachePaths": [
+        "~/.cache/qBittorrent",
+        "~/.local/share/qBittorrent/logs"
+      ],
+      "userDataPaths": [
+        "~/.local/share/qBittorrent/BT_backup"
+      ],
+      "notes": "BT_backup хранит .torrent и состояние раздач — удаление сбросит все закачки."
+    },
+    {
+      "displayName": "Transmission и Deluge",
+      "publisher": "Open Source",
+      "installPaths": [
+        "~/.config/transmission"
+      ],
+      "additionalPaths": [
+        "~/.config/transmission-daemon",
+        "~/.config/deluge",
+        "~/.var/app/com.transmissionbt.Transmission"
+      ],
+      "cachePaths": [
+        "~/.cache/transmission",
+        "~/.config/deluge/logs"
+      ],
+      "userDataPaths": [
+        "~/.config/transmission/torrents",
+        "~/.config/deluge/state"
+      ],
+      "notes": "Пути Transmission соответствуют правилам BleachBit (cleaners/transmission.xml)."
+    },
+    {
+      "displayName": "AnyDesk",
+      "publisher": "AnyDesk Software",
+      "installPaths": [
+        "~/.anydesk"
+      ],
+      "additionalPaths": [
+        "~/.local/share/anydesk",
+        "/etc/anydesk"
+      ],
+      "cachePaths": [
+        "~/.anydesk/ad.trace",
+        "~/.anydesk/connection_trace.txt"
+      ],
+      "notes": "Логи трассировки AnyDesk растут без ограничения."
+    },
+    {
+      "displayName": "TeamViewer",
+      "publisher": "TeamViewer",
+      "installPaths": [
+        "~/.config/teamviewer"
+      ],
+      "additionalPaths": [
+        "~/.local/share/teamviewer",
+        "/opt/teamviewer"
+      ],
+      "cachePaths": [
+        "~/.local/share/teamviewer/logfiles"
+      ],
+      "notes": "Пути соответствуют правилам BleachBit (cleaners/teamviewer.xml)."
+    },
+    {
+      "displayName": "RustDesk",
+      "publisher": "RustDesk",
+      "installPaths": [
+        "~/.config/rustdesk"
+      ],
+      "cachePaths": [
+        "~/.local/share/logs/RustDesk"
+      ],
+      "notes": "Остатки RustDesk."
+    },
+    {
+      "displayName": "Flatpak (пользовательская установка)",
+      "publisher": "Flatpak",
+      "installPaths": [
+        "~/.local/share/flatpak"
+      ],
+      "cachePaths": [
+        "~/.cache/flatpak",
+        "~/.local/share/flatpak/repo/tmp"
+      ],
+      "userDataPaths": [
+        "~/.var/app"
+      ],
+      "notes": "~/.var/app хранит данные и настройки flatpak-приложений и остаётся после flatpak uninstall без --delete-data. Неиспользуемые рантаймы убирает flatpak uninstall --unused."
+    },
+    {
+      "displayName": "Snap (пользовательские данные)",
+      "publisher": "Canonical",
+      "installPaths": [
+        "~/snap"
+      ],
+      "cachePaths": [
+        "/var/lib/snapd/cache"
+      ],
+      "userDataPaths": [
+        "~/snap"
+      ],
+      "notes": "~/snap/<пакет>/<ревизия> остаётся после удаления снапа. Старые ревизии в /var/lib/snapd/snaps — самый крупный системный мусор в Ubuntu."
+    },
+    {
+      "displayName": "Electron (общий мусор приложений)",
+      "publisher": "Различные",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/.config/Electron",
+        "~/.electron",
+        "~/.electron-gyp"
+      ],
+      "cachePaths": [
+        "~/.cache/electron",
+        "~/.cache/electron-builder",
+        "~/.config/Electron/Cache"
+      ],
+      "notes": "Скачанные бинарники Electron остаются после удаления приложений и сборочных инструментов."
+    },
+    {
+      "displayName": "Obsidian",
+      "publisher": "Obsidian",
+      "installPaths": [
+        "~/.config/obsidian"
+      ],
+      "additionalPaths": [
+        "~/.var/app/md.obsidian.Obsidian",
+        "~/snap/obsidian"
+      ],
+      "cachePaths": [
+        "~/.config/obsidian/Cache",
+        "~/.config/obsidian/Code Cache",
+        "~/.config/obsidian/GPUCache"
+      ],
+      "notes": "Сами заметки лежат в хранилищах (vault) вне этого каталога и не затрагиваются."
+    },
+    {
+      "displayName": "Notion",
+      "publisher": "Notion Labs",
+      "installPaths": [
+        "~/.config/Notion"
+      ],
+      "cachePaths": [
+        "~/.config/Notion/Cache",
+        "~/.config/Notion/GPUCache",
+        "~/.config/Notion/notion-cache"
+      ],
+      "notes": "Неофициальные сборки Notion для Linux используют тот же каталог."
+    },
+    {
+      "displayName": "Figma для Linux",
+      "publisher": "Figma (неофициальный порт)",
+      "installPaths": [
+        "~/.config/figma-linux"
+      ],
+      "cachePaths": [
+        "~/.config/figma-linux/Cache",
+        "~/.config/figma-linux/GPUCache"
+      ],
+      "notes": "Остатки неофициального клиента figma-linux."
+    },
+    {
+      "displayName": "Neovim и Vim",
+      "publisher": "Open Source",
+      "installPaths": [
+        "~/.config/nvim"
+      ],
+      "additionalPaths": [
+        "~/.local/share/nvim",
+        "~/.local/state/nvim",
+        "~/.vim"
+      ],
+      "cachePaths": [
+        "~/.cache/nvim",
+        "~/.local/state/nvim/swap",
+        "~/.local/state/nvim/undo"
+      ],
+      "userDataPaths": [
+        "~/.config/nvim"
+      ],
+      "notes": "~/.config/nvim — конфиг пользователя; плагины и скачанные LSP-серверы в ~/.local/share/nvim легко перерастают 1 ГБ. Пути Vim соответствуют cleaners/vim.xml в BleachBit."
+    },
+    {
+      "displayName": "Emacs",
+      "publisher": "GNU",
+      "installPaths": [
+        "~/.emacs.d"
+      ],
+      "additionalPaths": [
+        "~/.config/emacs"
+      ],
+      "cachePaths": [
+        "~/.cache/emacs",
+        "~/.emacs.d/eln-cache",
+        "~/.emacs.d/auto-save-list"
+      ],
+      "userDataPaths": [
+        "~/.emacs.d/init.el"
+      ],
+      "notes": "eln-cache — нативно скомпилированные пакеты, пересоздаётся."
+    },
+    {
+      "displayName": "Calibre",
+      "publisher": "Kovid Goyal",
+      "installPaths": [
+        "~/.config/calibre"
+      ],
+      "additionalPaths": [
+        "~/.var/app/com.calibre_ebook.calibre"
+      ],
+      "cachePaths": [
+        "~/.cache/calibre"
+      ],
+      "userDataPaths": [
+        "~/Calibre Library"
+      ],
+      "notes": "~/Calibre Library — библиотека книг пользователя."
+    },
+    {
+      "displayName": "Kodi",
+      "publisher": "Kodi Foundation",
+      "installPaths": [
+        "~/.kodi"
+      ],
+      "additionalPaths": [
+        "~/.var/app/tv.kodi.Kodi"
+      ],
+      "cachePaths": [
+        "~/.kodi/temp",
+        "~/.kodi/userdata/Thumbnails",
+        "~/.cache/kodi"
+      ],
+      "userDataPaths": [
+        "~/.kodi/userdata"
+      ],
+      "notes": "Кеш обложек в userdata/Thumbnails часто занимает несколько ГБ."
+    },
+    {
+      "displayName": "Wireshark",
+      "publisher": "Wireshark Foundation",
+      "installPaths": [
+        "~/.config/wireshark"
+      ],
+      "additionalPaths": [
+        "~/.wireshark"
+      ],
+      "notes": "Остатки настроек и профилей Wireshark."
+    },
+    {
+      "displayName": "Ollama",
+      "publisher": "Ollama",
+      "installPaths": [
+        "~/.ollama"
+      ],
+      "additionalPaths": [
+        "/usr/share/ollama/.ollama"
+      ],
+      "userDataPaths": [
+        "~/.ollama/models"
+      ],
+      "notes": "~/.ollama/models — скачанные веса LLM, десятки и сотни ГБ. Формально не мусор, но это почти всегда крупнейший забытый каталог у тех, кто пробовал Ollama."
+    },
+    {
+      "displayName": "LM Studio",
+      "publisher": "LM Studio",
+      "installPaths": [
+        "~/.lmstudio"
+      ],
+      "additionalPaths": [
+        "~/.config/LM Studio",
+        "~/.cache/lm-studio"
+      ],
+      "userDataPaths": [
+        "~/.lmstudio/models",
+        "~/.cache/lm-studio/models"
+      ],
+      "notes": "Скачанные GGUF-модели занимают десятки ГБ."
+    },
+    {
+      "displayName": "Hugging Face (transformers, datasets, torch)",
+      "publisher": "Hugging Face",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/.cache/huggingface"
+      ],
+      "cachePaths": [
+        "~/.cache/huggingface/hub",
+        "~/.cache/huggingface/datasets",
+        "~/.cache/torch"
+      ],
+      "notes": "Кеш моделей и датасетов после экспериментов с ML — регулярно сотни ГБ."
+    },
+    {
+      "displayName": "balenaEtcher",
+      "publisher": "Balena",
+      "installPaths": [
+        "~/.config/balena-etcher"
+      ],
+      "additionalPaths": [
+        "~/.config/balena-etcher-electron"
+      ],
+      "cachePaths": [
+        "~/.config/balena-etcher/Cache"
+      ],
+      "notes": "Остатки Etcher."
+    },
+    {
+      "displayName": "Кеш эскизов рабочего стола",
+      "publisher": "freedesktop.org",
+      "installPaths": [],
+      "cachePaths": [
+        "~/.cache/thumbnails",
+        "~/.thumbnails"
+      ],
+      "notes": "Стандартный кеш миниатюр по спецификации freedesktop (см. cleaners/thumbnails.xml в BleachBit). Полностью безопасен к удалению, пересоздаётся при просмотре папок."
+    },
+    {
+      "displayName": "Кеш шейдеров видеодрайверов (Mesa, NVIDIA)",
+      "publisher": "Mesa / NVIDIA",
+      "installPaths": [],
+      "cachePaths": [
+        "~/.cache/mesa_shader_cache",
+        "~/.cache/mesa_shader_cache_db",
+        "~/.cache/nvidia/GLCache",
+        "~/.nv/GLCache",
+        "~/.cache/radv_builtin_shaders"
+      ],
+      "notes": "Кеш скомпилированных шейдеров драйверов. Удаление безопасно, но первый запуск игр после этого будет с подтормаживаниями."
+    },
+    {
+      "displayName": "Отчёты о сбоях и дампы памяти",
+      "publisher": "Система",
+      "installPaths": [],
+      "cachePaths": [
+        "/var/crash",
+        "/var/lib/systemd/coredump",
+        "~/.cache/abrt",
+        "~/.xsession-errors"
+      ],
+      "notes": "Дампы упавших процессов: apport в Ubuntu, systemd-coredump, abrt в Fedora. Нужны только для отладки конкретного сбоя."
+    }
+  ]
+}

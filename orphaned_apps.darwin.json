@@ -1,0 +1,1519 @@
+{
+  "apps": [
+    {
+      "displayName": "Google Chrome",
+      "publisher": "Google",
+      "installPaths": [
+        "/Applications/Google Chrome.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Google/Chrome",
+        "~/Library/Preferences/com.google.Chrome.plist",
+        "~/Library/Saved Application State/com.google.Chrome.savedState",
+        "~/Library/Application Support/Google/GoogleSoftwareUpdate",
+        "~/Library/Google"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Google/Chrome",
+        "~/Library/Caches/com.google.Chrome",
+        "~/Library/Caches/com.google.Keystone",
+        "~/Library/Application Support/Google/Chrome/Default/Service Worker/CacheStorage"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/Google/Chrome/Default"
+      ],
+      "notes": "Профиль Default (закладки, пароли, история) — пользовательские данные. GoogleSoftwareUpdate (Keystone) остаётся после удаления всех продуктов Google и обновляет уже несуществующие программы."
+    },
+    {
+      "displayName": "Mozilla Firefox",
+      "publisher": "Mozilla",
+      "installPaths": [
+        "/Applications/Firefox.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Firefox",
+        "~/Library/Preferences/org.mozilla.firefox.plist",
+        "~/Library/Saved Application State/org.mozilla.firefox.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Firefox",
+        "~/Library/Caches/Mozilla"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/Firefox/Profiles"
+      ],
+      "notes": "Профили с закладками и паролями лежат в Application Support/Firefox/Profiles; ~/Library/Caches/Firefox — чистый мусор."
+    },
+    {
+      "displayName": "Safari",
+      "publisher": "Apple",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/Library/Safari"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.apple.Safari",
+        "~/Library/Containers/com.apple.Safari/Data/Library/Caches",
+        "~/Library/Safari/LocalStorage"
+      ],
+      "userDataPaths": [
+        "~/Library/Safari/Bookmarks.plist",
+        "~/Library/Safari/History.db"
+      ],
+      "notes": "Системный браузер: сам .app удалять нельзя. Безопасно чистится только кеш; закладки и история — пользовательские данные."
+    },
+    {
+      "displayName": "Brave Browser",
+      "publisher": "Brave Software",
+      "installPaths": [
+        "/Applications/Brave Browser.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/BraveSoftware",
+        "~/Library/Preferences/com.brave.Browser.plist",
+        "~/Library/Saved Application State/com.brave.Browser.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/BraveSoftware",
+        "~/Library/Caches/com.brave.Browser"
+      ],
+      "notes": "Остатки Brave после переноса .app в корзину."
+    },
+    {
+      "displayName": "Microsoft Edge",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "/Applications/Microsoft Edge.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Microsoft Edge",
+        "~/Library/Preferences/com.microsoft.edgemac.plist",
+        "~/Library/Saved Application State/com.microsoft.edgemac.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Microsoft Edge",
+        "~/Library/Caches/com.microsoft.edgemac"
+      ],
+      "notes": "Bundle ID Edge для macOS — com.microsoft.edgemac."
+    },
+    {
+      "displayName": "Opera",
+      "publisher": "Opera Software",
+      "installPaths": [
+        "/Applications/Opera.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/com.operasoftware.Opera",
+        "~/Library/Preferences/com.operasoftware.Opera.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.operasoftware.Opera"
+      ],
+      "notes": "Остатки Opera."
+    },
+    {
+      "displayName": "Vivaldi",
+      "publisher": "Vivaldi Technologies",
+      "installPaths": [
+        "/Applications/Vivaldi.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Vivaldi",
+        "~/Library/Preferences/com.vivaldi.Vivaldi.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Vivaldi",
+        "~/Library/Caches/com.vivaldi.Vivaldi"
+      ],
+      "notes": "Остатки Vivaldi."
+    },
+    {
+      "displayName": "Arc Browser",
+      "publisher": "The Browser Company",
+      "installPaths": [
+        "/Applications/Arc.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Arc",
+        "~/Library/Preferences/company.thebrowser.Browser.plist",
+        "~/Library/Saved Application State/company.thebrowser.Browser.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/company.thebrowser.Browser"
+      ],
+      "notes": "Остатки Arc."
+    },
+    {
+      "displayName": "Mozilla Thunderbird",
+      "publisher": "Mozilla",
+      "installPaths": [
+        "/Applications/Thunderbird.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Thunderbird",
+        "~/Library/Preferences/org.mozilla.thunderbird.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Thunderbird"
+      ],
+      "userDataPaths": [
+        "~/Library/Thunderbird/Profiles"
+      ],
+      "notes": "~/Library/Thunderbird/Profiles содержит локальную почту."
+    },
+    {
+      "displayName": "Xcode",
+      "publisher": "Apple",
+      "installPaths": [
+        "/Applications/Xcode.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Developer/Xcode",
+        "~/Library/Developer/CoreSimulator",
+        "~/Library/Preferences/com.apple.dt.Xcode.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Developer/Xcode/DerivedData",
+        "~/Library/Developer/Xcode/Archives",
+        "~/Library/Developer/Xcode/iOS DeviceSupport",
+        "~/Library/Developer/Xcode/watchOS DeviceSupport",
+        "~/Library/Developer/Xcode/tvOS DeviceSupport",
+        "~/Library/Developer/CoreSimulator/Caches",
+        "~/Library/Caches/com.apple.dt.Xcode",
+        "~/Library/Logs/CoreSimulator",
+        "~/Library/Developer/CoreSimulator/Devices"
+      ],
+      "notes": "Крупнейший источник мусора на Mac разработчика: DerivedData, DeviceSupport для каждой версии iOS и образы симуляторов суммарно занимают 50–200 ГБ. DerivedData полностью безопасен, Archives содержат собранные сборки для App Store."
+    },
+    {
+      "displayName": "Xcode Command Line Tools и сопутствующие кеши",
+      "publisher": "Apple",
+      "installPaths": [
+        "/Library/Developer/CommandLineTools"
+      ],
+      "additionalPaths": [
+        "~/Library/org.swift.swiftpm"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/org.swift.swiftpm",
+        "~/Library/Caches/CocoaPods",
+        "~/.cocoapods",
+        "~/Library/Caches/Carthage",
+        "~/Library/Caches/com.apple.dt.instruments"
+      ],
+      "notes": "Кеши SwiftPM, CocoaPods и Carthage остаются даже после удаления Xcode."
+    },
+    {
+      "displayName": "Visual Studio Code",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "/Applications/Visual Studio Code.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Code",
+        "~/.vscode",
+        "~/Library/Preferences/com.microsoft.VSCode.plist",
+        "~/Library/Saved Application State/com.microsoft.VSCode.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Code/Cache",
+        "~/Library/Application Support/Code/CachedData",
+        "~/Library/Application Support/Code/Code Cache",
+        "~/Library/Application Support/Code/logs",
+        "~/Library/Application Support/Code/User/workspaceStorage",
+        "~/Library/Caches/com.microsoft.VSCode",
+        "~/Library/Caches/com.microsoft.VSCode.ShipIt"
+      ],
+      "notes": "CachedData накапливает по каталогу на каждую установленную версию. ~/.vscode/extensions — расширения."
+    },
+    {
+      "displayName": "Cursor",
+      "publisher": "Anysphere",
+      "installPaths": [
+        "/Applications/Cursor.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Cursor",
+        "~/.cursor"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Cursor/CachedData",
+        "~/Library/Application Support/Cursor/Cache",
+        "~/Library/Application Support/Cursor/logs",
+        "~/Library/Caches/com.todesktop.230313mzl4w4u92"
+      ],
+      "notes": "Форк VS Code с той же структурой каталогов."
+    },
+    {
+      "displayName": "JetBrains IDE (IntelliJ IDEA, PyCharm, WebStorm, GoLand)",
+      "publisher": "JetBrains",
+      "installPaths": [
+        "~/Library/Application Support/JetBrains"
+      ],
+      "additionalPaths": [
+        "~/Library/Preferences/jetbrains"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/JetBrains",
+        "~/Library/Logs/JetBrains"
+      ],
+      "notes": "Официальная схема JetBrains для macOS: настройки и плагины ~/Library/Application Support/JetBrains/<IDE><версия>, кеши и индексы ~/Library/Caches/JetBrains/<IDE><версия>, логи ~/Library/Logs/JetBrains/<IDE><версия>. Каталоги версионированы — от каждой прошлой версии остаётся свой набор."
+    },
+    {
+      "displayName": "JetBrains Toolbox",
+      "publisher": "JetBrains",
+      "installPaths": [
+        "~/Library/Application Support/JetBrains/Toolbox"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/JetBrains/Toolbox"
+      ],
+      "notes": "Toolbox хранит установленные IDE в своём каталоге apps — после его удаления они остаются на диске."
+    },
+    {
+      "displayName": "Android Studio",
+      "publisher": "Google",
+      "installPaths": [
+        "/Applications/Android Studio.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Google",
+        "~/Library/Preferences/com.google.android.studio.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Google",
+        "~/Library/Logs/Google"
+      ],
+      "notes": "С версии 4.1 Android Studio следует схеме JetBrains: ~/Library/Application Support/Google/AndroidStudio<версия>."
+    },
+    {
+      "displayName": "Android SDK и эмулятор",
+      "publisher": "Google",
+      "installPaths": [
+        "~/Library/Android/sdk"
+      ],
+      "additionalPaths": [
+        "~/.android",
+        "~/Library/Android"
+      ],
+      "cachePaths": [
+        "~/.android/cache",
+        "~/.android/build-cache",
+        "~/Library/Android/sdk/system-images",
+        "~/Library/Android/sdk/sources"
+      ],
+      "userDataPaths": [
+        "~/.android/avd"
+      ],
+      "notes": "SDK и образы системы занимают десятки ГБ и остаются после удаления Android Studio. ~/.android/avd — виртуальные устройства пользователя."
+    },
+    {
+      "displayName": "Docker Desktop",
+      "publisher": "Docker Inc.",
+      "installPaths": [
+        "/Applications/Docker.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Containers/com.docker.docker",
+        "~/Library/Group Containers/group.com.docker",
+        "~/.docker",
+        "~/Library/Application Support/Docker Desktop",
+        "~/Library/Preferences/com.docker.docker.plist",
+        "/Library/PrivilegedHelperTools/com.docker.vmnetd",
+        "/usr/local/bin/com.docker.cli"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.docker.docker",
+        "~/Library/Logs/Docker Desktop"
+      ],
+      "userDataPaths": [
+        "~/Library/Containers/com.docker.docker/Data/vms"
+      ],
+      "notes": "Официальная документация Docker требует убирать ~/Library/Group Containers/group.com.docker и ~/.docker вручную. Образ виртуальной машины в Containers/com.docker.docker/Data растёт с каждым pull и легко достигает 60+ ГБ."
+    },
+    {
+      "displayName": "Homebrew",
+      "publisher": "Homebrew",
+      "installPaths": [
+        "/opt/homebrew"
+      ],
+      "additionalPaths": [
+        "/usr/local/Homebrew"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Homebrew",
+        "~/Library/Logs/Homebrew"
+      ],
+      "notes": "~/Library/Caches/Homebrew хранит скачанные бутылки всех когда-либо установленных формул (brew cleanup). /opt/homebrew — Apple Silicon, /usr/local — Intel."
+    },
+    {
+      "displayName": "npm (Node.js)",
+      "publisher": "npm, Inc.",
+      "installPaths": [
+        "~/.npm"
+      ],
+      "additionalPaths": [
+        "~/.node-gyp"
+      ],
+      "cachePaths": [
+        "~/.npm/_cacache",
+        "~/.npm/_logs"
+      ],
+      "notes": "Кеш пакетов npm, чистится npm cache clean --force."
+    },
+    {
+      "displayName": "Yarn, pnpm и Bun",
+      "publisher": "Open Source",
+      "installPaths": [
+        "~/.yarn"
+      ],
+      "additionalPaths": [
+        "~/Library/pnpm",
+        "~/.bun"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Yarn",
+        "~/.yarn/berry/cache",
+        "~/Library/Caches/pnpm",
+        "~/.bun/install/cache"
+      ],
+      "notes": "На macOS Yarn и pnpm кешируют в ~/Library/Caches, а не в ~/.cache."
+    },
+    {
+      "displayName": "nvm (Node Version Manager)",
+      "publisher": "nvm-sh",
+      "installPaths": [
+        "~/.nvm"
+      ],
+      "cachePaths": [
+        "~/.nvm/.cache"
+      ],
+      "notes": "~/.nvm/versions хранит все установленные версии Node."
+    },
+    {
+      "displayName": "Go",
+      "publisher": "Google",
+      "installPaths": [
+        "~/go"
+      ],
+      "additionalPaths": [
+        "/usr/local/go"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/go-build",
+        "~/go/pkg/mod/cache",
+        "~/go/pkg"
+      ],
+      "userDataPaths": [
+        "~/go/src"
+      ],
+      "notes": "На macOS кеш сборки Go лежит в ~/Library/Caches/go-build (в Linux — в ~/.cache/go-build)."
+    },
+    {
+      "displayName": "Rust (rustup и Cargo)",
+      "publisher": "Rust Foundation",
+      "installPaths": [
+        "~/.cargo"
+      ],
+      "additionalPaths": [
+        "~/.rustup"
+      ],
+      "cachePaths": [
+        "~/.cargo/registry",
+        "~/.cargo/git",
+        "~/.rustup/downloads"
+      ],
+      "notes": "~/.rustup/toolchains хранит все установленные тулчейны."
+    },
+    {
+      "displayName": "pip, uv и Poetry (Python)",
+      "publisher": "Python Community",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/Library/Application Support/uv",
+        "~/Library/Application Support/pypoetry"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/pip",
+        "~/Library/Caches/uv",
+        "~/Library/Caches/pypoetry",
+        "~/Library/Caches/pip-tools"
+      ],
+      "notes": "Все три инструмента следуют соглашениям macOS и кешируют в ~/Library/Caches, а не в ~/.cache."
+    },
+    {
+      "displayName": "Conda, Miniconda и Anaconda",
+      "publisher": "Anaconda, Inc.",
+      "installPaths": [
+        "~/miniconda3"
+      ],
+      "additionalPaths": [
+        "~/anaconda3",
+        "~/miniforge3",
+        "~/.conda",
+        "/opt/miniconda3",
+        "/opt/anaconda3"
+      ],
+      "cachePaths": [
+        "~/.conda/pkgs",
+        "~/miniconda3/pkgs",
+        "~/anaconda3/pkgs"
+      ],
+      "userDataPaths": [
+        "~/miniconda3/envs",
+        "~/anaconda3/envs"
+      ],
+      "notes": "Каталог pkgs — распакованный кеш пакетов (conda clean -a)."
+    },
+    {
+      "displayName": "Gradle и Maven",
+      "publisher": "Gradle Inc. / Apache",
+      "installPaths": [
+        "~/.gradle"
+      ],
+      "additionalPaths": [
+        "~/.m2"
+      ],
+      "cachePaths": [
+        "~/.gradle/caches",
+        "~/.gradle/daemon",
+        "~/.gradle/wrapper",
+        "~/.m2/repository"
+      ],
+      "notes": "Кеши сборки JVM-проектов; безопасно удаляются и восстанавливаются из сети."
+    },
+    {
+      "displayName": "Java (Oracle Web Start и JDK)",
+      "publisher": "Oracle",
+      "installPaths": [
+        "~/Library/Application Support/Oracle/Java"
+      ],
+      "additionalPaths": [
+        "/Library/Java/JavaVirtualMachines",
+        "~/Library/Preferences/com.oracle.java.Java-Updater.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Oracle/Java/Deployment/cache",
+        "~/Library/Caches/Java"
+      ],
+      "notes": "/Library/Java/JavaVirtualMachines хранит все установленные JDK — по 300–600 МБ каждый, старые версии не удаляются автоматически."
+    },
+    {
+      "displayName": ".NET SDK",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "/usr/local/share/dotnet"
+      ],
+      "additionalPaths": [
+        "~/.dotnet",
+        "~/.nuget",
+        "~/.templateengine"
+      ],
+      "cachePaths": [
+        "~/.nuget/packages",
+        "~/.local/share/NuGet"
+      ],
+      "notes": "На macOS SDK ставится в /usr/local/share/dotnet и остаётся после удаления Visual Studio."
+    },
+    {
+      "displayName": "Flutter и Dart",
+      "publisher": "Google",
+      "installPaths": [
+        "~/flutter"
+      ],
+      "additionalPaths": [
+        "~/.pub-cache",
+        "~/.flutter"
+      ],
+      "cachePaths": [
+        "~/flutter/bin/cache",
+        "~/.pub-cache",
+        "~/Library/Caches/flutter_engine"
+      ],
+      "notes": "SDK Flutter и кеш pub вместе часто занимают больше 10 ГБ."
+    },
+    {
+      "displayName": "Postman и Insomnia",
+      "publisher": "Postman Inc. / Kong",
+      "installPaths": [
+        "/Applications/Postman.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Postman",
+        "~/Library/Application Support/Insomnia",
+        "~/Library/Preferences/com.postmanlabs.mac.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Postman/Cache",
+        "~/Library/Caches/com.postmanlabs.mac",
+        "~/Library/Application Support/Insomnia/Cache"
+      ],
+      "notes": "Electron-клиенты: кеш растёт независимо от размера коллекций."
+    },
+    {
+      "displayName": "DBeaver и TablePlus",
+      "publisher": "DBeaver Corp. / TablePlus",
+      "installPaths": [
+        "~/Library/DBeaverData"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/com.tinyapp.TablePlus",
+        "~/Library/Preferences/com.tinyapp.TablePlus.plist"
+      ],
+      "userDataPaths": [
+        "~/Library/DBeaverData/workspace6"
+      ],
+      "notes": "workspace6 содержит подключения и SQL-скрипты пользователя."
+    },
+    {
+      "displayName": "iTerm2",
+      "publisher": "George Nachman",
+      "installPaths": [
+        "/Applications/iTerm.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/iTerm2",
+        "~/Library/Preferences/com.googlecode.iterm2.plist",
+        "~/Library/Saved Application State/com.googlecode.iterm2.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.googlecode.iterm2"
+      ],
+      "notes": "Остатки iTerm2 вместе с сохранёнными профилями."
+    },
+    {
+      "displayName": "Adobe Creative Cloud",
+      "publisher": "Adobe",
+      "installPaths": [
+        "/Applications/Adobe Creative Cloud"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Adobe",
+        "/Library/Application Support/Adobe",
+        "~/Library/Preferences/Adobe",
+        "/Library/PrivilegedHelperTools/com.adobe.acc.installer.v2",
+        "~/Library/Application Support/CrashReporter"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Adobe",
+        "~/Library/Caches/com.adobe.accmac",
+        "~/Library/Logs/Adobe",
+        "/Library/Logs/Adobe",
+        "~/Library/Application Support/Adobe/Common/Media Cache Files",
+        "~/Library/Application Support/Adobe/Common/Media Cache",
+        "~/Library/Application Support/Adobe/Common/Peak Files"
+      ],
+      "notes": "Штатный деинсталлятор Creative Cloud оставляет и системный, и пользовательский каталог Adobe. Media Cache Files и Peak Files (Premiere Pro, After Effects) — крупнейший безопасный к удалению кеш, регулярно 50+ ГБ."
+    },
+    {
+      "displayName": "Microsoft Office",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "/Applications/Microsoft Word.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Containers/com.microsoft.Word",
+        "~/Library/Containers/com.microsoft.Excel",
+        "~/Library/Containers/com.microsoft.Powerpoint",
+        "~/Library/Containers/com.microsoft.Outlook",
+        "~/Library/Group Containers/UBF8T346G9.Office",
+        "~/Library/Application Support/Microsoft"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.microsoft.Word",
+        "~/Library/Caches/com.microsoft.Excel",
+        "~/Library/Caches/com.microsoft.Outlook",
+        "~/Library/Group Containers/UBF8T346G9.Office/Outlook/Outlook 15 Profiles"
+      ],
+      "userDataPaths": [
+        "~/Library/Group Containers/UBF8T346G9.Office/Outlook"
+      ],
+      "notes": "Локальная почта Outlook лежит в Group Containers/UBF8T346G9.Office/Outlook и может занимать десятки ГБ — это пользовательские данные, а не кеш."
+    },
+    {
+      "displayName": "OneDrive",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "/Applications/OneDrive.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Group Containers/UBF8T346G9.OneDriveStandaloneSuite",
+        "~/Library/Application Support/OneDrive",
+        "~/Library/Containers/com.microsoft.OneDriveStandaloneUpdater"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.microsoft.OneDrive",
+        "~/Library/Logs/OneDrive"
+      ],
+      "userDataPaths": [
+        "~/OneDrive"
+      ],
+      "notes": "~/OneDrive — синхронизированные файлы пользователя."
+    },
+    {
+      "displayName": "Dropbox",
+      "publisher": "Dropbox Inc.",
+      "installPaths": [
+        "/Applications/Dropbox.app"
+      ],
+      "additionalPaths": [
+        "~/.dropbox",
+        "~/Library/Application Support/Dropbox",
+        "~/Library/Preferences/com.getdropbox.dropbox.plist",
+        "~/Library/DropboxHelperTools"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.getdropbox.dropbox",
+        "~/Dropbox/.dropbox.cache"
+      ],
+      "userDataPaths": [
+        "~/Dropbox"
+      ],
+      "notes": "Скрытый .dropbox.cache внутри папки синхронизации хранит удалённые файлы до 3 суток и чистится безопасно."
+    },
+    {
+      "displayName": "Google Drive",
+      "publisher": "Google",
+      "installPaths": [
+        "/Applications/Google Drive.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Google/DriveFS",
+        "~/Library/Preferences/com.google.drivefs.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.google.drivefs",
+        "~/Library/Application Support/Google/DriveFS/Logs"
+      ],
+      "notes": "Локальный кеш содержимого DriveFS хранит все открытые файлы и может занимать десятки ГБ."
+    },
+    {
+      "displayName": "Slack",
+      "publisher": "Slack Technologies",
+      "installPaths": [
+        "/Applications/Slack.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Slack",
+        "~/Library/Containers/com.tinyspeck.slackmacgap",
+        "~/Library/Preferences/com.tinyspeck.slackmacgap.plist",
+        "~/Library/Saved Application State/com.tinyspeck.slackmacgap.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Slack/Cache",
+        "~/Library/Application Support/Slack/Code Cache",
+        "~/Library/Application Support/Slack/Service Worker/CacheStorage",
+        "~/Library/Application Support/Slack/logs",
+        "~/Library/Caches/com.tinyspeck.slackmacgap"
+      ],
+      "notes": "Версия из Mac App Store живёт в Containers, версия с сайта — в Application Support."
+    },
+    {
+      "displayName": "Discord",
+      "publisher": "Discord Inc.",
+      "installPaths": [
+        "/Applications/Discord.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/discord",
+        "~/Library/Application Support/discordcanary",
+        "~/Library/Application Support/discordptb",
+        "~/Library/Preferences/com.hnc.Discord.plist",
+        "~/Library/Saved Application State/com.hnc.Discord.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/discord/Cache",
+        "~/Library/Application Support/discord/Code Cache",
+        "~/Library/Application Support/discord/GPUCache",
+        "~/Library/Caches/com.hnc.Discord"
+      ],
+      "notes": "Bundle ID Discord — com.hnc.Discord; помимо стабильной версии остаются каталоги Canary и PTB."
+    },
+    {
+      "displayName": "Telegram",
+      "publisher": "Telegram FZ-LLC",
+      "installPaths": [
+        "/Applications/Telegram.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Group Containers/6N38VWS5BX.ru.keepcoder.Telegram",
+        "~/Library/Containers/ru.keepcoder.Telegram",
+        "~/Library/Application Support/Telegram Desktop",
+        "~/Library/Preferences/ru.keepcoder.Telegram.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/ru.keepcoder.Telegram",
+        "~/Library/Application Support/Telegram Desktop/tdata/user_data/cache"
+      ],
+      "userDataPaths": [
+        "~/Library/Group Containers/6N38VWS5BX.ru.keepcoder.Telegram",
+        "~/Library/Application Support/Telegram Desktop/tdata"
+      ],
+      "notes": "Telegram для macOS (App Store) хранит всё в Group Containers, Telegram Desktop — в Application Support. В обоих случаях данные включают авторизованную сессию: удаление разлогинивает."
+    },
+    {
+      "displayName": "Signal",
+      "publisher": "Signal Foundation",
+      "installPaths": [
+        "/Applications/Signal.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Signal",
+        "~/Library/Preferences/org.whispersystems.signal-desktop.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Signal/Cache",
+        "~/Library/Application Support/Signal/logs",
+        "~/Library/Caches/org.whispersystems.signal-desktop"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/Signal/sql"
+      ],
+      "notes": "sql — локальная база переписки, восстановлению не подлежит."
+    },
+    {
+      "displayName": "Zoom",
+      "publisher": "Zoom Video Communications",
+      "installPaths": [
+        "/Applications/zoom.us.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/zoom.us",
+        "~/Library/Preferences/us.zoom.xos.plist",
+        "~/.zoomus",
+        "~/Library/Saved Application State/us.zoom.xos.savedState",
+        "/Library/Internet Plug-Ins/ZoomUsPlugIn.plugin"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/us.zoom.xos",
+        "~/Library/Logs/zoom.us",
+        "~/Library/Application Support/zoom.us/AutoUpdater"
+      ],
+      "userDataPaths": [
+        "~/Documents/Zoom"
+      ],
+      "notes": "~/Documents/Zoom — локальные записи встреч, часто десятки ГБ, это пользовательские данные."
+    },
+    {
+      "displayName": "Microsoft Teams",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "/Applications/Microsoft Teams.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Microsoft/Teams",
+        "~/Library/Containers/com.microsoft.teams2",
+        "~/Library/Group Containers/UBF8T346G9.com.microsoft.teams"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Microsoft/Teams/Cache",
+        "~/Library/Application Support/Microsoft/Teams/Code Cache",
+        "~/Library/Application Support/Microsoft/Teams/Application Cache",
+        "~/Library/Application Support/Microsoft/Teams/blob_storage",
+        "~/Library/Application Support/Microsoft/Teams/databases",
+        "~/Library/Application Support/Microsoft/Teams/GPUCache",
+        "~/Library/Application Support/Microsoft/Teams/IndexedDB",
+        "~/Library/Application Support/Microsoft/Teams/tmp"
+      ],
+      "notes": "Классический клиент оставляет каталог в Application Support даже после перехода на Teams 2 (Containers/com.microsoft.teams2). Список подкаталогов кеша соответствует правилам mac-cleanup."
+    },
+    {
+      "displayName": "Skype",
+      "publisher": "Microsoft",
+      "installPaths": [
+        "/Applications/Skype.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Skype",
+        "~/Library/Preferences/com.skype.skype.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.skype.skype",
+        "~/Library/Logs/Skype"
+      ],
+      "notes": "Классический Skype снят с поддержки — каталог обычно остаётся полностью."
+    },
+    {
+      "displayName": "WhatsApp",
+      "publisher": "Meta",
+      "installPaths": [
+        "/Applications/WhatsApp.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/WhatsApp",
+        "~/Library/Containers/net.whatsapp.WhatsApp",
+        "~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/net.whatsapp.WhatsApp",
+        "~/Library/Application Support/WhatsApp/Cache"
+      ],
+      "notes": "Медиа-кеш WhatsApp растёт вместе с числом чатов."
+    },
+    {
+      "displayName": "Spotify",
+      "publisher": "Spotify AB",
+      "installPaths": [
+        "/Applications/Spotify.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Spotify",
+        "~/Library/Preferences/com.spotify.client.plist",
+        "~/Library/Saved Application State/com.spotify.client.savedState"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.spotify.client",
+        "~/Library/Application Support/Spotify/PersistentCache",
+        "~/Library/Logs/Spotify"
+      ],
+      "notes": "PersistentCache хранит офлайн-треки и по умолчанию не ограничен по размеру."
+    },
+    {
+      "displayName": "VLC media player",
+      "publisher": "VideoLAN",
+      "installPaths": [
+        "/Applications/VLC.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/org.videolan.vlc",
+        "~/Library/Preferences/org.videolan.vlc",
+        "~/Library/Preferences/org.videolan.vlc.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/org.videolan.vlc"
+      ],
+      "notes": "Пути соответствуют правилам BleachBit (cleaners/vlc.xml)."
+    },
+    {
+      "displayName": "OBS Studio",
+      "publisher": "OBS Project",
+      "installPaths": [
+        "/Applications/OBS.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/obs-studio",
+        "~/Library/Preferences/com.obsproject.obs-studio.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/obs-studio/logs",
+        "~/Library/Application Support/obs-studio/crashes"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/obs-studio/basic"
+      ],
+      "notes": "Сцены и профили в basic — настройки пользователя."
+    },
+    {
+      "displayName": "Final Cut Pro",
+      "publisher": "Apple",
+      "installPaths": [
+        "/Applications/Final Cut Pro.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Final Cut Pro",
+        "~/Library/Preferences/com.apple.FinalCut.plist",
+        "~/Library/Containers/com.apple.FinalCut"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.apple.FinalCut"
+      ],
+      "userDataPaths": [
+        "~/Movies/Final Cut Backups.localized",
+        "~/Movies/Motion Templates.localized"
+      ],
+      "notes": "Библиотеки Final Cut (.fcpbundle) в ~/Movies содержат рендеры и оптимизированные медиа — сотни ГБ, но это проекты пользователя."
+    },
+    {
+      "displayName": "Logic Pro и GarageBand",
+      "publisher": "Apple",
+      "installPaths": [
+        "/Applications/Logic Pro.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Logic",
+        "~/Library/Application Support/GarageBand",
+        "/Library/Application Support/Logic",
+        "/Library/Application Support/GarageBand"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.apple.logic10",
+        "~/Library/Caches/com.apple.garageband10"
+      ],
+      "userDataPaths": [
+        "~/Music/Audio Music Apps"
+      ],
+      "notes": "Библиотеки звуков в /Library/Application Support/Logic и GarageBand занимают до 70 ГБ и остаются после удаления самих программ."
+    },
+    {
+      "displayName": "Blender",
+      "publisher": "Blender Foundation",
+      "installPaths": [
+        "/Applications/Blender.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Blender",
+        "~/Library/Preferences/org.blenderfoundation.blender.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Blender",
+        "~/Library/Caches/cycles"
+      ],
+      "notes": "~/Library/Application Support/Blender версионирован — от каждой версии остаётся каталог с аддонами."
+    },
+    {
+      "displayName": "GIMP и Inkscape",
+      "publisher": "Open Source",
+      "installPaths": [
+        "/Applications/GIMP.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/GIMP",
+        "~/Library/Application Support/org.inkscape.Inkscape",
+        "~/Library/Preferences/org.gimp.gimp-2.10.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/GIMP",
+        "~/Library/Caches/org.inkscape.Inkscape"
+      ],
+      "notes": "Остатки GIMP и Inkscape."
+    },
+    {
+      "displayName": "Sketch",
+      "publisher": "Sketch B.V.",
+      "installPaths": [
+        "/Applications/Sketch.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/com.bohemiancoding.sketch3",
+        "~/Library/Preferences/com.bohemiancoding.sketch3.plist",
+        "~/Library/Containers/com.bohemiancoding.sketch3"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.bohemiancoding.sketch3"
+      ],
+      "notes": "Остатки Sketch вместе с кешем облачных документов."
+    },
+    {
+      "displayName": "Figma",
+      "publisher": "Figma",
+      "installPaths": [
+        "/Applications/Figma.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Figma",
+        "~/Library/Preferences/com.figma.Desktop.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.figma.Desktop",
+        "~/Library/Application Support/Figma/DesktopProfile"
+      ],
+      "notes": "DesktopProfile — Electron-профиль с кешем шрифтов и изображений."
+    },
+    {
+      "displayName": "Steam",
+      "publisher": "Valve",
+      "installPaths": [
+        "/Applications/Steam.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Steam",
+        "~/Library/Preferences/com.valvesoftware.steam.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/Steam/appcache",
+        "~/Library/Application Support/Steam/depotcache",
+        "~/Library/Application Support/Steam/logs",
+        "~/Library/Application Support/Steam/steamapps/shadercache",
+        "~/Library/Application Support/Steam/steamapps/downloading",
+        "~/Library/Application Support/Steam/steamapps/temp",
+        "~/Library/Caches/com.valvesoftware.steam"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/Steam/userdata",
+        "~/Library/Application Support/Steam/steamapps/common"
+      ],
+      "notes": "Список кеш-подкаталогов соответствует правилам mac-cleanup. userdata — локальные сохранения и настройки."
+    },
+    {
+      "displayName": "Minecraft (Java Edition)",
+      "publisher": "Mojang Studios",
+      "installPaths": [
+        "~/Library/Application Support/minecraft"
+      ],
+      "additionalPaths": [
+        "/Applications/Minecraft.app"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/minecraft/assets",
+        "~/Library/Application Support/minecraft/libraries",
+        "~/Library/Application Support/minecraft/versions",
+        "~/Library/Application Support/minecraft/logs",
+        "~/Library/Application Support/minecraft/crash-reports",
+        "~/Library/Application Support/minecraft/webcache2"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/minecraft/saves",
+        "~/Library/Application Support/minecraft/resourcepacks",
+        "~/Library/Application Support/minecraft/screenshots",
+        "~/Library/Application Support/minecraft/mods"
+      ],
+      "notes": "Подкаталоги logs, crash-reports и webcache2 подтверждены правилами mac-cleanup. saves — миры игрока, удалять нельзя."
+    },
+    {
+      "displayName": "Epic Games Launcher",
+      "publisher": "Epic Games",
+      "installPaths": [
+        "/Applications/Epic Games Launcher.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Epic",
+        "~/Library/Preferences/com.epicgames.EpicGamesLauncher.plist",
+        "/Users/Shared/Epic Games"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.epicgames.EpicGamesLauncher",
+        "~/Library/Logs/Unreal Engine"
+      ],
+      "notes": "Игры Epic по умолчанию ставятся в /Users/Shared/Epic Games и после удаления лаунчера остаются на диске."
+    },
+    {
+      "displayName": "Battle.net",
+      "publisher": "Blizzard Entertainment",
+      "installPaths": [
+        "/Applications/Battle.net.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Battle.net",
+        "/Users/Shared/Battle.net",
+        "~/Library/Preferences/net.battle.a.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Battle.net",
+        "/Users/Shared/Battle.net/Agent/data"
+      ],
+      "notes": "Общий каталог /Users/Shared/Battle.net хранит агент обновлений и кеш загрузок."
+    },
+    {
+      "displayName": "Unity Hub и Unity Editor",
+      "publisher": "Unity Technologies",
+      "installPaths": [
+        "/Applications/Unity"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Unity",
+        "~/Library/Application Support/UnityHub",
+        "~/Library/Unity"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Unity",
+        "~/Library/Caches/com.unity3d.UnityEditor",
+        "~/Library/Unity/cache",
+        "~/Library/Logs/Unity"
+      ],
+      "notes": "Установленные редакторы Unity в /Applications/Unity/Hub/Editor занимают по 5–15 ГБ каждый."
+    },
+    {
+      "displayName": "Parallels Desktop",
+      "publisher": "Alludo",
+      "installPaths": [
+        "/Applications/Parallels Desktop.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Parallels",
+        "~/Library/Preferences/com.parallels.desktop.console.plist",
+        "/Library/Preferences/Parallels"
+      ],
+      "cachePaths": [
+        "~/Library/Logs/parallels.log",
+        "~/Library/Caches/com.parallels.desktop.console"
+      ],
+      "userDataPaths": [
+        "~/Parallels"
+      ],
+      "notes": "~/Parallels — сами виртуальные машины (десятки ГБ), это пользовательские данные."
+    },
+    {
+      "displayName": "VirtualBox, VMware Fusion и UTM",
+      "publisher": "Oracle / Broadcom / UTM",
+      "installPaths": [
+        "~/Library/VirtualBox"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/VMware Fusion",
+        "~/Library/Containers/com.utmapp.UTM",
+        "~/Library/Preferences/org.virtualbox.app.VirtualBox.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Logs/VMware Fusion",
+        "~/Library/VirtualBox/VBoxSVC.log"
+      ],
+      "userDataPaths": [
+        "~/VirtualBox VMs",
+        "~/Virtual Machines.localized"
+      ],
+      "notes": "Каталоги виртуальных машин — пользовательские данные, мусор здесь только логи и настройки."
+    },
+    {
+      "displayName": "CrossOver и Wine",
+      "publisher": "CodeWeavers",
+      "installPaths": [
+        "/Applications/CrossOver.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/CrossOver",
+        "~/Library/Preferences/com.codeweavers.CrossOver.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.codeweavers.CrossOver",
+        "~/Library/Logs/CrossOver"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/CrossOver/Bottles"
+      ],
+      "notes": "Bottles — Windows-префиксы с установленными программами."
+    },
+    {
+      "displayName": "iOS-бэкапы (Finder и iTunes)",
+      "publisher": "Apple",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/Library/Application Support/MobileSync"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/MobileSync/Backup"
+      ],
+      "notes": "Самый крупный скрытый каталог на многих Mac: полные резервные копии iPhone по 50–150 ГБ, которые никогда не удаляются автоматически. Это пользовательские данные — удалять только осознанно, через настройки устройства."
+    },
+    {
+      "displayName": "iTunes и Apple Music",
+      "publisher": "Apple",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/Music/iTunes",
+        "~/Library/Application Support/com.apple.iTunes"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.apple.iTunes",
+        "~/Library/Caches/com.apple.Music",
+        "~/Music/iTunes/iTunes Media/Mobile Applications",
+        "~/Music/iTunes/iTunes Media/Downloads"
+      ],
+      "notes": "Mobile Applications — устаревшие .ipa-файлы из времён синхронизации приложений через iTunes."
+    },
+    {
+      "displayName": "TeamViewer и AnyDesk",
+      "publisher": "TeamViewer / AnyDesk",
+      "installPaths": [
+        "/Applications/TeamViewer.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/TeamViewer",
+        "~/Library/Preferences/com.teamviewer.TeamViewer.plist",
+        "~/.anydesk",
+        "~/Library/Application Support/AnyDesk",
+        "/Library/PrivilegedHelperTools/com.teamviewer.Helper"
+      ],
+      "cachePaths": [
+        "~/Library/Logs/TeamViewer",
+        "~/Library/Caches/com.teamviewer.TeamViewer"
+      ],
+      "notes": "Оба клиента ставят привилегированные хелперы в /Library/PrivilegedHelperTools, которые не удаляются вместе с .app."
+    },
+    {
+      "displayName": "1Password",
+      "publisher": "AgileBits",
+      "installPaths": [
+        "/Applications/1Password.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Group Containers/2BUA8C4S2C.com.1password",
+        "~/Library/Application Support/1Password",
+        "~/Library/Containers/com.1password.1password"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.1password.1password",
+        "~/Library/Logs/1Password"
+      ],
+      "userDataPaths": [
+        "~/Library/Group Containers/2BUA8C4S2C.com.1password"
+      ],
+      "notes": "Group Containers хранит локальные хранилища паролей — удалять только после подтверждённой синхронизации."
+    },
+    {
+      "displayName": "Raycast и Alfred",
+      "publisher": "Raycast / Running with Crayons",
+      "installPaths": [
+        "/Applications/Raycast.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/com.raycast.macos",
+        "~/Library/Application Support/Alfred",
+        "~/Library/Preferences/com.raycast.macos.plist",
+        "~/Library/Preferences/com.runningwithcrayons.Alfred.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.raycast.macos",
+        "~/Library/Caches/com.runningwithcrayons.Alfred"
+      ],
+      "notes": "Остатки лаунчеров вместе с индексами поиска."
+    },
+    {
+      "displayName": "Obsidian и Notion",
+      "publisher": "Obsidian / Notion Labs",
+      "installPaths": [
+        "/Applications/Obsidian.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/obsidian",
+        "~/Library/Application Support/Notion",
+        "~/Library/Preferences/md.obsidian.plist",
+        "~/Library/Preferences/notion.id.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Application Support/obsidian/Cache",
+        "~/Library/Application Support/Notion/Cache",
+        "~/Library/Application Support/Notion/notion-cache",
+        "~/Library/Caches/notion.id"
+      ],
+      "notes": "Хранилища заметок Obsidian лежат отдельно от Application Support и не затрагиваются."
+    },
+    {
+      "displayName": "Setapp",
+      "publisher": "MacPaw",
+      "installPaths": [
+        "/Applications/Setapp"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Setapp",
+        "~/Library/Preferences/com.setapp.DesktopClient.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.setapp.DesktopClient",
+        "~/Library/Logs/Setapp"
+      ],
+      "notes": "После отписки от Setapp каталог /Applications/Setapp с приложениями часто остаётся."
+    },
+    {
+      "displayName": "Transmission и qBittorrent",
+      "publisher": "Open Source",
+      "installPaths": [
+        "/Applications/Transmission.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Transmission",
+        "~/Library/Application Support/qBittorrent",
+        "~/Library/Preferences/org.m0k.transmission.plist",
+        "~/Library/Preferences/org.qbittorrent.qBittorrent.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/org.m0k.transmission",
+        "~/Library/Caches/qBittorrent",
+        "~/Library/Logs/qBittorrent"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/qBittorrent/BT_backup"
+      ],
+      "notes": "BT_backup хранит состояние всех раздач."
+    },
+    {
+      "displayName": "Calibre",
+      "publisher": "Kovid Goyal",
+      "installPaths": [
+        "/Applications/calibre.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Preferences/calibre",
+        "~/Library/Application Support/calibre"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/calibre"
+      ],
+      "userDataPaths": [
+        "~/Calibre Library"
+      ],
+      "notes": "~/Calibre Library — библиотека книг пользователя."
+    },
+    {
+      "displayName": "Anki",
+      "publisher": "Ankitects",
+      "installPaths": [
+        "/Applications/Anki.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/Anki2",
+        "~/Library/Preferences/net.ankiweb.dtop.plist"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/net.ankiweb.dtop"
+      ],
+      "userDataPaths": [
+        "~/Library/Application Support/Anki2"
+      ],
+      "notes": "Anki2 содержит колоды и медиа пользователя."
+    },
+    {
+      "displayName": "Zotero",
+      "publisher": "Corporation for Digital Scholarship",
+      "installPaths": [
+        "/Applications/Zotero.app"
+      ],
+      "additionalPaths": [
+        "~/Zotero",
+        "~/Library/Application Support/Zotero"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/Zotero"
+      ],
+      "userDataPaths": [
+        "~/Zotero/storage"
+      ],
+      "notes": "~/Zotero/storage — вложенные PDF библиотеки пользователя."
+    },
+    {
+      "displayName": "RStudio и R",
+      "publisher": "Posit",
+      "installPaths": [
+        "/Applications/RStudio.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/RStudio",
+        "~/Library/Preferences/org.rstudio.RStudio.plist",
+        "~/Library/R"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/RStudio",
+        "~/Library/Caches/org.R-project.R"
+      ],
+      "notes": "~/Library/R хранит установленные пакеты R."
+    },
+    {
+      "displayName": "MATLAB",
+      "publisher": "MathWorks",
+      "installPaths": [
+        "/Applications/MATLAB_R2024a.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/MathWorks",
+        "~/.matlab"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/MathWorks",
+        "~/Library/Logs/MathWorks"
+      ],
+      "userDataPaths": [
+        "~/Documents/MATLAB"
+      ],
+      "notes": "Каталог .app версионирован (MATLAB_R20xxx.app) — старые версии по 20+ ГБ остаются после обновления."
+    },
+    {
+      "displayName": "Ollama и LM Studio",
+      "publisher": "Ollama / LM Studio",
+      "installPaths": [
+        "/Applications/Ollama.app"
+      ],
+      "additionalPaths": [
+        "~/.ollama",
+        "~/.lmstudio",
+        "~/Library/Application Support/LM Studio"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.electron.lm-studio",
+        "~/.cache/lm-studio"
+      ],
+      "userDataPaths": [
+        "~/.ollama/models",
+        "~/.lmstudio/models"
+      ],
+      "notes": "Скачанные веса LLM — десятки и сотни ГБ, самый крупный забытый каталог у тех, кто пробовал локальные модели."
+    },
+    {
+      "displayName": "Hugging Face и PyTorch",
+      "publisher": "Hugging Face / Meta",
+      "installPaths": [],
+      "additionalPaths": [
+        "~/.cache/huggingface"
+      ],
+      "cachePaths": [
+        "~/.cache/huggingface/hub",
+        "~/.cache/huggingface/datasets",
+        "~/.cache/torch",
+        "~/Library/Caches/torch"
+      ],
+      "notes": "Кеш моделей и датасетов после экспериментов с ML — регулярно сотни ГБ."
+    },
+    {
+      "displayName": "CleanMyMac и утилиты MacPaw",
+      "publisher": "MacPaw",
+      "installPaths": [
+        "/Applications/CleanMyMac X.app"
+      ],
+      "additionalPaths": [
+        "~/Library/Application Support/CleanMyMac X",
+        "~/Library/Application Support/CleanMyMac X Menu",
+        "~/Library/Preferences/com.macpaw.CleanMyMac4.plist",
+        "/Library/PrivilegedHelperTools/com.macpaw.CleanMyMac4.Agent"
+      ],
+      "cachePaths": [
+        "~/Library/Caches/com.macpaw.CleanMyMac4",
+        "~/Library/Logs/CleanMyMac X"
+      ],
+      "notes": "Сам чистильщик оставляет привилегированный хелпер и агент автозапуска после переноса .app в корзину."
+    },
+    {
+      "displayName": "Wireshark",
+      "publisher": "Wireshark Foundation",
+      "installPaths": [
+        "/Applications/Wireshark.app"
+      ],
+      "additionalPaths": [
+        "~/.config/wireshark",
+        "~/Library/Preferences/org.wireshark.Wireshark.plist",
+        "/Library/Application Support/Wireshark"
+      ],
+      "notes": "Драйвер ChmodBPF в /Library/StartupItems остаётся после удаления Wireshark."
+    },
+    {
+      "displayName": "Отчёты о сбоях и диагностика",
+      "publisher": "Apple",
+      "installPaths": [],
+      "cachePaths": [
+        "~/Library/Logs/DiagnosticReports",
+        "/Library/Logs/DiagnosticReports",
+        "~/Library/Application Support/CrashReporter",
+        "/private/var/log/asl"
+      ],
+      "notes": "Отчёты об аварийных завершениях программ. Нужны только для отладки конкретного сбоя; список путей соответствует правилам mac-cleanup."
+    },
+    {
+      "displayName": "Сохранённые состояния приложений",
+      "publisher": "Apple",
+      "installPaths": [],
+      "cachePaths": [
+        "~/Library/Saved Application State"
+      ],
+      "notes": "Каталоги .savedState остаются от давно удалённых программ и восстанавливают окна при запуске. Полностью безопасны к удалению."
+    },
+    {
+      "displayName": "Кеши веб-движка WebKit и HTTPStorages",
+      "publisher": "Apple",
+      "installPaths": [],
+      "cachePaths": [
+        "~/Library/WebKit",
+        "~/Library/HTTPStorages",
+        "~/Library/Cookies"
+      ],
+      "notes": "Каталоги, названные по bundle ID: каждое приложение на WebKit или Electron заводит свой подкаталог, который остаётся после удаления программы."
+    },
+    {
+      "displayName": "Кеш QuickLook и миниатюр",
+      "publisher": "Apple",
+      "installPaths": [],
+      "cachePaths": [
+        "~/Library/Caches/com.apple.QuickLook.thumbnailcache",
+        "~/Library/Caches/com.apple.finder",
+        "~/Library/Caches/com.apple.akd"
+      ],
+      "notes": "Миниатюры Finder и QuickLook, пересоздаются автоматически."
+    }
+  ]
+}

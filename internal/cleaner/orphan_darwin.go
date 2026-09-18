@@ -8,8 +8,12 @@ import (
 	"strings"
 )
 
-// registryKeyExists — в macOS реестра нет. Поле registryKeys в
-// orphaned_apps.json заполнено windows-путями, поэтому здесь всегда false.
+// orphanConfigName — база остатков macOS-ядра (пути ~/Library/Application
+// Support, ~/Library/Caches, ~/Library/Containers и /Applications).
+const orphanConfigName = "orphaned_apps.darwin.json"
+
+// registryKeyExists — в macOS реестра нет. Поле registryKeys в базе остатков
+// осмысленно только для Windows, поэтому здесь всегда false.
 func registryKeyExists(_ string) bool { return false }
 
 // DefaultDiscoverRoots — где искать неизвестные каталоги: пользовательские

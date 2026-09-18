@@ -95,7 +95,17 @@ go build -o mac-cleaner-lamp ./maccli && ./mac-cleaner-lamp --scan
 
 Платформенные части лежат в том же пакете в файлах `*_windows.go` / `*_linux.go` / `*_darwin.go` — компилятор выбирает нужные по имени файла, так что ядро каждой ОС содержит только свой код.
 
-**Чего в Linux и macOS нет по определению:** реестра Windows. Поля `registryKeys` в `orphaned_apps.json` эти ядра не проверяют и не удаляют, а `--orphan-export-reg` честно сообщает, что экспортировать нечего. Проверка `.lnk`-ярлыков заменена на `.desktop` (Linux) и символические ссылки с `.app`-бандлами (macOS).
+**База остатков своя у каждой ОС.** Пути вроде `%LOCALAPPDATA%\...` в Linux и macOS не существуют, а `~/Library/...` и `~/.config/...` — в Windows, поэтому один общий файл на три платформы означал бы, что две трети записей всегда мимо. Рядом с исполняемым файлом ядро ищет базу для своей ОС:
+
+| ОС | Файл | Чем заполнен |
+| --- | --- | --- |
+| Windows | `orphaned_apps.windows.json` | `%APPDATA%`, `%LOCALAPPDATA%`, `%PROGRAMFILES%`, ключи реестра |
+| Linux | `orphaned_apps.linux.json` | XDG-каталоги `~/.config`, `~/.cache`, `~/.local/share`, а также `~/.var/app` (Flatpak), `~/snap` и `/opt` |
+| macOS | `orphaned_apps.darwin.json` | `~/Library/Application Support`, `~/Library/Caches`, `~/Library/Containers`, `~/Library/Group Containers`, `/Applications` |
+
+Если файла для текущей ОС рядом нет, но лежит старый общий `orphaned_apps.json` — используется он, так что вручную собранная база не теряется при обновлении. Явный путь задаётся флагом `--orphan-config`.
+
+**Чего в Linux и macOS нет по определению:** реестра Windows. Поля `registryKeys` эти ядра не проверяют и не удаляют, а `--orphan-export-reg` честно сообщает, что экспортировать нечего. Проверка `.lnk`-ярлыков заменена на `.desktop` (Linux) и символические ссылки с `.app`-бандлами (macOS).
 
 ---
 
@@ -150,7 +160,7 @@ go build -o mac-cleaner-lamp ./maccli && ./mac-cleaner-lamp --scan
 # Быстрый отчёт по возможным остаткам в AppData/ProgramData (без удаления)
 .\win-cleaner-lamp.exe --leftovers
 
-# Проверка известной базы orphaned_apps.json (подтверждённый мусор)
+# Проверка известной базы остатков (подтверждённый мусор)
 .\win-cleaner-lamp.exe --orphan-scan
 
 # Удаление мусора конкретной программы (только её кеш — безопасно)

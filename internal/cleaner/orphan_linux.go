@@ -8,9 +8,13 @@ import (
 	"strings"
 )
 
-// registryKeyExists — в Linux реестра нет. Поле registryKeys в
-// orphaned_apps.json заполнено windows-путями, поэтому здесь всегда false:
-// иначе Linux-ядро сообщало бы о «найденных» ключах, которых не существует.
+// orphanConfigName — база остатков Linux-ядра (пути XDG: ~/.config,
+// ~/.cache, ~/.local/share, ~/.var/app и ~/snap).
+const orphanConfigName = "orphaned_apps.linux.json"
+
+// registryKeyExists — в Linux реестра нет. Поле registryKeys в базе остатков
+// осмысленно только для Windows, поэтому здесь всегда false: иначе Linux-ядро
+// сообщало бы о «найденных» ключах, которых не существует.
 func registryKeyExists(_ string) bool { return false }
 
 // DefaultDiscoverRoots — где искать неизвестные каталоги: пользовательские
