@@ -50,7 +50,15 @@
 
 ## Установка
 
-**Вариант 1 — готовая сборка.** На странице [Releases](https://github.com/Danik-Off/winCleanerLamp/releases) лежат: `win-cleaner-lamp.exe` (CLI, можно использовать отдельно) и установщик/portable GUI (`WinCleanerLamp-Setup-*.exe`). Скачать и запустить — сборка обновляется автоматически при каждом релизе (см. [«Версия и релизы»](#версия-и-релизы)).
+**Вариант 1 — готовая сборка.** На странице [Releases](https://github.com/Danik-Off/winCleanerLamp/releases) для каждой версии лежат GUI и отдельное ядро (CLI):
+
+| ОС | GUI | Только CLI |
+|---|---|---|
+| Windows | `WinCleanerLamp-Setup-*.exe` (установщик) · `WinCleanerLamp-Portable-*.exe` | `win-cleaner-lamp.exe` |
+| Linux | `WinCleanerLamp-*.AppImage` (любой дистрибутив, `chmod +x` и запустить) · `.deb` (Debian/Ubuntu) · `.rpm` (Fedora/openSUSE) | `lin-cleaner-lamp` |
+| macOS | `WinCleanerLamp-*-x64.dmg` / `-arm64.dmg` — сборка не подписана, после установки: `xattr -cr "/Applications/Win Cleaner Lamp.app"` | `mac-cleaner-lamp` (universal) |
+
+Автообновление внутри GUI работает в Windows и в Linux AppImage; deb/rpm и macOS обновляются вручную. Сборка публикуется автоматически при каждом релизе (см. [«Версия и релизы»](#версия-и-релизы)).
 
 **Вариант 2 — из исходников.** Нужен [Go 1.21+](https://go.dev/dl/) для CLI и дополнительно [Node.js 20+](https://nodejs.org/) для GUI:
 
@@ -247,7 +255,7 @@ npm run release:patch   # или release:minor / release:major
 npm run release:push
 ```
 
-GitHub Actions автоматически собирает CLI + GUI и публикует релиз при пуше тега `v*` или при изменении корневого `package.json`.
+GitHub Actions ([`release.yml`](.github/workflows/release.yml)) запускается при изменении корневого `package.json` в `main` (или вручную через *workflow_dispatch*): три параллельных джоба собирают ядро + GUI под Windows (NSIS/portable), Linux (AppImage/deb/rpm) и macOS (dmg/zip, без подписи), затем один джоб создаёт тег `v*` (если его ещё нет) и публикует GitHub Release со всеми файлами. macOS-сборка — best-effort: её падение не блокирует релиз, отсутствие dmg видно в описании релиза. Упаковка Linux AppImage дополнительно проверяется в [`ci.yml`](.github/workflows/ci.yml) на каждый push.
 
 ---
 

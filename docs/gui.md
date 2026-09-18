@@ -66,9 +66,9 @@ flowchart LR
 
 ## Требования
 
-- **Windows** (сборка и типичное использование ориентированы на Win x64).
+- **Windows**, **Linux** или **macOS** — упаковка идёт под ту ОС, на которой запущена (Linux: для цели `rpm` нужен `rpmbuild`, пакет `rpm`).
 - **Node.js** 20+ и **npm**.
-- **Go** 1.21+ — для сборки `win-cleaner-lamp.exe` в корень репозитория (скрипты `pack` / `dist` делают это автоматически).
+- **Go** 1.21+ — для сборки ядра текущей ОС в корень репозитория (скрипты `pack` / `dist` делают это автоматически, см. `gui/build-cli.cjs`).
 
 ---
 
@@ -116,17 +116,25 @@ cd gui
 npm run pack
 ```
 
-Установщик и portable для Windows:
+Пакеты для текущей ОС (electron-builder сам выбирает платформу, на которой запущен):
 
 ```powershell
 npm run dist
 ```
 
-`pack` и `dist` сначала выполняют **`build:cli`** (`go build ../wincli` в `../win-cleaner-lamp.exe`), затем **`verify:cli`** (проверка, что файл есть — иначе сборка падает с понятной ошибкой), затем `build`, затем **electron-builder**.
+| ОС | Цели (`build` в `gui/package.json`) | Ядро в `resources/` |
+|---|---|---|
+| Windows | NSIS-установщик + portable (x64) | `win-cleaner-lamp.exe` + `orphaned_apps.windows.json` |
+| Linux | AppImage, deb, rpm | `lin-cleaner-lamp` + `orphaned_apps.linux.json` |
+| macOS | dmg + zip (x64 и arm64, без подписи) | `mac-cleaner-lamp` + `orphaned_apps.darwin.json` |
 
-Бинарник CLI попадает в **`resources/win-cleaner-lamp.exe`** рядом с `app.asar` (**`extraResources`** в `package.json`), а не рядом с `WinCleanerLamp.exe`. Главный процесс ищет его в `process.resourcesPath`.
+`pack` и `dist` сначала выполняют **`build:cli`** (`node build-cli.cjs` — `go build` ядра текущей ОС в корень репозитория: `wincli` / `lincli` / `maccli`, карта в `gui/cli-target.cjs`), затем **`verify:cli`** (проверка, что файл есть — иначе сборка падает с понятной ошибкой), затем `build`, затем **electron-builder**.
 
-Если CLI уже собран в корне репозитория, достаточно **`npm run dist:electron`** (`verify:cli` + `build` + `electron-builder` без Go). Такой шаг используется в GitHub Actions после отдельного шага `go build`.
+Бинарник ядра попадает в **`resources/`** рядом с `app.asar` (**`extraResources`** своей платформы в `package.json`), а не рядом с исполняемым файлом GUI. Главный процесс ищет его в `process.resourcesPath` под именем, зависящим от `process.platform` (`EXE_NAME` в `electron/main.ts`).
+
+Автообновление (electron-updater) работает в Windows и в Linux только из AppImage: deb/rpm обновляются пакетным менеджером, а неподписанная macOS-сборка не может установить обновление — в этих случаях GUI сообщает, что новую версию нужно скачать со страницы Releases.
+
+Если ядро уже собрано в корне репозитория, достаточно **`npm run dist:electron`** (`verify:cli` + `build` + `electron-builder` без Go). Такой шаг используется в GitHub Actions (`release.yml`: три параллельных джоба Windows / Linux / macOS) после отдельного шага `go build`.
 
 ---
 

@@ -9,11 +9,21 @@ import fs from 'fs';
 import { autoUpdater } from 'electron-updater';
 
 // Constants
-const EXE_NAME = 'win-cleaner-lamp.exe';
+/**
+ * Имя ядра зависит от ОС: три бинарника собираются из wincli / lincli / maccli
+ * (см. gui/cli-target.cjs) и в упакованном приложении лежат в extraResources
+ * своей платформы (секция build в gui/package.json).
+ */
+const EXE_NAME =
+  process.platform === 'win32'
+    ? 'win-cleaner-lamp.exe'
+    : process.platform === 'darwin'
+      ? 'mac-cleaner-lamp'
+      : 'lin-cleaner-lamp';
 const DEV_PORT = 3000;
 
 /**
- * Путь к win-cleaner-lamp.exe:
+ * Путь к ядру (EXE_NAME):
  * - dev: корень репозитория (на уровень выше gui/)
  * - production: electron-builder кладёт бинарник в extraResources → каталог process.resourcesPath
  */
@@ -31,6 +41,19 @@ function getExePath(): string {
     return besideApp;
   }
   return inResources;
+}
+
+/**
+ * Где electron-updater реально умеет ставить обновления: Windows (NSIS) и
+ * Linux только из AppImage — deb/rpm обновляются пакетным менеджером, а
+ * macOS-сборка не подписана (без подписи quitAndInstall на macOS не работает).
+ * В остальных случаях обновления — вручную со страницы Releases.
+ */
+function isAutoUpdateSupported(): boolean {
+  if (!app.isPackaged) return false;
+  if (process.platform === 'win32') return true;
+  if (process.platform === 'linux') return Boolean(process.env.APPIMAGE);
+  return false;
 }
 
 /** Рендерер: только в упакованном приложении грузим dist; иначе легко словить localhost при NODE_ENV=development в системе */
@@ -123,7 +146,7 @@ try {
     // Тихая фоновая проверка обновлений вскоре после старта — но даже она
     // не скачивает и не ставит ничего без явного согласия пользователя
     // (см. setupAutoUpdater ниже: autoDownload=false, диалог с Установить/Отмена).
-    if (app.isPackaged) {
+    if (isAutoUpdateSupported()) {
       setTimeout(() => {
         autoUpdater.checkForUpdates().catch((err) => {
           console.error('Background update check failed:', err);
@@ -715,6 +738,12 @@ autoUpdater.on('update-downloaded', () => {
 ipcMain.handle('check-for-updates', async () => {
   if (!app.isPackaged) {
     return { success: false, error: 'Проверка обновлений доступна только в собранном приложении.' };
+  }
+  if (!isAutoUpdateSupported()) {
+    return {
+      success: false,
+      error: 'Автообновление доступно в Windows и в Linux AppImage. Для этой сборки скачайте новую версию со страницы Releases.',
+    };
   }
   try {
     await autoUpdater.checkForUpdates();

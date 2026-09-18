@@ -1,13 +1,15 @@
 name: Release
 
 on:
-  # Триггер на изменения package.json в корне (поднятие версии)
+  # Триггер на изменения package.json в корне (поднятие версии через
+  # `npm run release:*` + `release:push`). На push тега намеренно НЕ
+  # запускаемся: `git push --follow-tags` отправляет коммит и тег вместе,
+  # и два триггера дали бы две параллельные сборки одного релиза.
   push:
     branches:
       - main
     paths:
       - 'package.json'
-  # Также можно запускать вручную или по тегам
   workflow_dispatch:
 
 concurrency:
@@ -17,38 +19,57 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '20'
+
 jobs:
-  build-and-release:
-    name: 'Windows: CLI + GUI + Release'
+  # ───────────────────────────── версия ─────────────────────────────
+  version:
+    name: 'Версия из package.json'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Прочитать версию
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Релиз v$version"
+
+  # ───────────────────────────── Windows ─────────────────────────────
+  build-windows:
+    name: 'Windows: ядро + NSIS/portable'
     runs-on: windows-latest
     defaults:
       run:
         shell: pwsh
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Go — установка
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ env.GO_VERSION }}
 
       - name: Node.js — установка
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: gui/package-lock.json
 
       # LOCALAPPDATA не в github `env` по умолчанию — берём из PowerShell
       - name: Кэш Electron — пути
         id: electron_cache_paths
-        shell: pwsh
         run: |
           Add-Content -Path $env:GITHUB_OUTPUT -Value "electron=$($env:LOCALAPPDATA)\electron\Cache"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "electron_builder=$($env:LOCALAPPDATA)\electron-builder\Cache"
@@ -67,11 +88,8 @@ jobs:
         working-directory: gui
         run: npm ci
 
-      # Проверка перед сборкой релиза — раньше её не было, и в релиз дважды
-      # подряд уезжали пакеты с реальными проблемами (latest.yml не попадал
-      # в релиз, имя артефакта с пробелами не совпадало с тем, что ждёт
-      # автообновление). Любая из этих проверок падает — джоб останавливается
-      # раньше, чем будет создан тег и опубликован релиз.
+      # Проверка перед сборкой релиза: любая из них падает — релиз не
+      # публикуется (джоб release ждёт успеха всех сборок).
       - name: Go — vet
         run: go vet ./...
 
@@ -86,63 +104,285 @@ jobs:
         working-directory: gui
         run: npx tsc -p tsconfig.electron.json --noEmit
 
-      - name: CLI — сборка Go
+      - name: Ядро — сборка wincli
         run: go build -ldflags "-s -w" -o win-cleaner-lamp.exe ./wincli
 
-      - name: GUI — сборка (tsc + Vite + Electron main)
-        working-directory: gui
-        run: npm run build
-
-      - name: GUI — упаковка (electron-builder)
+      - name: GUI — сборка и упаковка (electron-builder)
         working-directory: gui
         run: npm run dist:electron
 
-      - name: Получить версию из package.json
-        id: version
+      # Все файлы релиза складываем в один плоский каталог: так их проще
+      # передать между джобами и опубликовать одним glob'ом.
+      - name: Собрать файлы релиза
         run: |
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=v$version"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          Copy-Item win-cleaner-lamp.exe release-assets/
+          Copy-Item gui/dist-release/*.exe release-assets/
+          Copy-Item gui/dist-release/*.blockmap release-assets/
+          Copy-Item gui/dist-release/latest.yml release-assets/
+          Get-ChildItem release-assets
 
-      - name: Создать и отправить тег
-        id: tag_created
+      - name: Артефакт — windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 3
+
+  # ───────────────────────────── Linux ─────────────────────────────
+  build-linux:
+    name: 'Linux: ядро + AppImage/deb/rpm'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # rpm — rpmbuild для цели rpm в electron-builder (fpm);
+      # librsvg2-bin — rsvg-convert для иконки из assets/logo.svg.
+      - name: Системные пакеты
         run: |
-          $tag = "${{ steps.version.outputs.tag }}"
-          Write-Host "Checking if tag $tag exists..."
-          $exists = git tag -l $tag
-          if ($exists) {
-            Write-Host "Tag $tag already exists, skipping creation"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "created=false"
-          } else {
-            Write-Host "Creating tag $tag..."
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rpm librsvg2-bin
+
+      - name: Go — установка
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Node.js — установка
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
+
+      - name: Кэш бинарников Electron
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('gui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - name: GUI — npm ci
+        working-directory: gui
+        run: npm ci
+
+      - name: Go — vet
+        run: go vet ./...
+
+      - name: Go — тесты (internal/cleaner)
+        run: go test ./internal/cleaner/... -short
+
+      - name: Ядро — сборка lincli
+        run: go build -ldflags "-s -w" -o lin-cleaner-lamp ./lincli
+
+      # Дымовая проверка: ядро должно отдавать список категорий в JSON —
+      # именно этим вызовом начинает работу GUI.
+      - name: Ядро — --list --json
+        run: ./lin-cleaner-lamp --list --json > /dev/null
+
+      # electron-builder берёт build/icon.png для .desktop и AppImage;
+      # без него в меню приложений будет стандартная иконка Electron.
+      - name: Иконка из assets/logo.svg
+        run: |
+          mkdir -p gui/build
+          rsvg-convert -w 512 -h 512 assets/logo.svg -o gui/build/icon.png
+
+      - name: GUI — сборка и упаковка (electron-builder)
+        working-directory: gui
+        run: npm run dist:electron
+
+      - name: Собрать файлы релиза
+        run: |
+          mkdir -p release-assets
+          cp lin-cleaner-lamp release-assets/
+          cp gui/dist-release/*.AppImage gui/dist-release/*.deb gui/dist-release/*.rpm release-assets/
+          cp gui/dist-release/latest-linux.yml release-assets/
+          ls -la release-assets
+
+      - name: Артефакт — linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 3
+
+  # ───────────────────────────── macOS ─────────────────────────────
+  # Best-effort: сборка без подписи и нотаризации (нет Apple Developer ID),
+  # поэтому её падение не должно блокировать релиз Windows и Linux —
+  # continue-on-error. Отсутствие macOS-файлов видно в сводке релиза.
+  build-macos:
+    name: 'macOS: ядро + dmg/zip (без подписи)'
+    runs-on: macos-latest
+    continue-on-error: true
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Go — установка
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Node.js — установка
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
+
+      - name: Кэш бинарников Electron
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('gui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - name: GUI — npm ci
+        working-directory: gui
+        run: npm ci
+
+      - name: Go — vet
+        run: go vet ./...
+
+      - name: Go — тесты (internal/cleaner)
+        run: go test ./internal/cleaner/... -short
+
+      # Одно универсальное ядро (Intel + Apple Silicon): в dmg для x64 и
+      # arm64 кладётся один и тот же файл.
+      - name: Ядро — сборка maccli (universal)
+        run: |
+          GOARCH=amd64 go build -ldflags "-s -w" -o mac-cleaner-lamp-amd64 ./maccli
+          GOARCH=arm64 go build -ldflags "-s -w" -o mac-cleaner-lamp-arm64 ./maccli
+          lipo -create -output mac-cleaner-lamp mac-cleaner-lamp-amd64 mac-cleaner-lamp-arm64
+          rm mac-cleaner-lamp-amd64 mac-cleaner-lamp-arm64
+          lipo -info mac-cleaner-lamp
+
+      - name: Ядро — --list --json
+        run: ./mac-cleaner-lamp --list --json > /dev/null
+
+      - name: GUI — сборка и упаковка (electron-builder)
+        working-directory: gui
+        run: npm run dist:electron
+
+      - name: Собрать файлы релиза
+        run: |
+          mkdir -p release-assets
+          cp mac-cleaner-lamp release-assets/
+          cp gui/dist-release/*.dmg gui/dist-release/*.zip release-assets/
+          cp gui/dist-release/latest-mac.yml release-assets/
+          ls -la release-assets
+
+      - name: Артефакт — macos
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 3
+
+  # ───────────────────────────── публикация ─────────────────────────────
+  release:
+    name: 'Тег + GitHub Release'
+    runs-on: ubuntu-latest
+    needs: [version, build-windows, build-linux, build-macos]
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      VERSION: ${{ needs.version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Скачать артефакты всех платформ
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Файлы релиза
+        run: ls -la release-assets
+
+      # Тег уже есть, если версия поднята через `npm run release:*` (тег
+      # создаётся локально и уезжает с `git push --follow-tags`); иначе
+      # (версия поднята руками) создаём его здесь.
+      - name: Создать и отправить тег
+        id: tag
+        run: |
+          if git tag -l "$TAG" | grep -q .; then
+            echo "Тег $TAG уже существует — пропускаем"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a $tag -m "Release v${{ steps.version.outputs.version }}"
-            git push origin $tag
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "created=true"
-          }
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # continue-on-error у build-macos прячет её падение от needs.*.result,
+      # поэтому факт наличия macOS-сборки определяем по файлам.
+      - name: Есть ли macOS-сборка
+        id: macos
+        run: |
+          if ls release-assets/*.dmg >/dev/null 2>&1; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Текст релиза — что скачать
+        run: |
+          {
+            echo "## Что скачать"
+            echo
+            echo "| Платформа | GUI | Только ядро (CLI) |"
+            echo "|---|---|---|"
+            echo "| Windows | \`WinCleanerLamp-Setup-$VERSION.exe\` (установщик) · \`WinCleanerLamp-Portable-$VERSION.exe\` | \`win-cleaner-lamp.exe\` |"
+            echo "| Linux | \`.AppImage\` (любой дистрибутив, \`chmod +x\`) · \`.deb\` (Debian/Ubuntu) · \`.rpm\` (Fedora/openSUSE) | \`lin-cleaner-lamp\` |"
+            if [ "${{ steps.macos.outputs.present }}" = "true" ]; then
+              echo "| macOS | \`.dmg\` (x64 / arm64, без подписи — после установки: \`xattr -cr \"/Applications/Win Cleaner Lamp.app\"\`) | \`mac-cleaner-lamp\` (universal) |"
+            else
+              echo "| macOS | сборка в этом релизе не удалась — см. лог workflow | — |"
+            fi
+            echo
+          } > release-body.md
+          cat release-body.md
 
       - name: Опубликовать релиз
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          body_path: release-body.md
           generate_release_notes: true
-          files: |
-            win-cleaner-lamp.exe
-            gui/dist-release/*.exe
-            gui/dist-release/*.yml
-            gui/dist-release/*.blockmap
+          append_body: true
+          fail_on_unmatched_files: true
+          files: release-assets/*
 
       - name: Сводка релиза
-        if: success()
-        shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.version }}"
-          $tag = "${{ steps.version.outputs.tag }}"
-          $created = "${{ steps.tag_created.outputs.created }}"
-          @"
-          ## Релиз $tag
-          - **CLI:** `win-cleaner-lamp.exe` в релизе
-          - **GUI:** установщики в релизе
-          - **Тег создан:** $created
-          "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
+          {
+            echo "## Релиз $TAG"
+            echo "- **Тег создан workflow:** ${{ steps.tag.outputs.created }}"
+            echo "- **macOS-сборка в релизе:** ${{ steps.macos.outputs.present }}"
+            echo
+            echo '```'
+            ls -la release-assets
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -94,7 +94,7 @@ jobs:
         run: npm run build
 
   verify-linux:
-    name: 'Linux: ядро lincli'
+    name: 'Linux: ядро + GUI (AppImage)'
     runs-on: ubuntu-latest
 
     steps:
@@ -105,6 +105,23 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
+
+      - name: Node.js — установка
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
+
+      - name: Кэш бинарников Electron
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('gui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
 
       - name: Go — vet
         run: go vet ./...
@@ -119,6 +136,22 @@ jobs:
       # именно этим вызовом начинает работу GUI.
       - name: Ядро — --list --json
         run: ./lin-cleaner-lamp --list --json > /dev/null
+
+      - name: GUI — npm ci
+        working-directory: gui
+        run: npm ci
+
+      # Упаковка Linux-GUI раньше вообще не проверялась — релиз под Linux
+      # ломался молча. Собираем только AppImage: deb/rpm используют тот же
+      # app-каталог, а rpm ещё и требует rpmbuild — оставлено release.yml.
+      - name: GUI — сборка и упаковка AppImage
+        working-directory: gui
+        run: npm run verify:cli && npm run build && npx electron-builder --linux AppImage --publish never
+
+      - name: Ядро внутри AppImage
+        run: |
+          ls -la gui/dist-release/*.AppImage
+          ls gui/dist-release/linux-unpacked/resources/lin-cleaner-lamp gui/dist-release/linux-unpacked/resources/orphaned_apps.linux.json
 
   verify-macos:
     name: 'macOS: ядро maccli'

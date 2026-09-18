@@ -14,7 +14,7 @@
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron dist-electron/main.js",
     "build": "tsc && vite build && npm run build:electron",
-    "build:cli": "go build -ldflags \"-s -w\" -o ../win-cleaner-lamp.exe ../wincli",
+    "build:cli": "node build-cli.cjs",
     "build:electron": "tsc -p tsconfig.electron.json",
     "electron": "electron dist-electron/main.js",
     "start": "npm run build && electron dist-electron/main.js",
@@ -22,8 +22,8 @@
     "type-check": "tsc --noEmit",
     "verify:cli": "node verify-cli.cjs",
     "pack": "npm run build:cli && npm run verify:cli && npm run build && electron-builder --dir",
-    "dist": "npm run build:cli && npm run verify:cli && npm run build && electron-builder --win --x64",
-    "dist:electron": "npm run verify:cli && npm run build && electron-builder --win --x64"
+    "dist": "npm run build:cli && npm run verify:cli && npm run build && electron-builder --publish never",
+    "dist:electron": "npm run verify:cli && npm run build && electron-builder --publish never"
   },
   "dependencies": {
     "@emotion/react": "^11.11.0",
@@ -62,18 +62,6 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "../",
-        "filter": [
-          "win-cleaner-lamp.exe",
-          "orphaned_apps.windows.json",
-          "orphaned_apps.linux.json",
-          "orphaned_apps.darwin.json"
-        ],
-        "to": "."
-      }
-    ],
     "publish": {
       "provider": "github",
       "owner": "Danik-Off",
@@ -94,7 +82,17 @@
           ]
         }
       ],
-      "icon": null
+      "icon": null,
+      "extraResources": [
+        {
+          "from": "../",
+          "filter": [
+            "win-cleaner-lamp.exe",
+            "orphaned_apps.windows.json"
+          ],
+          "to": "."
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -105,6 +103,59 @@
     },
     "portable": {
       "artifactName": "WinCleanerLamp-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "Utility",
+      "synopsis": "Очистка временных файлов и кешей",
+      "maintainer": "Danik Off <suzenebl@gmail.com>",
+      "executableName": "win-cleaner-lamp",
+      "artifactName": "WinCleanerLamp-${version}-${arch}.${ext}",
+      "extraResources": [
+        {
+          "from": "../",
+          "filter": [
+            "lin-cleaner-lamp",
+            "orphaned_apps.linux.json"
+          ],
+          "to": "."
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "identity": null,
+      "artifactName": "WinCleanerLamp-${version}-${arch}.${ext}",
+      "extraResources": [
+        {
+          "from": "../",
+          "filter": [
+            "mac-cleaner-lamp",
+            "orphaned_apps.darwin.json"
+          ],
+          "to": "."
+        }
+      ]
     }
   }
 }
