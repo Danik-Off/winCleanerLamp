@@ -49,12 +49,17 @@ func skipDirNamesCases() (mustSkip, mustNotSkip []string) {
 
 // userDataPathCases — пути, похожие и не похожие на пользовательские данные.
 func userDataPathCases() (likely, notLikely []string) {
-	return []string{
-			`C:\Users\Me\AppData\Roaming\.minecraft\saves`,
-			`C:\Users\Me\Documents\MyGame\Screenshots`,
-			`C:\Users\Me\AppData\Roaming\.minecraft\resourcepacks`,
-		}, []string{
-			`C:\Users\Me\AppData\Local\SomeApp\Cache`,
-			`C:\Users\Me\AppData\Roaming\SomeApp\logs`,
-		}
+	// Литералы вынесены из return намеренно: gofmt 1.27 и более ранние
+	// по-разному отбивают многострочные литералы в многозначном return,
+	// а так форматирование одинаково при любой версии Go.
+	likely = []string{
+		`C:\Users\Me\AppData\Roaming\.minecraft\saves`,
+		`C:\Users\Me\Documents\MyGame\Screenshots`,
+		`C:\Users\Me\AppData\Roaming\.minecraft\resourcepacks`,
+	}
+	notLikely = []string{
+		`C:\Users\Me\AppData\Local\SomeApp\Cache`,
+		`C:\Users\Me\AppData\Roaming\SomeApp\logs`,
+	}
+	return likely, notLikely
 }
